@@ -1,0 +1,6 @@
+[package]
+name = "xmpp"
+version = "0.1.0"
+authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
+
+[dependencies]
