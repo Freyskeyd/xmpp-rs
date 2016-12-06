@@ -4,3 +4,9 @@ version = "0.1.0"
 authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
 
 [dependencies]
+
+
+
+[dependencies.RustyXML]
+git = "https://github.com/Florob/RustyXML"
+
