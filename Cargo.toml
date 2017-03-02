@@ -1,0 +1,16 @@
+[package]
+name = "xmpp"
+version = "0.1.0"
+authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
+
+[dependencies]
+tokio-core = "0.1.4"
+tokio-proto = "0.1"
+tokio-service = "0.1"
+futures = "0.1.10"
+byteorder = "1.0.0"
+tokio-tls = { version = "0.1", features = ["tokio-proto"] }
+native-tls = "0.1"
+
+[dev-dependencies]
+service-fn = { git = "https://github.com/tokio-rs/service-fn" }
