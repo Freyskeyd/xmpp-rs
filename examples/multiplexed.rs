@@ -18,8 +18,6 @@ use line::XmppService;
 
 fn main() {
     env_logger::init().unwrap();
-    // The builder requires a protocol and an address
-    // let server = TcpServer::new(LineProto, addr);
 
     let addr = env::args().nth(1).unwrap_or("127.0.0.1:5222".to_string());
     let addr = addr.parse::<SocketAddr>().unwrap();
