@@ -5,12 +5,15 @@ authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
 
 [dependencies]
 tokio-core = "0.1.4"
-tokio-proto = "0.1"
+# tokio-proto = "0.1"
+tokio-proto = { path = "../tokio-proto" }
 tokio-service = "0.1"
 futures = "0.1.10"
 byteorder = "1.0.0"
 tokio-tls = { version = "0.1", features = ["tokio-proto"] }
 native-tls = "0.1"
+env_logger = "0.4.1"
+log = "0.3"
 
 [dev-dependencies]
 service-fn = { git = "https://github.com/tokio-rs/service-fn" }

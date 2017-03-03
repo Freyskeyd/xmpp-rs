@@ -4,6 +4,9 @@ extern crate tokio_core;
 extern crate tokio_proto;
 extern crate tokio_service;
 extern crate byteorder;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 
 use std::env;
 use tokio_core::reactor::Core;
@@ -14,8 +17,10 @@ use std::net::SocketAddr;
 use line::XmppService;
 
 fn main() {
+    env_logger::init().unwrap();
     // The builder requires a protocol and an address
     // let server = TcpServer::new(LineProto, addr);
+
     let addr = env::args().nth(1).unwrap_or("127.0.0.1:5222".to_string());
     let addr = addr.parse::<SocketAddr>().unwrap();
 
@@ -24,19 +29,15 @@ fn main() {
     let handle = core.handle();
     let tcp = line::XmppClient::connect(&addr, &handle)
         .and_then(|client| {
-            client.handle();
-            Ok(())
-            // client.start()
-            //     .and_then(move |response| {
-            //         println!("CLIENT: {:?}", response);
-            //         client.call("Goodbye".to_string())
-            //     })
-            // .and_then(|response| {
-            //     println!("CLIENT: {:?}", response);
-            //     Ok(())
-            // })
-            // We provide a way to *instantiate* the service for each new
-            // connection; here, we just immediately return a new instance.
+            client.start()
+                .and_then(move|response| {
+                    loop {
+                        match client.handle() {
+                            line::Event::StreamOpened => println!("Stream opened!")
+                        }
+                    }
+                    Ok(())
+                })
         });
 
     core.run(tcp).unwrap();
