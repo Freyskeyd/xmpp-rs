@@ -42,16 +42,16 @@ fn run_client<F>(rx: mpsc::Receiver<ClientMessage>, tx: mpsc::Sender<ClientMessa
     let tcp = TcpStream::connect(&addr, &handle);
 
     let handshake = tcp.and_then(|stream| {
-        let handshake_io = stream.framed(HandshakeCodec::new());
+        let handshake_io = stream.framed(HandshakeCodec::new(""));
 
         let start = "<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' xmlns='jabber:client'>";
         handshake_io
-            .send(ClientMessage(start.to_string()))
+            .send(start.to_string())
             .map(|handshake_io| handshake_io.into_inner())
     });
 
     let send_to_server = |msg| {
-        match tx.clone().start_send(msg) {
+        match tx.clone().start_send(ClientMessage(msg)) {
             Ok(_) => println!("message sent"),
             Err(_) => println!("fail to send to sink")
         }
@@ -62,12 +62,12 @@ fn run_client<F>(rx: mpsc::Receiver<ClientMessage>, tx: mpsc::Sender<ClientMessa
 
         let reader = from_server
             .for_each(move |msg| {
-                if msg.0.len() > 1 {
-                    if msg.0.starts_with("<stream:features") {
+                if msg.len() > 1 {
+                    if msg.starts_with("<stream:features") {
 
                     let message = String::from("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
 
-                    send_to_server(ClientMessage(message));
+                    send_to_server(message);
                     }
                 }
 
@@ -104,22 +104,45 @@ impl Handshake {
     }
 }
 
-pub type HandshakeCodec = LengthPrefixedJson;
+pub type HandshakeCodec = LengthPrefixedJson<Handshake, Handshake>;
 
 #[derive(Debug, Clone)]
 pub struct ClientMessage(pub String);
+
+impl ClientMessage {
+    pub fn new<S: Into<String>>(message: S) -> ClientMessage {
+        ClientMessage(message.into())
+    }
+}
+
+impl std::fmt::Display for ClientMessage {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Debug)]
 pub struct ServerMessage(pub String);
 
 
-pub struct LengthPrefixedJson{
-    _in: PhantomData<ServerMessage>,
-    _out: PhantomData<ClientMessage>,
+pub struct LengthPrefixedJson<In, Out>
+    where In: Debug + FromStr + ToString,
+          Out: Debug + FromStr + ToString
+{
+    _in: PhantomData<In>,
+    _out: PhantomData<Out>,
 }
 
-impl LengthPrefixedJson {
-    pub fn new() -> LengthPrefixedJson{
+impl<In, Out> LengthPrefixedJson<In, Out>
+    where In: Debug + FromStr + ToString,
+          Out: Debug + FromStr + ToString
+{
+    pub fn new() -> LengthPrefixedJson<In, Out> {
         LengthPrefixedJson {
             _in: PhantomData,
             _out: PhantomData,
@@ -128,10 +151,12 @@ impl LengthPrefixedJson {
 }
 
 
-impl Codec for LengthPrefixedJson
+impl<In, Out> Codec for LengthPrefixedJson<In, Out>
+    where In: ToString + FromStr + Debug,
+          Out: ToString + FromStr + Debug
 {
-    type In = ServerMessage;
-    type Out = ClientMessage;
+    type In = In;
+    type Out = Out;
 
     fn decode(&mut self, buf: &mut EasyBuf) -> io::Result<Option<Self::In>> {
         let len = buf.len();
@@ -143,12 +168,15 @@ impl Codec for LengthPrefixedJson
         let s = str::from_utf8(buf.as_slice()).unwrap();
 
         println!("IN: {:?}", s);
-        Ok(Some(ServerMessage(s.to_string())))
+        match In::from_str(s) {
+            Ok(s) => Ok(Some(s)),
+            Err(_) => Ok(None)
+        }
     }
 
-    fn encode(&mut self, msg: ClientMessage, buf: &mut Vec<u8>) -> io::Result<()> {
+    fn encode(&mut self, msg: Out, buf: &mut Vec<u8>) -> io::Result<()> {
         println!("OUT: {:?}", msg);
-        let _ = buf.write(msg.0.to_string().as_bytes());
+        let _ = buf.write(msg.to_string().as_bytes());
 
         Ok(())
     }
@@ -170,6 +198,23 @@ impl Codec for LengthPrefixedJson
 //     UserDisconnected(String),
 // }
 
-pub type ServerToClientCodec = LengthPrefixedJson;
-pub type ClientToServerCodec = LengthPrefixedJson;
+pub type ServerToClientCodec = LengthPrefixedJson<ClientMessage, ServerMessage>;
+pub type ClientToServerCodec = LengthPrefixedJson<ServerMessage, ClientMessage>;
+
+impl FromStr for ClientMessage {
+    type Err = ();
+    fn from_str(s: &str) -> Result<ClientMessage, ()> {
+        Ok(ClientMessage::new(s))
+    }
+}
+impl std::fmt::Display for ServerMessage {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        write!(f, "{}", self.0)
+    }
+}
 
