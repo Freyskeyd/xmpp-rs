@@ -14,6 +14,10 @@ tokio-tls = { version = "0.1", features = ["tokio-proto"] }
 native-tls = "0.1"
 env_logger = "0.4.1"
 log = "0.3"
+serde_derive = "0.8"
+serde_json = "0.8"
+serde = "0.8"
+
 
 [dev-dependencies]
 service-fn = { git = "https://github.com/tokio-rs/service-fn" }
