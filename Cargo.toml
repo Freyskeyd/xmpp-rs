@@ -4,20 +4,24 @@ version = "0.1.0"
 authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
 
 [dependencies]
-tokio-core = "0.1.4"
+bytes = "0.4"
+futures = "0.1"
+# tokio-io = "0.1"
+tokio-core = "0.1"
+# tokio-proto = "0.1"
+tokio-service = "0.1"
+# tokio-core = "*"
 # tokio-proto = "0.1"
 tokio-proto = { path = "../tokio-proto" }
-tokio-service = "0.1"
-futures = "0.1.10"
-byteorder = "1.0.0"
+tokio-io = { path = "../tokio-io" }
 tokio-tls = { version = "0.1", features = ["tokio-proto"] }
 native-tls = "0.1"
 env_logger = "0.4.1"
 log = "0.3"
-serde_derive = "0.8"
-serde_json = "0.8"
-serde = "0.8"
+# serde_derive = "0.8"
+# serde_json = "0.8"
+# serde = "0.8"
 
 
-[dev-dependencies]
-service-fn = { git = "https://github.com/tokio-rs/service-fn" }
+# [dev-dependencies]
+# service-fn = { git = "https://github.com/tokio-rs/service-fn" }
