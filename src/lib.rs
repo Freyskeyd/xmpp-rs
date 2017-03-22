@@ -7,9 +7,8 @@ extern crate tokio_tls;
 extern crate tokio_io;
 extern crate bytes;
 
-mod connect;
 
-use connect::{ClientToServerCodec, LineCodec, AUTH, PLAIN, ServerMessage};
+use connect::{AUTH, PLAIN, ServerMessage};
 
 use base64::{encode};
 use futures::{Future, Stream, Sink};
@@ -25,7 +24,12 @@ use tokio_io::codec::Framed;
 use futures::sync::mpsc;
 use tokio_tls::TlsStream;
 
+mod connect;
+mod codec;
+
 pub use connect::ClientMessage;
+use codec::LineCodec;
+use codec::ClientToServerCodec;
 
 pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<ClientMessage>)>, f: F) 
     where F: Fn(ServerMessage) -> Option<ClientMessage> + 'static
@@ -84,10 +88,9 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
         .and_then(|(_, transport)| {
             let mut data: Vec<u8> = Vec::new();
             data.push(0);
-            // data.extend(b"alice@example.com");
-            data.extend(b"admin@simon.iadvize.com");
+            data.extend(b"alice@example.com");
             data.push(0);
-            data.extend(b"iAdvize");
+            data.extend(b"test");
 
             // let plain = data.to_base64();
 
