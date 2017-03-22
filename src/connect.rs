@@ -44,7 +44,7 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
         .and_then(|(_, transport)| {
             transport.send(AUTH.to_string())
         })
-        .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+    .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
         .and_then(|(_, transport)| {
             let builder = TlsConnector::builder().unwrap();
             let cx = builder.build().unwrap();
@@ -53,12 +53,12 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
                 io::Error::new(io::ErrorKind::Other, e)
             })
         })
-        .and_then(|transport| {
-            let transport = transport.framed(LineCodec);
+    .and_then(|transport| {
+        let transport = transport.framed(LineCodec);
 
-            transport.send(TLS_SUCCESS.to_string())
-        })
-        .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+        transport.send(TLS_SUCCESS.to_string())
+    })
+    .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
         .and_then(|(_, transport)| {
             let mut data: Vec<u8> = Vec::new();
             data.push(0);
@@ -73,33 +73,38 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
             let plain = format!("{}{}</auth>", PLAIN, plain);
             transport.send(plain)
         })
-        .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
-            .and_then(|(_, transport)| {
-                let socket = transport.into_inner();
-                let transport = socket.framed(ClientToServerCodec::new());
+    .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+        .and_then(|(_, transport)| {
+            transport.send("<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' version='1.0'>".to_string())
+        })
 
-                let (to_server, from_server) = transport.split();
-                let reader = from_server
-                    .for_each(move |msg| {
-                        match f(msg) {
-                            Some(ret) => send_to_server(ret),
-                            None => {}
-                        };
+    .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+    .and_then(|(_, transport)| {
+        let socket = transport.into_inner();
+        let transport = socket.framed(ClientToServerCodec::new());
 
-                        Ok(())
-                    });
+        let (to_server, from_server) = transport.split();
+        let reader = from_server
+            .for_each(move |msg| {
+                match f(msg) {
+                    Some(ret) => send_to_server(ret),
+                    None => {}
+                };
 
-                let writer = rx
-                    .map_err(|()| unreachable!("rx can't fail"))
-                    .fold(to_server, |to_server, msg| {
-                        to_server.send(msg)
-                    })
-                .map(|_| ());
+                Ok(())
+            });
 
-                let _ = out_tx.clone().start_send((ClientMessage("connected".to_string()), tx.clone()));
-                reader.select(writer).map(|_| ()).map_err(|(err, _)| err)
+        let writer = rx
+            .map_err(|()| unreachable!("rx can't fail"))
+            .fold(to_server, |to_server, msg| {
+                to_server.send(msg)
+            })
+        .map(|_| ());
 
-        });
+        let _ = out_tx.clone().start_send((ClientMessage("connected".to_string()), tx.clone()));
+        reader.select(writer).map(|_| ()).map_err(|(err, _)| err)
+
+    });
 
     core.run(socket).unwrap();
 }
