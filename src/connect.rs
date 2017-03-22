@@ -9,10 +9,12 @@ use tokio_core::reactor::Core;
 use tokio_io::codec::{Encoder, Decoder};
 use tokio_io::{AsyncRead};
 use tokio_tls::TlsConnectorExt;
-
+use tokio_io::codec::Framed;
 use futures::sync::mpsc;
 use base64::{encode};
 use std::marker::PhantomData;
+use tokio_tls::TlsStream;
+use futures;
 
 
 const START: &'static str = "<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' xmlns='jabber:client'>";
@@ -21,6 +23,11 @@ const TLS_SUCCESS: &'static str = "
 <stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' version='1.0'>";
 const PLAIN: &'static str = "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>";
 
+
+fn initialize_stream(t: Framed<TokioStream, LineCodec>) -> futures::AndThen {
+    t.send(START.to_string())
+        .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+}
 pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<ClientMessage>)>, f: F) 
     where F: Fn(ServerMessage) -> Option<ClientMessage> + 'static
 {
@@ -34,37 +41,44 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
 
     let mut core = Core::new().unwrap();
 
-    let stream = TcpStream::connect("127.0.0.1:5222").unwrap();
+    let stream = TcpStream::connect(("xmpp-qa.iadvize.com", 5222)).unwrap();
     let socket = TokioStream::from_stream(stream, &core.handle()).unwrap();
 
     let transport = socket.framed(LineCodec);
+        let starttls = |(_, t): (Option<String>, Framed<TokioStream, LineCodec>)| {
+        t.send(AUTH.to_string())
+            .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+    };
 
-    let socket = transport.send(START.to_string())
-        .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
-        .and_then(|(_, transport)| {
-            transport.send(AUTH.to_string())
-        })
-    .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
-        .and_then(|(_, transport)| {
-            let builder = TlsConnector::builder().unwrap();
-            let cx = builder.build().unwrap();
+    let negociate = |(_, transport): (Option<String>, Framed<TokioStream, LineCodec>)| {
+        let builder = TlsConnector::builder().unwrap();
+        let cx = builder.build().unwrap();
 
-            cx.connect_no_domain(transport.into_inner()).map_err(|e| {
-                io::Error::new(io::ErrorKind::Other, e)
-            })
+        println!("connected");
+        // cx.connect_no_domain(transport.into_inner()).map_err(|e| {
+        cx.connect_async("xmpp-qa.iadvize.com", transport.into_inner()).map_err(|e| {
+            io::Error::new(io::ErrorKind::Other, e)
         })
-    .and_then(|transport| {
-        let transport = transport.framed(LineCodec);
+    };
+
+    let open_tls_stream = |socket: TlsStream<TokioStream>| {
+        let transport = socket.framed(LineCodec);
 
         transport.send(TLS_SUCCESS.to_string())
-    })
-    .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+            .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+    };
+
+    let socket = initialize_stream(transport)
+        .and_then(starttls)
+        .and_then(negociate)
+        .and_then(open_tls_stream)
         .and_then(|(_, transport)| {
             let mut data: Vec<u8> = Vec::new();
             data.push(0);
-            data.extend(b"alice@example.com");
+            // data.extend(b"alice@example.com");
+            data.extend(b"admin@iadvize.com");
             data.push(0);
-            data.extend(b"test");
+            data.extend(b"iAdvize");
 
             // let plain = data.to_base64();
 
@@ -80,6 +94,11 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
 
     .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
     .and_then(|(_, transport)| {
+        transport.send("<iq type='set' id='bind_1'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>".to_string())
+        })
+    .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+    .and_then(|(response, transport)| {
+        println!("{:?}", response);
         let socket = transport.into_inner();
         let transport = socket.framed(ClientToServerCodec::new());
 
@@ -162,14 +181,6 @@ pub struct Handshake {
     pub name: String,
 }
 
-// impl Handshake {
-//     pub fn new<S: Into<String>>(name: S) -> Handshake {
-//         Handshake { name: name.into() }
-//     }
-// }
-
-// pub type HandshakeCodec = LengthPrefixedJson;
-
 #[derive(Debug, Clone)]
 pub struct ClientMessage(pub String);
 
@@ -190,7 +201,6 @@ impl LengthPrefixedJson {
         }
     }
 }
-
 
 impl Decoder for LengthPrefixedJson
 {

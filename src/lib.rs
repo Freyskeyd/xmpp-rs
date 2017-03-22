@@ -7,6 +7,7 @@ extern crate native_tls;
 extern crate tokio_tls;
 extern crate tokio_io;
 extern crate bytes;
+extern crate openssl;
 mod connect;
 
 pub use connect::connect_client;
