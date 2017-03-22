@@ -6,14 +6,12 @@ authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
 [dependencies]
 bytes = "0.4"
 futures = "0.1"
-# tokio-io = "0.1"
+tokio-io = "0.1.0"
 tokio-core = "0.1"
 # tokio-proto = "0.1"
 tokio-service = "0.1"
 # tokio-core = "*"
-# tokio-proto = "0.1"
-tokio-proto = { path = "../tokio-proto" }
-tokio-io = { path = "../tokio-io" }
+# tokio-proto = "0.1.0"
 tokio-tls = { version = "0.1", features = ["tokio-proto"] }
 native-tls = "0.1"
 env_logger = "0.4.1"
@@ -21,7 +19,16 @@ log = "0.3"
 # serde_derive = "0.8"
 # serde_json = "0.8"
 # serde = "0.8"
+base64 = "0.4.0"
+rust-crypto = "0.2.36"
+futures-cpupool = "0.1"
 
+
+[replace]
+"tokio-io:0.1.0" = { path = "../tokio-io" }
+# "tokio-proto:0.1.0" = { path = "../tokio-proto" }
+"native-tls:0.1.1" = { path = "../rust-native-tls" }
+"tokio-tls:0.1.2" = { path = "../tokio-tls", features = ["tokio-proto"] }
 
 # [dev-dependencies]
 # service-fn = { git = "https://github.com/tokio-rs/service-fn" }
