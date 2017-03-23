@@ -1,6 +1,7 @@
 [package]
 name = "xmpp"
 version = "0.1.0"
+description = "A work in progress xmpp lib"
 authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
 
 [dependencies]
