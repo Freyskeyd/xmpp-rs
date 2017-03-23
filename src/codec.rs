@@ -2,7 +2,10 @@ use bytes::{BytesMut};
 use std::str;
 use std::{io};
 use tokio_io::codec::{Encoder, Decoder};
-use ::connect::LengthPrefixedJson;
+use ::connect::ClientMessage;
+use ::connect::ServerMessage;
+use std::marker::PhantomData;
+
 /// Our line-based codec
 pub struct LineCodec;
 /// Implementation of the simple line-based protocol.
@@ -47,6 +50,52 @@ impl Encoder for LineCodec {
         buf.reserve(msg.len());
 
         buf.extend(msg.as_bytes());
+
+        Ok(())
+    }
+}
+
+pub struct LengthPrefixedJson{
+    _in: PhantomData<ServerMessage>,
+    _out: PhantomData<ClientMessage>,
+}
+
+impl LengthPrefixedJson {
+    pub fn new() -> LengthPrefixedJson{
+        LengthPrefixedJson {
+            _in: PhantomData,
+            _out: PhantomData,
+        }
+    }
+}
+
+impl Decoder for LengthPrefixedJson
+{
+    type Item = ServerMessage;
+    type Error = io::Error;
+
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, io::Error> {
+        let len = buf.len();
+        if len < 1 {
+            return Ok(None);
+        }
+
+        let buf = buf.split_to(len);
+        let s = str::from_utf8(buf.as_ref()).unwrap();
+
+        println!("IN: {:?}", s);
+        Ok(Some(ServerMessage(s.to_string())))
+    }
+}
+
+impl Encoder for LengthPrefixedJson {
+    type Item = ClientMessage;
+    type Error = io::Error;
+
+
+    fn encode(&mut self, msg: ClientMessage, buf: &mut BytesMut) -> io::Result<()> {
+        println!("OUT: {:?}", msg.0);
+        buf.extend(msg.0.as_bytes());
 
         Ok(())
     }
