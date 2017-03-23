@@ -1,6 +1,6 @@
 #![deny(warnings)]
 extern crate base64;
-#[macro_use] extern crate futures;
+extern crate futures;
 extern crate tokio_core;
 extern crate native_tls;
 extern crate tokio_tls;
@@ -138,4 +138,11 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
     });
 
     core.run(socket).unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+    }
 }
