@@ -2,7 +2,7 @@ extern crate xmpp;
 extern crate futures;
 extern crate tokio_core;
 
-use xmpp::connect_client;
+use xmpp::client::connect_client;
 use xmpp::ClientMessage;
 use futures::sync::mpsc;
 use futures::{Sink, Stream};
