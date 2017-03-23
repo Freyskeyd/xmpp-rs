@@ -5,6 +5,10 @@ description = "A work in progress xmpp lib"
 license = "MPL-2.0"
 authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
 
+[lib]
+name = "xmpp"
+path = "src/lib.rs"
+
 [dependencies]
 bytes = "0.4"
 futures = "0.1"
