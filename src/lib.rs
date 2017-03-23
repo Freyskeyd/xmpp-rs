@@ -7,9 +7,8 @@ extern crate tokio_tls;
 extern crate tokio_io;
 extern crate bytes;
 
-mod connect;
 
-use connect::{ClientToServerCodec, LineCodec, AUTH, PLAIN, ServerMessage};
+use connect::{ServerMessage};
 
 use base64::{encode};
 use futures::{Future, Stream, Sink};
@@ -25,7 +24,13 @@ use tokio_io::codec::Framed;
 use futures::sync::mpsc;
 use tokio_tls::TlsStream;
 
+mod connect;
+mod codec;
+mod stanza;
+
 pub use connect::ClientMessage;
+use codec::LineCodec;
+use codec::ClientToServerCodec;
 
 pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<ClientMessage>)>, f: F) 
     where F: Fn(ServerMessage) -> Option<ClientMessage> + 'static
@@ -53,7 +58,7 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
 
     let starttls = |(response, t): (Option<String>, Framed<TokioStream, LineCodec>)| {
         println!("Response START: {:?}", response);
-        t.send(AUTH.to_string())
+        t.send(stanza::non_stanza::AUTH.to_string())
             .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
     };
 
@@ -63,7 +68,6 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
         let cx = builder.build().unwrap();
 
         println!("connected");
-        // cx.connect_no_domain(transport.into_inner()).map_err(|e| {
         cx.connect_async(domain, transport.into_inner()).map_err(|e| {
             io::Error::new(io::ErrorKind::Other, e)
         })
@@ -84,16 +88,15 @@ pub fn connect_client<F>(out_tx: mpsc::Sender<(ClientMessage, mpsc::Sender<Clien
         .and_then(|(_, transport)| {
             let mut data: Vec<u8> = Vec::new();
             data.push(0);
-            // data.extend(b"alice@example.com");
-            data.extend(b"admin@simon.iadvize.com");
+            data.extend(b"alice@example.com");
             data.push(0);
-            data.extend(b"iAdvize");
+            data.extend(b"test");
 
             // let plain = data.to_base64();
 
             let bytes = str::from_utf8(&data).unwrap().as_bytes();
             let plain = encode(bytes);
-            let plain = format!("{}{}</auth>", PLAIN, plain);
+            let plain = format!("{}{}</auth>", stanza::non_stanza::PLAIN, plain);
             transport.send(plain)
         })
     .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
