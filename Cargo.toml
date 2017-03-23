@@ -18,5 +18,11 @@ tokio-tls = "0.1"
 native-tls = "0.1"
 base64 = "0.4.0"
 
+[dependencies.xmpp-proto]
+path = "./proto"
+
+[dependencies.xmpp-client]
+path = "./client"
+
 [workspace]
 members = ["client/", "proto/", "server/"]

@@ -3,7 +3,7 @@ extern crate futures;
 extern crate tokio_core;
 
 use xmpp::client::connect_client;
-use xmpp::ClientMessage;
+use xmpp::proto::connect::ClientMessage;
 use futures::sync::mpsc;
 use futures::{Sink, Stream};
 use std::thread;
