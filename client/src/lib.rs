@@ -166,14 +166,14 @@ impl Client {
                     transport.send(plain)
                 })
                 .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
-                    .and_then(|(_, transport)| {
-                        transport.send(format!("<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='{}' version='1.0'>", xmpp_domain))
-                    })
+                .and_then(|(_, transport)| {
+                    transport.send(format!("<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='{}' version='1.0'>", xmpp_domain))
+                })
 
                 .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
-                    .and_then(|(_, transport)| {
-                        transport.send("<iq type='set' id='bind_1'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>".to_string())
-                    })
+                .and_then(|(_, transport)| {
+                    transport.send("<iq type='set' id='bind_1'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>".to_string())
+                })
                 .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
                 .and_then(|(response, transport)| {
                     println!("{:?}", response);
