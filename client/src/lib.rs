@@ -64,7 +64,9 @@ impl Connection {
         self.transport = Some(transport);
     }
 
-    pub fn authenticate(self, stanza_config: Arc<StanzaConfig>) -> BoxFuture<(Option<String>, Framed<TlsStream<TokioStream>, LineCodec>), Error>  {
+    pub fn authenticate(self, stanza_config: Arc<StanzaConfig>) 
+        -> BoxFuture<(Option<String>, Framed<TlsStream<TokioStream>, LineCodec>), Error>
+        {
         let start = format!("<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='{}' xmlns='jabber:client'>", stanza_config.get_xmpp_domain());
 
         let auth_cfg = stanza_config.clone();
@@ -136,8 +138,8 @@ impl Client {
 
             self.connection.connect(&self.domain.as_str(), &core.handle());
 
-            let cfg = StanzaConfig { domain: String::from(self.domain), xmpp_domain: String::from(self.xmpp_domain) };
-            let start_stream = self.connection.authenticate(Arc::new(cfg));
+            let cfg = Arc::new(StanzaConfig { domain: String::from(self.domain), xmpp_domain: String::from(self.xmpp_domain) });
+            let start_stream = self.connection.authenticate(cfg.clone());
 
             let send_to_server = |msg| {
                 match tx.clone().start_send(msg) {
@@ -146,9 +148,7 @@ impl Client {
                 }
             };
 
-            let domain = "xmpp-qa.iadvize.com";
-            let xmpp_domain = "bot.simon.iadvize.com";
-            let start = format!("<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='{}' xmlns='jabber:client'>", xmpp_domain);
+            let xmpp_domain = cfg.get_xmpp_domain();
 
             let socket = start_stream
                 .and_then(|(_, transport)| {
@@ -163,16 +163,16 @@ impl Client {
                     let plain = format!("{}{}</auth>", stanza::non_stanza::PLAIN, plain);
                     transport.send(plain)
                 })
-            .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+                .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
                 .and_then(|(_, transport)| {
                     transport.send(format!("<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='{}' version='1.0'>", xmpp_domain))
                 })
 
-            .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+                .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
                 .and_then(|(_, transport)| {
                     transport.send("<iq type='set' id='bind_1'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>".to_string())
                 })
-            .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
+                .and_then(|transport| transport.into_future().map_err(|(e, _)| e))
                 .and_then(|(response, transport)| {
                     println!("{:?}", response);
                     let socket = transport.into_inner();
