@@ -138,8 +138,8 @@ impl Client {
 
             self.connection.connect(&self.domain.as_str(), &core.handle());
 
-            let cfg = StanzaConfig { domain: String::from(self.domain), xmpp_domain: String::from(self.xmpp_domain) };
-            let start_stream = self.connection.authenticate(Arc::new(cfg));
+            let cfg = Arc::new(StanzaConfig { domain: String::from(self.domain), xmpp_domain: String::from(self.xmpp_domain) });
+            let start_stream = self.connection.authenticate(cfg.clone());
 
             let send_to_server = |msg| {
                 match tx.clone().start_send(msg) {
@@ -148,9 +148,7 @@ impl Client {
                 }
             };
 
-            let domain = "xmpp-qa.iadvize.com";
-            let xmpp_domain = "bot.simon.iadvize.com";
-            let start = format!("<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='{}' xmlns='jabber:client'>", xmpp_domain);
+            let xmpp_domain = cfg.get_xmpp_domain();
 
             let socket = start_stream
                 .and_then(|(_, transport)| {
