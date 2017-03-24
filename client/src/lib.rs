@@ -64,7 +64,7 @@ impl Connection {
         self.transport = Some(transport);
     }
 
-    pub fn authenticate<'a >(self, stanza_config: Arc<StanzaConfig>) -> BoxFuture<(Option<String>, Framed<TlsStream<TokioStream>, LineCodec>), Error>  {
+    pub fn authenticate(self, stanza_config: Arc<StanzaConfig>) -> BoxFuture<(Option<String>, Framed<TlsStream<TokioStream>, LineCodec>), Error>  {
         let start = format!("<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='{}' xmlns='jabber:client'>", stanza_config.get_xmpp_domain());
 
         let auth_cfg = stanza_config.clone();
