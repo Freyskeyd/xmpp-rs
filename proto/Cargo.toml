@@ -4,11 +4,14 @@ version = "0.1.0"
 authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
 
 [dependencies]
-bytes = "0.4"
-futures = "0.1"
-tokio-io = "0.1.1"
-tokio-core = "0.1"
-tokio-tls = "0.1"
-native-tls = "0.1"
-base64 = "0.4.0"
+futures = "*"
+tokio-io = "*"
+tokio-core = "*"
+tokio-tls = "0.1.2"
+bytes = "*"
+native-tls = "*"
+base64 = "*"
+log = "*"
 
+[replace]
+"tokio-tls:0.1.2" = { path = '../../tokio-tls' }

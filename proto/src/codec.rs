@@ -2,23 +2,20 @@ use bytes::{BytesMut};
 use std::str;
 use std::{io};
 use tokio_io::codec::{Encoder, Decoder};
-use ::connect::ClientMessage;
-use ::connect::ServerMessage;
-use std::marker::PhantomData;
 
 /// Our line-based codec
-pub struct LineCodec;
-/// Implementation of the simple line-based protocol.
-///
-/// Frames consist of a UTF-8 encoded string, terminated by a '\n' character.
-impl Decoder for LineCodec {
-    type Item = String;
+pub struct XMPPCodec;
+
+type Frame = String;
+
+impl Decoder for XMPPCodec {
+    type Item = Frame;
     type Error = io::Error;
 
-    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<String>, io::Error> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Frame>, io::Error> {
         let len = buf.len();
         if len > 1 {
-            println!("IN: {:?}", str::from_utf8(buf.as_ref()));
+            trace!("IN: {:?}", str::from_utf8(buf.as_ref()));
             let line = buf.split_to(len);
 
             return match str::from_utf8(&line.as_ref()) {
@@ -42,64 +39,55 @@ impl Decoder for LineCodec {
     }
 }
 
-impl Encoder for LineCodec {
-    type Item = String;
+impl Encoder for XMPPCodec {
+    type Item = Frame;
     type Error = io::Error;
 
-    fn encode(&mut self, msg: String, buf: &mut BytesMut) -> io::Result<()> {
-        buf.reserve(msg.len());
+    fn encode(&mut self, frame: Frame, buf: &mut BytesMut) -> Result<(), Self::Error> {
+      // let length = buf.len();
+      trace!("will send frame: {:?}", frame);
 
-        buf.extend(msg.as_bytes());
+      buf.extend(frame.as_bytes());
+      Ok(())
+      // loop {
+      //     return Ok(())
+        // let gen_res = match &frame {
+        //   &Frame::ProtocolHeader => {
+        //     gen_protocol_header((buf, 0)).map(|tup| tup.1)
+        //   },
+        //   &Frame::Heartbeat(_) => {
+        //     gen_heartbeat_frame((buf, 0)).map(|tup| tup.1)
+        //   },
+        //   &Frame::Method(channel, ref method) => {
+        //     gen_method_frame((buf, 0), channel, method).map(|tup| tup.1)
+        //   },
+        //   &Frame::Header(channel_id, class_id, ref header) => {
+        //     gen_content_header_frame((buf, 0), channel_id, class_id, header.body_size).map(|tup| tup.1)
+        //   },
+        //   &Frame::Body(channel_id, ref data) => {
+        //     gen_content_body_frame((buf, 0), channel_id, data).map(|tup| tup.1)
+        //   }
+        // };
 
-        Ok(())
+        // match gen_res {
+        //   Ok(sz) => {
+        //     buf.truncate(sz);
+        //     trace!("serialized frame: {} bytes", sz);
+        //     return Ok(());
+        //   },
+        //   Err(e) => {
+        //     error!("error generating frame: {:?}", e);
+        //     match e {
+        //       GenError::BufferTooSmall(sz) => {
+        //         buf.extend(repeat(0).take(sz - length));
+        //         //return Err(Error::new(ErrorKind::InvalidData, "send buffer too small"));
+        //       },
+        //       GenError::InvalidOffset | GenError::CustomError(_) | GenError::NotYetImplemented => {
+        //         return Err(Error::new(ErrorKind::InvalidData, "could not generate"));
+        //       }
+        //     }
+        //   }
+        // }
+      // }
     }
 }
-
-pub struct LengthPrefixedJson{
-    _in: PhantomData<ServerMessage>,
-    _out: PhantomData<ClientMessage>,
-}
-
-impl LengthPrefixedJson {
-    pub fn new() -> LengthPrefixedJson{
-        LengthPrefixedJson {
-            _in: PhantomData,
-            _out: PhantomData,
-        }
-    }
-}
-
-impl Decoder for LengthPrefixedJson
-{
-    type Item = ServerMessage;
-    type Error = io::Error;
-
-    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, io::Error> {
-        let len = buf.len();
-        if len < 1 {
-            return Ok(None);
-        }
-
-        let buf = buf.split_to(len);
-        let s = str::from_utf8(buf.as_ref()).unwrap();
-
-        println!("IN: {:?}", s);
-        Ok(Some(ServerMessage(s.to_string())))
-    }
-}
-
-impl Encoder for LengthPrefixedJson {
-    type Item = ClientMessage;
-    type Error = io::Error;
-
-
-    fn encode(&mut self, msg: ClientMessage, buf: &mut BytesMut) -> io::Result<()> {
-        println!("OUT: {:?}", msg.0);
-        buf.extend(msg.0.as_bytes());
-
-        Ok(())
-    }
-}
-
-pub type ClientToServerCodec = LengthPrefixedJson;
-// pub type ServerToClientCodec = LengthPrefixedJson;
