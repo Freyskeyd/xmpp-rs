@@ -13,5 +13,3 @@ native-tls = "*"
 base64 = "*"
 log = "*"
 
-[replace]
-"tokio-tls:0.1.2" = { path = '../../tokio-tls' }
