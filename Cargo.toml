@@ -28,7 +28,3 @@ path = "./client"
 
 [workspace]
 members = ["client/", "proto/", "server/"]
-
-
-[replace]
-"tokio-tls:0.1.2" = { path = '../tokio-tls' }
