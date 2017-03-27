@@ -1,27 +1,26 @@
 extern crate xmpp_client;
+extern crate xmpp_proto;
 extern crate tokio_core;
 extern crate futures;
+extern crate env_logger;
+extern crate log;
 
-use std::net::TcpStream;
 use tokio_core::reactor::Core;
-use futures::stream::Stream;
+use futures::Future;
+use tokio_core::net::TcpStream;
 use futures::sync::mpsc;
-use std::thread;
 
 fn main() {
+    env_logger::init().unwrap();
+    let mut core = Core::new().unwrap();
 
-    let (tx, rx) = mpsc::channel(1000);
-    let domain = "127.0.0.1";
-    let client = xmpp_client::Client::new("user", "pass", "127.0.0.1", "example.com");
+    let handle = core.handle();
+    let addr = "127.0.0.1:5222".parse().unwrap();
 
-    client.connect(tx);
-
-    let mut core = Core::new().expect("Failed to create core");
-
-    let xx = rx.for_each(|s| {
-
-        Ok(())
-    });
-
-    core.run(xx).expect("Core failed to run");
+    core.run(
+        TcpStream::connect(&addr, &handle).and_then(|stream| {
+            xmpp_client::Client::connect(stream)
+        }).and_then(|mut client| {
+            Ok(())
+    })).unwrap();
 }
