@@ -33,6 +33,10 @@ To build xmpp-rs:
     - [ ] Ping IQ client
     - [ ] Send First presence
 
+## XEP
+
+- [ ] [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
+
 ## License
 
 xmpp-rs is primarily distributed under the terms of both the MIT license
