@@ -22,6 +22,16 @@ To build xmpp-rs:
 
 `cargo build --release`
 
+## Discuss && Get help
+
+## ROADMAP
+
+- [ ] Root implementation
+    - [x] TCP Connection
+    - [x] TLS Connection and negociation
+    - [ ] PLAIN authentication
+    - [ ] Ping IQ client
+    - [ ] Send First presence
 
 ## License
 
