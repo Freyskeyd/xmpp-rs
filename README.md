@@ -32,6 +32,8 @@ To build xmpp-rs:
 
 ## ROADMAP
 
+### Client roadmap
+
 - [ ] :rocket: Root implementation
     - [ ] **TCP Connection**: Base of all the interaction, we need to provide a way to connect to different kind of
       servers.
@@ -50,6 +52,12 @@ To build xmpp-rs:
     - [ ] **Presence**: Offer a way to manage user's presence.
     - [ ] **MUC**: Activation option to deal with groupchat.
     - [ ] **MAM**: Activation option to retrieve history.
+
+### Server roadmap
+
+- [ ] :rocket: Root implementation
+    - [ ] **TCP Connection**: Able to accept TCP connection from clients
+    - [ ] **Open stream reading**: Listen to an open `stream` stanza and respond to it
 
 ## XEP
 
