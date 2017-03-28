@@ -59,9 +59,13 @@ To build xmpp-rs:
     - [ ] **TCP Connection**: Able to accept TCP connection from clients
     - [ ] **Open stream reading**: Listen to an open `stream` stanza and respond to it
 
-## XEP
+## XEPs
 
 - [ ] [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
+- [ ] [XEP-0004: Data Forms](https://xmpp.org/extensions/xep-0004.html)
+- [ ] [XEP-0030: Service Discovery](https://xmpp.org/extensions/xep-0030.html)
+- [ ] [XEP-0048: Bookmarks](https://xmpp.org/extensions/xep-0048.html)
+- [ ] [XEP-0049: Private XML Storage](https://xmpp.org/extensions/xep-0049.html)
 
 ## License
 

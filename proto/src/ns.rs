@@ -1,3 +1,7 @@
-pub const INITIAL_STREAM: &'static str = "<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' xmlns='jabber:client'>";
-
-pub const AUTH: &'static str = "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>";
+pub const CLIENT: &'static str = "jabber:client";
+pub const SERVER: &'static str = "jabber:server";
+pub const STREAM: &'static str = "http://etherx.jabber.org/streams";
+pub const TLS: &'static str = "urn:ietf:params:xml:ns:xmpp-tls";
+pub const SASL: &'static str = "urn:ietf:params:xml:ns:xmpp-sasl";
+pub const BIND: &'static str = "urn:ietf:params:xml:ns:xmpp-bind";
+pub const STANZAS: &'static str = "urn:ietf:params:xml:ns:xmpp-stanzas";

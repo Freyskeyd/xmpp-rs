@@ -1,6 +1,8 @@
 use std::collections::{VecDeque};
 use std::io::Result;
-use ::ns;
+use events;
+use ns;
+use config::XMPPConfig;
 use base64::{encode};
 use std::str;
 use credentials::Credentials;
@@ -46,22 +48,24 @@ pub enum ConnectingState {
 #[derive(Clone,Debug,PartialEq)]
 pub struct Connection {
     pub state: ConnectionState,
+    config: XMPPConfig,
     credentials: Option<Credentials>,
     /// list of message to send
     pub frame_queue:       VecDeque<String>,
 }
 
 impl Connection {
-    pub fn new() -> Connection {
+    pub fn new(config: XMPPConfig) -> Connection {
         Connection {
             state: ConnectionState::Initial,
             credentials: None,
+            config: config,
             frame_queue: VecDeque::new()
         }
     }
 
     pub fn connect(&mut self) -> Result<ConnectionState> {
-        self.frame_queue.push_back(ns::INITIAL_STREAM.to_string());
+        self.frame_queue.push_back(events::OpenStreamEvent::new(&self.config).compute());
 
         Ok(ConnectionState::Connecting(ConnectingState::SentInitialStreamHeader))
     }
@@ -75,7 +79,8 @@ impl Connection {
     }
 
     pub fn start_tls(&mut self) {
-        self.frame_queue.push_back("<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' version='1.0'>".to_string());
+        let event = events::OpenStreamEvent::new(&self.config);
+        self.frame_queue.push_back(event.compute());
     }
 
     pub fn handle_frame(&mut self, f: String) {
@@ -87,7 +92,7 @@ impl Connection {
 
             if f.contains("starttls") {
                 self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStreamFeatures);
-                self.frame_queue.push_back(ns::AUTH.to_string());
+                self.frame_queue.push_back(events::StartTlsEvent::new(&self.config).compute());
             }
             if f.contains("PLAIN") {
                 self.state = ConnectionState::Connecting(ConnectingState::ReceivedAuthenticatedFeatures);
@@ -149,7 +154,6 @@ impl Connection {
 //     use futures::Future;
 //     use futures::future;
 //     use std::thread;
-//     use super::{XMPPTransport, XMPPCodec, ConnectingState, ConnectionState};
 
 //     macro_rules! t {
 //         ($e:expr) => {

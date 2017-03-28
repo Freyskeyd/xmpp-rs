@@ -13,6 +13,7 @@ use tokio_tls::TlsStream;
 use native_tls::TlsConnector;
 use xmpp_proto::connection::Connection;
 use xmpp_proto::stream::XMPPStream;
+use xmpp_proto::config::XMPPConfig;
 use futures::Stream;
 
 #[derive(Clone)]
@@ -21,7 +22,8 @@ pub struct Client {
 }
 impl Client {
     pub fn connect(stream: TcpStream) -> Box<Future<Item=Client, Error=io::Error>> {
-        let mut connection = Connection::new();
+        let mut config = XMPPConfig::new();
+        let mut connection = Connection::new(config);
         Box::new(XMPPTransport::connect(XMPPStream::Tcp(stream.framed(XMPPCodec)), connection)
                  .and_then(|transport| {
                      let builder = TlsConnector::builder().unwrap();
