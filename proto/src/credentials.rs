@@ -3,8 +3,8 @@ use std::str::FromStr;
 
 #[derive(Clone,Debug,PartialEq)]
 pub struct Credentials {
-    jid: Jid,
-    password: String,
+    pub jid: Jid,
+    pub password: String,
 }
 
 impl Default for Credentials {

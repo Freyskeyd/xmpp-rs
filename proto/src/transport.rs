@@ -2,6 +2,7 @@
 
 use stream::XMPPStream;
 use std::io;
+use futures::future;
 use futures::{Async,Poll,Sink,Stream,StartSend,Future};
 use connection::{ConnectionState, ConnectingState, Connection};
 
@@ -46,6 +47,13 @@ impl XMPPTransport
         Box::new(connector)
     }
 
+    pub fn stream_poll(&mut self) {
+        match self.stream {
+            XMPPStream::Tcp(ref mut s) => s.poll(),
+            XMPPStream::Tls(ref mut s) => s.poll()
+        };
+    }
+
     pub fn send_frames(&mut self) {
         //FIXME: find a way to use a future here
         while let Some(f) = self.connection.next_frame() {
@@ -58,6 +66,17 @@ impl XMPPTransport
             }
         }
         //self.upstream.poll_complete();
+    }
+
+    pub fn send_frame(&mut self, s: String) -> Box<Future<Item = (), Error = io::Error>> {
+        Box::new(match self.stream {
+            XMPPStream::Tls(ref mut stream) => {
+                stream.start_send(s);
+                stream.poll_complete();
+                future::ok(())
+            },
+            XMPPStream::Tcp(_) => panic!("")
+        })
     }
 
     pub fn handle_frames(&mut self) {
@@ -133,7 +152,7 @@ impl Future for XMPPTransportConnector
 
         match value {
             Some(frame) => {
-                trace!("got frame: {:?}", frame);
+                println!("got frame: {:?}", frame);
                 transport.connection.handle_frame(frame);
                 while let Some(f) = transport.connection.next_frame() {
                     if f.contains("starttls") {
@@ -195,7 +214,7 @@ impl Stream for XMPPTransport
         }) {
             Some(frame) => {
                 trace!("XMPPTransport received frame: {:?}", frame);
-                //try!(self.poll_complete());
+                try!(self.poll_complete());
                 return Ok(Async::Ready(Some(frame)))
             },
             None => {

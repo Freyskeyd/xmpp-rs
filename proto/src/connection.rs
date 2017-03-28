@@ -1,6 +1,8 @@
 use std::collections::{VecDeque};
 use std::io::Result;
-use ::ns;
+use events;
+use jid::Jid;
+use config::XMPPConfig;
 use base64::{encode};
 use std::str;
 use credentials::Credentials;
@@ -46,22 +48,26 @@ pub enum ConnectingState {
 #[derive(Clone,Debug,PartialEq)]
 pub struct Connection {
     pub state: ConnectionState,
-    credentials: Option<Credentials>,
+    config: XMPPConfig,
+    pub credentials: Option<Credentials>,
     /// list of message to send
     pub frame_queue:       VecDeque<String>,
+    pub input_queue:       VecDeque<String>,
 }
 
 impl Connection {
-    pub fn new() -> Connection {
+    pub fn new(config: XMPPConfig) -> Connection {
         Connection {
             state: ConnectionState::Initial,
             credentials: None,
-            frame_queue: VecDeque::new()
+            config: config,
+            frame_queue: VecDeque::new(),
+            input_queue: VecDeque::new()
         }
     }
 
     pub fn connect(&mut self) -> Result<ConnectionState> {
-        self.frame_queue.push_back(ns::INITIAL_STREAM.to_string());
+        self.frame_queue.push_back(events::OpenStreamEvent::new(&self.config).compute());
 
         Ok(ConnectionState::Connecting(ConnectingState::SentInitialStreamHeader))
     }
@@ -70,24 +76,46 @@ impl Connection {
         self.frame_queue.pop_front()
     }
 
+    pub fn next_input_frame(&mut self) -> Option<String> {
+        self.input_queue.pop_front()
+    }
+
+    pub fn add_input_frame(&mut self, f: String) {
+        self.input_queue.push_back(f)
+    }
+
     pub fn add_frame(&mut self, f: String) {
         self.frame_queue.push_back(f)
     }
 
     pub fn start_tls(&mut self) {
-        self.frame_queue.push_back("<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' version='1.0'>".to_string());
+        let event = events::OpenStreamEvent::new(&self.config);
+        self.frame_queue.push_back(event.compute());
+    }
+
+    pub fn send_presence(&mut self) {
+        match self.credentials {
+            Some(ref c) => {
+                let p = format!("<presence from='{}' />", c.jid);
+                self.frame_queue.push_back(p);
+            },
+            None => {}
+        };
     }
 
     pub fn handle_frame(&mut self, f: String) {
         if f.contains("result") {
             self.state = ConnectionState::Connected;
+            let jid_split = f.split("<jid>").collect::<Vec<&str>>();
+            let jid_split_next = jid_split[1].split("</jid>").collect::<Vec<&str>>();
+            self.credentials = Some(Credentials {jid: Jid::from_full_jid(jid_split_next[0]), password: "tt".to_string()});
         }
         if f.contains("stream:features") {
             self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStream);
 
             if f.contains("starttls") {
                 self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStreamFeatures);
-                self.frame_queue.push_back(ns::AUTH.to_string());
+                self.frame_queue.push_back(events::StartTlsEvent::new(&self.config).compute());
             }
             if f.contains("PLAIN") {
                 self.state = ConnectionState::Connecting(ConnectingState::ReceivedAuthenticatedFeatures);
@@ -110,6 +138,8 @@ impl Connection {
             self.start_tls();
         } else if f.contains("success") {
             self.frame_queue.push_back("<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='{}' version='1.0'>".to_string());
+        } else if self.state == ConnectionState::Connected {
+            self.add_input_frame(f);
         }
 
         // match f {
@@ -149,7 +179,6 @@ impl Connection {
 //     use futures::Future;
 //     use futures::future;
 //     use std::thread;
-//     use super::{XMPPTransport, XMPPCodec, ConnectingState, ConnectionState};
 
 //     macro_rules! t {
 //         ($e:expr) => {

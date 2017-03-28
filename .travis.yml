@@ -3,3 +3,8 @@ rust:
   - stable
   - beta
   - nightly
+env:
+  - TEST_DIR=client
+  - TEST_DIR=proto
+  - TEST_DIR=server
+script: cd $TEST_DIR && cargo build --verbose && cargo test --verbose
