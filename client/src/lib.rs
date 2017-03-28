@@ -1,4 +1,4 @@
-#[macro_use] extern crate log;
+extern crate log;
 extern crate xmpp_proto;
 extern crate base64;
 extern crate futures;

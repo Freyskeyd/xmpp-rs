@@ -7,6 +7,9 @@ extern crate tokio_io;
 extern crate bytes;
 extern crate base64;
 
+pub mod default;
+pub mod config;
+pub mod events;
 pub mod jid;
 pub mod stream;
 pub mod codec;
