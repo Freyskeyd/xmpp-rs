@@ -1,10 +1,12 @@
 #![allow(unused_must_use)]
-
+use std::str;
 use stream::XMPPStream;
 use std::io;
 use futures::future;
 use futures::{Async,Poll,Sink,Stream,StartSend,Future};
 use connection::{ConnectionState, ConnectingState, Connection};
+
+
 
 pub struct XMPPTransport {
     pub stream: XMPPStream,
@@ -47,6 +49,24 @@ impl XMPPTransport
         Box::new(connector)
     }
 
+    pub fn send_presence(&mut self) -> Result<Async<Option<String>>, io::Error> {
+        self.connection.compile_presence();
+
+        match self.stream {
+            XMPPStream::Tcp(ref mut stream) => {
+                let f = self.connection.next_frame().unwrap();
+                stream.start_send(f);
+                stream.poll_complete();
+                stream.poll()
+            },
+            XMPPStream::Tls(ref mut stream) => {
+                let f = self.connection.next_frame().unwrap();
+                stream.start_send(f);
+                stream.poll_complete();
+                stream.poll()
+            }
+        }
+    }
     pub fn stream_poll(&mut self) {
         match self.stream {
             XMPPStream::Tcp(ref mut s) => s.poll(),
@@ -65,7 +85,6 @@ impl XMPPTransport
                 XMPPStream::Tcp(_) => panic!("")
             }
         }
-        //self.upstream.poll_complete();
     }
 
     pub fn send_frame(&mut self, s: String) -> Box<Future<Item = (), Error = io::Error>> {
@@ -129,8 +148,7 @@ impl Future for XMPPTransportConnector
             return Ok(Async::Ready(transport))
         }
 
-        trace!("waiting before poll");
-        let value = match match transport.stream {
+        while let Some(f) = match match transport.stream {
             XMPPStream::Tcp(ref mut stream) => stream.poll(),
             XMPPStream::Tls(ref mut stream) => stream.poll(),
         } {
@@ -147,62 +165,39 @@ impl Future for XMPPTransportConnector
             Err(e) => {
                 error!("stream poll got error: {:?}", e);
                 return Err(From::from(e));
-            },
-        };
-
-        match value {
-            Some(frame) => {
-                println!("got frame: {:?}", frame);
-                transport.connection.handle_frame(frame);
-                while let Some(f) = transport.connection.next_frame() {
-                    if f.contains("starttls") {
-                        transport.connection.state = ConnectionState::Connecting(ConnectingState::SentAuthenticationMechanism)
-                    }
-                    if f.contains("stream:stream") && transport.connection.state == ConnectionState::Connecting(ConnectingState::ReceivedProceedCommand) {
-                        return Ok(Async::Ready(transport));
-                    }
-
-                    match transport.stream {
-                        XMPPStream::Tcp(ref mut stream) => {
-                            stream.start_send(f);
-                            stream.poll_complete()
-                        },
-                        XMPPStream::Tls(ref mut stream) => {
-                            stream.start_send(f);
-                            stream.poll_complete()
-                        }
-                    };
-
+            }
+        } {
+            transport.connection.handle_frame(f);
+            while let Some(fr) = transport.connection.next_frame() {
+                if fr.contains("starttls") {
+                    transport.connection.state = ConnectionState::Connecting(ConnectingState::SentAuthenticationMechanism)
+                }
+                if fr.contains("stream:stream") && transport.connection.state == ConnectionState::Connecting(ConnectingState::ReceivedProceedCommand) {
+                    return Ok(Async::Ready(transport));
                 }
 
                 match transport.stream {
-                    XMPPStream::Tcp(ref mut stream) => stream.poll_complete(),
-                    XMPPStream::Tls(ref mut stream) => stream.poll_complete(),
+                    XMPPStream::Tcp(ref mut stream) => {
+                        stream.start_send(fr);
+                        stream.poll_complete()
+                    },
+                    XMPPStream::Tls(ref mut stream) => {
+                        stream.start_send(fr);
+                        stream.poll_complete()
+                    }
                 };
-                if transport.connection.state == ConnectionState::Connected {
-                    return Ok(Async::Ready(transport))
-                } else {
-                    trace!("Not Ready!");
-                    match transport.stream {
-                        XMPPStream::Tcp(ref mut stream) => stream.poll(),
-                        XMPPStream::Tls(ref mut stream) => stream.poll(),
-                    };
-                    self.transport = Some(transport);
-                    return Ok(Async::NotReady)
-                }
-            },
-            e => {
-                error!("did not get a frame? -> {:?}", e);
-
-                self.transport = Some(transport);
-                return Ok(Async::NotReady)
             }
-        }
+            if transport.connection.state == ConnectionState::Connected {
+                return Ok(Async::Ready(transport))
+            }
+        };
+
+        self.transport =  Some(transport);
+        Ok(Async::NotReady)
     }
 }
 
 impl Stream for XMPPTransport
-// where T: AsyncRead
 {
     type Item = String;
     type Error = io::Error;
@@ -226,7 +221,6 @@ impl Stream for XMPPTransport
 }
 
 impl Sink for XMPPTransport
-// where T: AsyncWrite
 {
     type SinkItem = String;
     type SinkError = io::Error;
