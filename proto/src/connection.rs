@@ -93,7 +93,7 @@ impl Connection {
         self.frame_queue.push_back(event.compute());
     }
 
-    pub fn send_presence(&mut self) {
+    pub fn compile_presence(&mut self) {
         match self.credentials {
             Some(ref c) => {
                 let p = format!("<presence from='{}' />", c.jid);
@@ -138,6 +138,9 @@ impl Connection {
             self.start_tls();
         } else if f.contains("success") {
             self.frame_queue.push_back("<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='{}' version='1.0'>".to_string());
+
+        } else if f.contains("bind_") {
+            trace!("binded");
         } else if self.state == ConnectionState::Connected {
             self.add_input_frame(f);
         }
@@ -166,56 +169,3 @@ impl Connection {
         // };
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use std::net::TcpListener;
-//     use tokio_io::{AsyncRead,AsyncWrite};
-//     use tokio_io::codec::{Framed};
-//     use tokio_core::reactor::Core;
-//     use tokio_core::net::TcpStream;
-//     use std::net::SocketAddr;
-//     use std::io::{Read,Write};
-//     use futures::Future;
-//     use futures::future;
-//     use std::thread;
-
-//     macro_rules! t {
-//         ($e:expr) => {
-//             match $e {
-//                 Ok(t) => t,
-//                 Err(e) => panic!("received error for `{}`: {}", stringify!($e), e),
-//             }
-//         }
-//     }
-
-//     #[test]
-//     fn listen_localhost() {
-//         let socket_addr:SocketAddr = "127.0.0.1:5222".parse().unwrap();
-//         let listener = t!(TcpListener::bind(&socket_addr));
-
-//         let _t = thread::spawn(move || {
-//             let mut core = Core::new().unwrap();
-//             let handler = core.handle();
-
-//             core.run(
-//                 TcpStream::connect(&socket_addr, &handler)
-//                 .and_then(|stream| XMPPTransport::connect(stream.framed(XMPPCodec)))
-//                 .and_then(|transport| {
-//                     Ok(())
-//                 })
-//                 ).unwrap();
-
-//             // connection.connect()
-//         });
-
-//         let mut stream = t!(listener.accept()).0;
-//         let mut buf = Vec::new();
-//         t!(stream.read_to_end(&mut buf));
-//         assert!(String::from_utf8(buf).unwrap() == "hello");
-
-//         let result = _t.join();
-
-//         assert!(!result.is_err());
-//     }
-// }

@@ -20,8 +20,7 @@ pub struct Client {
     transport: Arc<Mutex<XMPPTransport>>,
 }
 impl Client {
-    pub fn connect(stream: TcpStream) -> Box<Future<Item=Client, Error=io::Error>> {
-        let config = XMPPConfig::new();
+    pub fn connect(stream: TcpStream, config: XMPPConfig) -> Box<Future<Item=Client, Error=io::Error>> {
         let connection = Connection::new(config);
         Box::new(XMPPTransport::connect(XMPPStream::Tcp(stream.framed(XMPPCodec)), connection)
                  .and_then(|transport| {
@@ -51,16 +50,17 @@ impl Client {
     }
 
     pub fn send_presence(&self) -> Box<Future<Item = (), Error = io::Error>> {
-        if let Ok(mut transport) = self.transport.lock() {
-            transport.connection.send_presence();
-            transport.send_frames();
-            transport.handle_frames();
+      if let Ok(mut transport) = self.transport.lock() {
+        transport.send_presence()
+          .and_then(|_| {
 
-            Box::new(future::ok(()))
-        } else {
-            panic!("")
-        }
+            Ok(Box::new(future::ok(())))
+          }).unwrap()
+      } else {
+        panic!("")
+      }
     }
+
     pub fn send(&mut self, f: String) -> Box<Future<Item = (), Error = io::Error>> {
         if let Ok(mut transport) = self.transport.lock() {
             transport.send_frame(f)
