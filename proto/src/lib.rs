@@ -6,6 +6,9 @@ extern crate tokio_tls;
 extern crate tokio_io;
 extern crate bytes;
 extern crate base64;
+#[macro_use] extern crate lazy_static;
+extern crate regex;
+
 
 pub mod default;
 pub mod config;
@@ -18,6 +21,7 @@ pub mod connection;
 pub mod ns;
 pub mod transport;
 pub mod credentials;
+pub mod parser;
 
 #[cfg(test)]
 mod tests {

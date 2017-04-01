@@ -19,6 +19,8 @@ native-tls = "0.1"
 base64 = "0.4.0"
 log = "*"
 env_logger = "*"
+regex = "0.2"
+lazy_static = "0.2.5"
 
 [dev-dependencies]
 cursive = "0.3.7"
