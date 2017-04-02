@@ -20,8 +20,7 @@ pub struct Client {
     transport: Arc<Mutex<XMPPTransport>>,
 }
 impl Client {
-    pub fn connect(stream: TcpStream) -> Box<Future<Item=Client, Error=io::Error>> {
-        let config = XMPPConfig::new();
+    pub fn connect(stream: TcpStream, config: XMPPConfig) -> Box<Future<Item=Client, Error=io::Error>> {
         let connection = Connection::new(config);
         Box::new(XMPPTransport::connect(XMPPStream::Tcp(stream.framed(XMPPCodec)), connection)
                  .and_then(|transport| {
