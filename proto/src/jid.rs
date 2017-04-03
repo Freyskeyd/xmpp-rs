@@ -10,17 +10,9 @@ pub struct Jid {
     resource: Option<String>
 }
 
-impl FromStr for Jid {
-    type Err = ParseError;
 
-    fn from_str(input: &str) -> Result<Self, ParseError> {
-        Ok(Jid {
-            node: None,
-            domain: input.to_string(),
-            resource: None
-        })
-    }
-}
+
+
 
 impl Jid {
     pub fn from_full_jid(jid: &str) -> Jid {
@@ -64,7 +56,32 @@ impl fmt::Display for Jid {
         Ok(())
     }
 }
+impl FromStr for Jid {
+    type Err = ParseError;
 
+    fn from_str(input: &str) -> Result<Self, ParseError> {
+        Ok(Jid {
+            node: None,
+            domain: input.to_string(),
+            resource: None
+        })
+    }
+}
+// impl ToString for Jid {
+//     fn to_string(&self) -> String {
+//         let node = match self.node {
+//             Some(s) => format!("{}@", s),
+//             None => String::new()
+//         };
+
+//         let resource = match self.resource {
+//             Some(r) => format!("/{}", r),
+//             None => String::new()
+//         };
+
+//         format!("{node}{domain}{resource}", node=node, domain=self.domain, resource=resource)
+//     }
+// }
 #[cfg(test)]
 mod tests {
     use super::*;
