@@ -12,8 +12,6 @@ use futures::Future;
 use futures::Stream;
 use tokio_core::net::TcpStream;
 use xmpp_proto::config::XMPPConfig;
-use xmpp_proto::credentials::Credentials;
-use xmpp_proto::jid::Jid;
 
 fn main() {
     env_logger::init().unwrap();
@@ -21,29 +19,35 @@ fn main() {
     let mut core = Core::new().unwrap();
 
     let handle = core.handle();
+
     let addr = "127.0.0.1:5222".parse().unwrap();
-    // let addrs: Vec<SocketAddr> = "xmpp-qa.iadvize.com:5222".to_socket_addrs().unwrap().collect();
-    // let addr = addrs[0];
 
     let config = XMPPConfig::new()
-          .set_domain("example.com");
+        .set_domain("example.com");
 
-    let credentials = Credentials {
-        jid: Jid::from_full_jid("alice@example.com"),
-        password: String::from("test")
-    };
     core.run(
         TcpStream::connect(&addr, &handle).and_then(|stream| {
-            xmpp_client::Client::connect(stream, config, Some(credentials))
+            xmpp_client::Client::connect(stream, config)
         }).and_then(|mut client| {
-            println!("Connected!");
+            let c = client.clone();
             client.send_presence()
                 .and_then(move |_| {
                     client.handle()
                         .and_then(|stream| {
-                            stream.for_each(|message| {
+                            stream.for_each(move |message| {
                                 // Deal with Incomming Message
-                                println!("Message: {:?}", message);
+                                if message.contains("body") {
+                                    println!("Message: {:?}", message);
+                                    let x = c.send_presence().map(|_| {
+                                    // ... after which we'll print what happened
+                                        println!("wrote bytes");
+                                    }).map_err(|err| {
+                                        println!("IO error {:?}", err)
+                                    });
+                                    handle.spawn(x);
+                                } else {
+                                    println!("No Body");
+                                }
                                 Ok(())
                             })
                         })

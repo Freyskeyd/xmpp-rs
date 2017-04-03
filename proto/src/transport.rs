@@ -1,4 +1,6 @@
 #![allow(unused_must_use)]
+use events::Event;
+use events::NonStanzaEvent;
 use std::str;
 use stream::XMPPStream;
 use std::io;
@@ -49,7 +51,7 @@ impl XMPPTransport
         Box::new(connector)
     }
 
-    pub fn send_presence(&mut self) -> Result<Async<Option<String>>, io::Error> {
+    pub fn send_presence(&mut self) -> Result<Async<Option<Event>>, io::Error> {
         self.connection.compile_presence();
 
         match self.stream {
@@ -87,7 +89,7 @@ impl XMPPTransport
         }
     }
 
-    pub fn send_frame(&mut self, s: String) -> Box<Future<Item = (), Error = io::Error>> {
+    pub fn send_frame(&mut self, s: Event) -> Box<Future<Item = (), Error = io::Error>> {
         Box::new(match self.stream {
             XMPPStream::Tls(ref mut stream) => {
                 stream.start_send(s);
@@ -135,7 +137,6 @@ pub struct XMPPTransportConnector {
 
 impl Future for XMPPTransportConnector
 {
-
     type Item  = XMPPTransport;
     type Error = io::Error;
 
@@ -169,11 +170,16 @@ impl Future for XMPPTransportConnector
         } {
             transport.connection.handle_frame(f);
             while let Some(fr) = transport.connection.next_frame() {
-                if fr.contains("starttls") {
-                    transport.connection.state = ConnectionState::Connecting(ConnectingState::SentAuthenticationMechanism)
-                }
-                if fr.contains("stream:stream") && transport.connection.state == ConnectionState::Connecting(ConnectingState::ReceivedProceedCommand) {
-                    return Ok(Async::Ready(transport));
+                match fr {
+                    Event::NonStanza(NonStanzaEvent::StartTls(_), _) => {
+                        transport.connection.state = ConnectionState::Connecting(ConnectingState::SentAuthenticationMechanism)
+                    },
+                    Event::NonStanza(NonStanzaEvent::OpenStream(_), _) => {
+                        if transport.connection.state == ConnectionState::Connecting(ConnectingState::ReceivedProceedCommand) {
+                            return Ok(Async::Ready(transport));
+                        }
+                    },
+                    _ => {}
                 }
 
                 match transport.stream {
@@ -199,22 +205,22 @@ impl Future for XMPPTransportConnector
 
 impl Stream for XMPPTransport
 {
-    type Item = String;
+    type Item = Event;
     type Error = io::Error;
 
-    fn poll(&mut self) -> Poll<Option<String>, io::Error> {
+    fn poll(&mut self) -> Poll<Option<Self::Item>, io::Error> {
         match try_ready!(match self.stream {
             XMPPStream::Tcp(ref mut stream) => stream.poll(),
             XMPPStream::Tls(ref mut stream) => stream.poll(),
         }) {
             Some(frame) => {
-                trace!("XMPPTransport received frame: {:?}", frame);
+                info!("XMPPTransport received frame: {:?}", frame);
                 try!(self.poll_complete());
-                return Ok(Async::Ready(Some(frame)))
+                Ok(Async::Ready(Some(frame)))
             },
             None => {
                 trace!("XMPPTransport returned NotReady");
-                return Ok(Async::NotReady)
+                Ok(Async::NotReady)
             }
         }
     }
@@ -222,10 +228,11 @@ impl Stream for XMPPTransport
 
 impl Sink for XMPPTransport
 {
-    type SinkItem = String;
+    type SinkItem = Event;
     type SinkError = io::Error;
 
-    fn start_send(&mut self, item: String) -> StartSend<String, io::Error> {
+    fn start_send(&mut self, item: Event) -> StartSend<Event, io::Error> {
+        trace!("Start send this item: {:?}", item);
         match self.stream {
             XMPPStream::Tcp(ref mut stream) => stream.start_send(item),
             XMPPStream::Tls(ref mut stream) => stream.start_send(item),
