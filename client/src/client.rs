@@ -14,78 +14,80 @@ use xmpp_proto::connection::Connection;
 use xmpp_proto::stream::XMPPStream;
 use xmpp_proto::config::XMPPConfig;
 use futures::Stream;
+use xmpp_proto::credentials::Credentials;
+use xmpp_proto::events::Event;
 
 #[derive(Clone)]
 pub struct Client {
-    transport: Arc<Mutex<XMPPTransport>>,
+  transport: Arc<Mutex<XMPPTransport>>,
 }
 impl Client {
-    pub fn connect(stream: TcpStream, config: XMPPConfig) -> Box<Future<Item=Client, Error=io::Error>> {
-        let connection = Connection::new(config);
-        Box::new(XMPPTransport::connect(XMPPStream::Tcp(stream.framed(XMPPCodec)), connection)
-                 .and_then(|transport| {
-                     let builder = TlsConnector::builder().unwrap();
-                     let cx = builder.build().unwrap();
+  pub fn connect(stream: TcpStream, config: XMPPConfig, credentials: Option<Credentials>) -> Box<Future<Item=Client, Error=io::Error>> {
+    let connection = Connection::new(&config, credentials);
+    Box::new(XMPPTransport::connect(XMPPStream::Tcp(stream.framed(XMPPCodec)), connection)
+             .and_then(move |transport| {
+               let builder = TlsConnector::builder().unwrap();
+               let cx = builder.build().unwrap();
 
-                     let connection = transport.connection;
-                     let stream = match transport.stream {
-                         XMPPStream::Tcp(stream) => stream.into_inner(),
-                         XMPPStream::Tls(_) => panic!("")
-                     };
+               let connection = transport.connection;
+               let stream = match transport.stream {
+                 XMPPStream::Tcp(stream) => stream.into_inner(),
+                 XMPPStream::Tls(_) => panic!("")
+               };
 
-                     cx.connect_async("127.0.0.1", stream).map_err(|e| {
-                         io::Error::new(io::ErrorKind::Other, e)
-                     }).map(|socket| (connection, socket))
-                 })
-                 .and_then(|(connection, s)| {
-                     XMPPTransport::connect(XMPPStream::Tls(s.framed(XMPPCodec)), connection)
-                 }).and_then(|transport| {
+               cx.connect_async(config.get_domain(), stream).map_err(|e| {
+                 io::Error::new(io::ErrorKind::Other, e)
+               }).map(|socket| (connection, socket))
+             })
+             .and_then(|(connection, s)| {
+               XMPPTransport::connect(XMPPStream::Tls(s.framed(XMPPCodec)), connection)
+             }).and_then(|transport| {
 
-                     let client = Client {
-                         transport: Arc::new(Mutex::new(transport)),
-                     };
+               let client = Client {
+                 transport: Arc::new(Mutex::new(transport)),
+               };
 
-                     future::ok(client)
-                 }))
+               future::ok(client)
+             }))
+  }
+
+  pub fn send_presence(&self) -> Box<Future<Item = (), Error = io::Error>> {
+    if let Ok(mut transport) = self.transport.lock() {
+      transport.send_presence()
+        .and_then(|_| {
+
+          Ok(Box::new(future::ok(())))
+        }).unwrap()
+    } else {
+      panic!("")
     }
+  }
 
-    pub fn send_presence(&self) -> Box<Future<Item = (), Error = io::Error>> {
-      if let Ok(mut transport) = self.transport.lock() {
-        transport.send_presence()
-          .and_then(|_| {
-
-            Ok(Box::new(future::ok(())))
-          }).unwrap()
-      } else {
-        panic!("")
-      }
+  pub fn send(&mut self, f: Event) -> Box<Future<Item = (), Error = io::Error>> {
+    if let Ok(mut transport) = self.transport.lock() {
+      transport.send_frame(f)
+    } else {
+      panic!("")
     }
+  }
 
-    pub fn send(&mut self, f: String) -> Box<Future<Item = (), Error = io::Error>> {
-        if let Ok(mut transport) = self.transport.lock() {
-            transport.send_frame(f)
-        } else {
-            panic!("")
-        }
+  pub fn handle(&mut self) -> Box<Future<Item = Consumer, Error = io::Error>> {
+    let t = self.transport.clone();
+    if let Ok(mut transport) = self.transport.lock() {
+      transport.send_frames();
+      transport.handle_frames();
+
+      let consumer = Consumer {
+        transport: t.clone()
+      };
+
+      Box::new(wait_for_answer(t.clone()).map(move |_| {
+        consumer
+      }))
+    } else {
+      panic!("")
     }
-
-    pub fn handle(&mut self) -> Box<Future<Item = Consumer, Error = io::Error>> {
-        let t = self.transport.clone();
-        if let Ok(mut transport) = self.transport.lock() {
-            transport.send_frames();
-            transport.handle_frames();
-
-            let consumer = Consumer {
-                transport: t.clone()
-            };
-
-            Box::new(wait_for_answer(t.clone()).map(move |_| {
-                consumer
-            }))
-        } else {
-            panic!("")
-        }
-    }
+  }
 }
 
 #[derive(Clone)]
@@ -94,20 +96,20 @@ pub struct Consumer{
 }
 
 impl Stream for Consumer {
-  type Item = String;
+  type Item = Event;
   type Error = io::Error;
 
-  fn poll(&mut self) -> Poll<Option<String>, io::Error> {
-    //trace!("consumer[{}] poll", self.consumer_tag);
+  fn poll(&mut self) -> Poll<Option<Event>, io::Error> {
+    trace!("consumer[{}] poll", self.consumer_tag);
     if let Ok(mut transport) = self.transport.try_lock() {
       transport.handle_frames();
       //FIXME: if the consumer closed, we should return Ok(Async::Ready(None))
       if let Some(message) = transport.connection.next_input_frame() {
-          transport.stream_poll();
-          Ok(Async::Ready(Some(message)))
+        transport.stream_poll();
+        Ok(Async::Ready(Some(message)))
       } else {
-          transport.stream_poll();
-          Ok(Async::NotReady)
+        transport.stream_poll();
+        Ok(Async::NotReady)
       }
     } else {
       //FIXME: return an error in case of mutex failure

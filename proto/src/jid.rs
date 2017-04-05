@@ -10,18 +10,6 @@ pub struct Jid {
     resource: Option<String>
 }
 
-impl FromStr for Jid {
-    type Err = ParseError;
-
-    fn from_str(input: &str) -> Result<Self, ParseError> {
-        Ok(Jid {
-            node: None,
-            domain: input.to_string(),
-            resource: None
-        })
-    }
-}
-
 impl Jid {
     pub fn from_full_jid(jid: &str) -> Jid {
         let mut node: Option<String> = None;
@@ -62,6 +50,17 @@ impl fmt::Display for Jid {
             write!(fmt, "/{}", resource)?;
         }
         Ok(())
+    }
+}
+impl FromStr for Jid {
+    type Err = ParseError;
+
+    fn from_str(input: &str) -> Result<Self, ParseError> {
+        Ok(Jid {
+            node: None,
+            domain: input.to_string(),
+            resource: None
+        })
     }
 }
 
