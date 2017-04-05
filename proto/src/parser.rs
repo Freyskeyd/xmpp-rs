@@ -10,33 +10,8 @@ use std::ops::Fn;
 use events::{OpenStream, StreamFeatures, Unknown, SuccessTls, ProceedTls};
 use std::str::FromStr;
 
-// #[derive(Debug)]
-// pub struct RawStanza {
-//     pub inner: String
-// }
-
-// #[derive(Debug)]
-// pub enum NonStanzaType {
-//     StreamOpen(RawStanza),
-//     StreamFeatures(RawStanza),
-//     ProceedTls(RawStanza),
-//     SuccessTls(RawStanza),
-// }
-
-// #[derive(Debug)]
-// pub enum StanzaType {
-//     Event(RawStanza),
-//     Iq(RawStanza),
-//     Presence(RawStanza),
-// }
-
-// #[derive(Debug)]
-// pub enum Event {
-//     Unknown(Event),
-//     NonStanza(Event),
-//     Stanza(Event)
-// }
 pub struct Parser;
+
 impl Parser {
     pub fn parse(f: &str) -> Option<Event> {
         let matches:Vec<_> = SET.matches(f).into_iter().collect();

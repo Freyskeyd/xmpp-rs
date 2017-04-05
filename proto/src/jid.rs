@@ -10,10 +10,6 @@ pub struct Jid {
     resource: Option<String>
 }
 
-
-
-
-
 impl Jid {
     pub fn from_full_jid(jid: &str) -> Jid {
         let mut node: Option<String> = None;
@@ -67,21 +63,7 @@ impl FromStr for Jid {
         })
     }
 }
-// impl ToString for Jid {
-//     fn to_string(&self) -> String {
-//         let node = match self.node {
-//             Some(s) => format!("{}@", s),
-//             None => String::new()
-//         };
 
-//         let resource = match self.resource {
-//             Some(r) => format!("/{}", r),
-//             None => String::new()
-//         };
-
-//         format!("{node}{domain}{resource}", node=node, domain=self.domain, resource=resource)
-//     }
-// }
 #[cfg(test)]
 mod tests {
     use super::*;

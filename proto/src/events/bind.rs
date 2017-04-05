@@ -88,10 +88,6 @@ impl Generic {
 
         self
     }
-
-    // pub fn parse_generic(&self) -> Event {
-
-    // }
 }
 
 impl FromStr for Generic {
@@ -113,6 +109,5 @@ impl FromStr for Generic {
 impl ToString for Generic {
     fn to_string(&self) -> String {
         String::new()
-        // format!("<iq type='{bind_type}' id='{id}'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>", id=self.id, bind_type=self.bind_type)
     }
 }

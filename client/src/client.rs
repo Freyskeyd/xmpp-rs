@@ -23,9 +23,9 @@ pub struct Client {
 }
 impl Client {
   pub fn connect(stream: TcpStream, config: XMPPConfig, credentials: Option<Credentials>) -> Box<Future<Item=Client, Error=io::Error>> {
-    let connection = Connection::new(config, credentials);
+    let connection = Connection::new(&config, credentials);
     Box::new(XMPPTransport::connect(XMPPStream::Tcp(stream.framed(XMPPCodec)), connection)
-             .and_then(|transport| {
+             .and_then(move |transport| {
                let builder = TlsConnector::builder().unwrap();
                let cx = builder.build().unwrap();
 
@@ -35,7 +35,7 @@ impl Client {
                  XMPPStream::Tls(_) => panic!("")
                };
 
-               cx.connect_async("127.0.0.1", stream).map_err(|e| {
+               cx.connect_async(config.get_domain(), stream).map_err(|e| {
                  io::Error::new(io::ErrorKind::Other, e)
                }).map(|socket| (connection, socket))
              })
@@ -100,7 +100,7 @@ impl Stream for Consumer {
   type Error = io::Error;
 
   fn poll(&mut self) -> Poll<Option<Event>, io::Error> {
-    //trace!("consumer[{}] poll", self.consumer_tag);
+    trace!("consumer[{}] poll", self.consumer_tag);
     if let Ok(mut transport) = self.transport.try_lock() {
       transport.handle_frames();
       //FIXME: if the consumer closed, we should return Ok(Async::Ready(None))

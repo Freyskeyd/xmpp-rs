@@ -1,27 +1,6 @@
 use config::XMPPConfig;
 use std::fmt::Debug;
 
-// #[derive(Debug)]
-// pub struct Event {
-//     pub inner: Box<EventTrait>,
-//     pub source: String
-// }
-
-// impl ToString for Event {
-//     fn to_string(&self) -> String {
-//         self.inner.to_string()
-//     }
-// }
-// impl Event {
-//     /// Creates an abstract event from a concrete event.
-//     pub fn new<M: EventTrait + 'static, S: ToString>(message: M, source: S) -> Event {
-//         Event {
-//             inner: Box::new(message),
-//             source: source.to_string()
-//         }
-//     }
-// }
-
 pub trait EventTrait: Debug + ToString + Clone {}
 
 mod open_stream;

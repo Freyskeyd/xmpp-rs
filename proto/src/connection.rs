@@ -58,11 +58,11 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(config: XMPPConfig, credentials: Option<Credentials>) -> Connection {
+    pub fn new(config: &XMPPConfig, credentials: Option<Credentials>) -> Connection {
         Connection {
             state: ConnectionState::Initial,
             credentials: credentials,
-            config: config,
+            config: config.clone(),
             frame_queue: VecDeque::new(),
             input_queue: VecDeque::new()
         }
@@ -111,9 +111,7 @@ impl Connection {
             Event::NonStanza(NonStanzaEvent::SuccessTls(_), _) => {
                 self.frame_queue.push_back(Event::NonStanza(NonStanzaEvent::OpenStream(OpenStream::new(&self.config)), String::new()));
             },
-            // },
             Event::NonStanza(NonStanzaEvent::StreamFeatures(_), source) => {
-                println!("source: {:?}", source);
                 if source.contains("starttls") {
                     self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStreamFeatures);
                     self.frame_queue.push_back(Event::NonStanza(NonStanzaEvent::StartTls(StartTls::new(&self.config)), String::new()));
@@ -166,7 +164,6 @@ impl Connection {
                     self.add_input_frame(f);
                 }
             }
-
         }
     }
 }
