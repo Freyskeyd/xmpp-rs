@@ -1,3 +1,4 @@
+#![allow(unused_must_use)]
 use futures::{Async,Poll};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -23,9 +24,9 @@ pub struct Client {
 }
 impl Client {
   pub fn connect(stream: TcpStream, config: XMPPConfig, credentials: Option<Credentials>) -> Box<Future<Item=Client, Error=io::Error>> {
-    let connection = Connection::new(config, credentials);
+    let connection = Connection::new(&config, credentials);
     Box::new(XMPPTransport::connect(XMPPStream::Tcp(stream.framed(XMPPCodec)), connection)
-             .and_then(|transport| {
+             .and_then(move |transport| {
                let builder = TlsConnector::builder().unwrap();
                let cx = builder.build().unwrap();
 
@@ -35,7 +36,7 @@ impl Client {
                  XMPPStream::Tls(_) => panic!("")
                };
 
-               cx.connect_async("127.0.0.1", stream).map_err(|e| {
+               cx.connect_async(config.get_domain(), stream).map_err(|e| {
                  io::Error::new(io::ErrorKind::Other, e)
                }).map(|socket| (connection, socket))
              })
@@ -47,8 +48,23 @@ impl Client {
                  transport: Arc::new(Mutex::new(transport)),
                };
 
+               if let Ok(mut transport) = client.transport.lock() {
+                 transport.handle_frames();
+               }
+
                future::ok(client)
              }))
+  }
+
+  pub fn send_ping(&self) -> Box<Future<Item = (), Error = io::Error>> {
+    if let Ok(mut transport) = self.transport.lock() {
+      transport.send_ping()
+        .and_then(|_| {
+          Ok(Box::new(future::ok(())))
+        }).unwrap()
+    } else {
+      panic!("")
+    }
   }
 
   pub fn send_presence(&self) -> Box<Future<Item = (), Error = io::Error>> {
@@ -63,6 +79,13 @@ impl Client {
     }
   }
 
+  pub fn get_jid(&self) -> Credentials {
+    if let Ok(mut transport) = self.transport.lock() {
+      transport.get_credentials()
+    } else {
+      panic!("")
+    }
+  }
   pub fn send(&mut self, f: Event) -> Box<Future<Item = (), Error = io::Error>> {
     if let Ok(mut transport) = self.transport.lock() {
       transport.send_frame(f)
@@ -100,7 +123,6 @@ impl Stream for Consumer {
   type Error = io::Error;
 
   fn poll(&mut self) -> Poll<Option<Event>, io::Error> {
-    //trace!("consumer[{}] poll", self.consumer_tag);
     if let Ok(mut transport) = self.transport.try_lock() {
       transport.handle_frames();
       //FIXME: if the consumer closed, we should return Ok(Async::Ready(None))

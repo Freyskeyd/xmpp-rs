@@ -7,9 +7,7 @@ use events::XMPPConfig;
 #[derive(Debug, Clone)]
 pub struct OpenStream {
     config: XMPPConfig,
-    // id: Option<String>,
     pub to: Option<String>,
-    // from: Option<String>,
     pub xmlns: String,
 }
 
