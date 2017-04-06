@@ -59,6 +59,7 @@ pub enum StanzaEvent {
 #[derive(Debug, Clone)]
 pub enum NonStanzaEvent {
     OpenStreamEvent(OpenStream),
+    CloseStreamEvent,
     ProceedTlsEvent(ProceedTls),
     SuccessTlsEvent(SuccessTls),
     StartTlsEvent(StartTls),

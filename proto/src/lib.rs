@@ -1,3 +1,6 @@
+#![deny(warnings)]
+//! Proto
+
 #[macro_use]extern crate log;
 extern crate futures;
 extern crate tokio_core;
@@ -10,19 +13,27 @@ extern crate base64;
 extern crate regex;
 extern crate elementtree;
 
-
-pub mod default;
-pub mod config;
+mod default;
+mod config;
 pub mod events;
-pub mod jid;
-pub mod stream;
-pub mod codec;
-pub mod stanza;
-pub mod connection;
-pub mod ns;
-pub mod transport;
-pub mod credentials;
-pub mod parser;
+mod jid;
+mod stream;
+mod codec;
+mod stanza;
+mod connection;
+mod ns;
+mod transport;
+mod credentials;
+mod parser;
+
+pub use parser::Parser;
+pub use config::XMPPConfig;
+pub use transport::XMPPTransport;
+pub use connection::Connection;
+pub use stream::XMPPStream;
+pub use codec::XMPPCodec;
+pub use credentials::Credentials;
+pub use jid::Jid;
 
 #[cfg(test)]
 mod tests {

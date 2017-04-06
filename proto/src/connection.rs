@@ -11,9 +11,7 @@ use events::IqType::*;
 use events::*;
 use std::str::FromStr;
 use ns;
-use std::sync::Arc;
 use futures::sync::oneshot::Sender;
-use std::sync::Mutex;
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum ConnectionState {
@@ -192,21 +190,9 @@ impl Connection {
                         }
                     } else if event.iq_type == "result" {
                         self.handle_iq(event.id.to_string(), Stanza(IqEvent(GenericIq(e.clone())), String::new()));
-                        // self.handle_frame(Stanza(IqEvent(GenericIq(event)), source));
                     }
                 }
             },
-            // Stanza(IqResponseEvent(iq), _) => {
-            //     println!("hey");
-            //     match iq {
-            //         PingIq(ping) => {
-            //             if self.iq_queue.contains_key(&ping.id) {
-            //                 self.iq_queue.insert(ping.id.to_string(), Some(PingIq(ping)));
-            //             }
-            //         },
-            //         _ => {},
-            //     }
-            // },
             _ => {
                 if self.state == ConnectionState::Connected {
                     self.add_input_frame(f);
@@ -218,7 +204,7 @@ impl Connection {
     fn handle_iq(&mut self, id: String, event: Event) {
         match self.iq_queue.remove(&id) {
             Some(tx) => {
-                tx.send(event);
+                let _ = tx.send(event);
             },
             None => {}
         }

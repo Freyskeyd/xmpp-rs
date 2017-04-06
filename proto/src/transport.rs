@@ -13,16 +13,19 @@ use futures::{Async,Poll,Sink,Stream,StartSend,Future};
 use connection::{ConnectionState, ConnectingState, Connection};
 use credentials::Credentials;
 use futures::sync::oneshot::Sender;
-use std::sync::Arc;
-use std::sync::Mutex;
 
+/// Deal with the communication process based on a Tcp/Tls stream
 pub struct XMPPTransport {
+    /// Current stream connected to xmpp
     pub stream: XMPPStream,
+    /// Connection state machine
     pub connection: Connection
 }
 
 impl XMPPTransport
 {
+    /// Deal with connection
+    /// TODO
     pub fn connect(upstream: XMPPStream, connection: Connection) -> Box<Future<Item=XMPPTransport, Error=io::Error>>
     {
 
@@ -58,11 +61,15 @@ impl XMPPTransport
     }
 
 
+    pub fn shutdown(&mut self) -> Result<Async<()>, io::Error> {
+        self.stream.shutdown()
+    }
+
+    /// Send a ping IQ and register the Receiver for the response IQ
     pub fn send_ping(&mut self, tx: Sender<Event>) {
         let ping = self.connection.compile_ping();
         let id = ping.id.to_string();
         let event = Stanza(IqRequestEvent(PingIq(ping)), String::new());
-        let e = event.clone();
         self.connection.iq_queue.insert(id.clone(),Box::new(tx));
 
         match self.stream {
@@ -79,7 +86,7 @@ impl XMPPTransport
         };
     }
 
-
+    /// Send the first presence to the stream
     pub fn send_presence(&mut self) -> Result<Async<Option<Event>>, io::Error> {
         self.connection.compile_presence();
 
@@ -99,12 +106,19 @@ impl XMPPTransport
         }
     }
 
+    /// Return the current credentials
+    ///
+    /// TODO
     pub fn get_credentials(&mut self) -> Credentials {
         match self.connection.credentials {
             Some(ref c) => c.clone(),
             None => panic!("")
         }
     }
+
+    /// Execute poll on the stream
+    ///
+    /// DRY
     pub fn stream_poll(&mut self) -> Result<Async<Option<Event>>, io::Error> {
         match self.stream {
             XMPPStream::Tcp(ref mut s) => s.poll(),
@@ -112,6 +126,7 @@ impl XMPPTransport
         }
     }
 
+    /// Send pendings Events to the stream
     pub fn send_frames(&mut self) {
         //FIXME: find a way to use a future here
         while let Some(f) = self.connection.next_frame() {
@@ -125,6 +140,7 @@ impl XMPPTransport
         }
     }
 
+    /// Send an Event to the stream
     pub fn send_frame(&mut self, s: Event) -> Box<Future<Item = (), Error = io::Error>> {
         Box::new(match self.stream {
             XMPPStream::Tls(ref mut stream) => {
@@ -136,6 +152,7 @@ impl XMPPTransport
         })
     }
 
+    /// TODO@
     pub fn handle_frames(&mut self) {
         loop {
             match self.poll() {
@@ -166,8 +183,9 @@ impl XMPPTransport
     }
 }
 
-
-pub struct XMPPTransportConnector {
+/// Struct use in the connection process
+struct XMPPTransportConnector {
+    /// Upstream transport used to etablish connection
     pub transport: Option<XMPPTransport>
 }
 
@@ -269,20 +287,6 @@ impl Stream for XMPPTransport
         };
 
         Ok(Async::NotReady)
-        // match match self.stream {
-        //     XMPPStream::Tcp(ref mut stream) => stream.poll(),
-        //     XMPPStream::Tls(ref mut stream) => stream.poll(),
-        // } {
-        //     Some(frame) => {
-        //         info!("XMPPTransport received frame: {:?}", frame);
-        //         try!(self.poll_complete());
-        //         Ok(Async::Ready(Some(frame)))
-        //     },
-        //     None => {
-        //         trace!("XMPPTransport returned NotReady");
-        //         Ok(Async::NotReady)
-        //     }
-        // }
     }
 }
 

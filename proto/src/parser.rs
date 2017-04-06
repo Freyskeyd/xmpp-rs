@@ -11,9 +11,22 @@ use std::ops::Fn;
 use events::{OpenStream, Presence, Message,StreamFeatures, Unknown, SuccessTls, ProceedTls};
 use std::str::FromStr;
 
+/// Used to parse incoming stanza into Event
+///
+/// # Examples
+/// ```
+/// use xmpp_proto::Parser;
+///
+/// match Parser::parse("<proceed xmlns='' xmlns:stream=''/>") {
+///     Some(_) => {}
+///     None => panic!("")
+/// };
+/// ```
 pub struct Parser;
 
 impl Parser {
+    /// Parse an incoming `stanza` and return matching event
+    ///
     pub fn parse(f: &str) -> Option<Event> {
         let matches:Vec<_> = SET.matches(f).into_iter().collect();
 
@@ -40,10 +53,11 @@ impl Parser {
 lazy_static! {
     static ref XML_R: &'static str = r"(<\?xm[^<]*>)";
     static ref STREAM_STREAM: &'static str = r"(<stream:stream[^<]*)";
+    static ref STREAM_CLOSE: &'static str = r"(</stream:stream>)";
     static ref STREAM_FEATURES: &'static str = r"(?i)(<stream:features>(.*?)(?:</stream:features>))";
     static ref PROCEED: &'static str = r"(<proceed[^<]*)";
     static ref SUCCESS: &'static str = r"(<success[^<]*)";
-    static ref IQ: &'static str = r"(?i)(<iq(.*?)(?:(</iq>|/>)))";
+    static ref IQ: &'static str = r"(?i)((<iq[^<]*/>|<iq(.*?)(?:</iq>)))";
     static ref PRESENCE: &'static str = r"(?i)(<presence(.*?)(?:/>))";
     static ref MESSAGE: &'static str = r"(?i)(<message(.*?)(?:</message>))";
 
@@ -62,6 +76,14 @@ lazy_static! {
                 Regex::new(&STREAM_STREAM).unwrap(),
                 Box::new(|c:&str| {
                     NonStanza(OpenStreamEvent(OpenStream::from_str(c).unwrap()), c.to_string())
+                })
+                as Box<Fn(&str) -> Event + Sync>
+                ));
+
+        m.push((*STREAM_CLOSE,
+                Regex::new(&STREAM_CLOSE).unwrap(),
+                Box::new(|c:&str| {
+                    NonStanza(CloseStreamEvent, c.to_string())
                 })
                 as Box<Fn(&str) -> Event + Sync>
                 ));
