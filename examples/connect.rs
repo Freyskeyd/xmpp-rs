@@ -1,27 +1,16 @@
 extern crate xmpp_client;
-extern crate xmpp_proto;
 extern crate tokio_core;
 extern crate futures;
 extern crate env_logger;
 extern crate log;
-extern crate unicode_width;
-extern crate cursive;
 
 use tokio_core::reactor::Core;
 use futures::Future;
 use futures::Stream;
+use xmpp_client::{XMPPConfig, Credentials, Jid};
 use tokio_core::net::TcpStream;
-use xmpp_proto::config::XMPPConfig;
-use xmpp_proto::events::{Message};
-use xmpp_proto::events::Event::Stanza;
-use xmpp_proto::events::StanzaEvent::MessageEvent;
-use xmpp_proto::credentials::Credentials;
-use xmpp_proto::jid::Jid;
-use std::{thread, time};
-
-use tokio_core::reactor::Handle;
-use xmpp_client::Client;
-use futures::future;
+use xmpp_client::events::Event::Stanza;
+use xmpp_client::events::StanzaEvent::{MessageEvent};
 
 fn main() {
     env_logger::init().unwrap();
@@ -30,8 +19,6 @@ fn main() {
 
     let handle = core.handle();
     let addr = "127.0.0.1:5222".parse().unwrap();
-    // let addrs: Vec<SocketAddr> = "xmpp-qa.iadvize.com:5222".to_socket_addrs().unwrap().collect();
-    // let addr = addrs[0];
 
     let config = XMPPConfig::new()
           .set_domain("example.com");
@@ -44,13 +31,13 @@ fn main() {
         TcpStream::connect(&addr, &handle).and_then(|stream| {
             xmpp_client::Client::connect(stream, config, Some(credentials))
         }).and_then(|mut client| {
+            let ping = client.send_ping()
+                .then(move |x| {
+                    println!("X: {:?}", x);
+                    Ok(())
+                });
 
-            handle.spawn(client.send_ping()
-                         .then(move|x| {
-                             println!("X: {:?}", x);
-                             Ok(())
-                         }));
-
+            handle.spawn(ping);
             handle.spawn(client.send_presence().then(move|_| {
                 Ok(())
             }));
@@ -60,9 +47,6 @@ fn main() {
                     match m {
                         Stanza(MessageEvent(_), _) => {
                             println!("New message");
-                            let jid = client.get_jid();
-                            let event = Stanza(MessageEvent(Message::new(&jid.jid.to_string(), "user1@example.com/MacBook-Pro-de-Simon")), String::new());
-                            handle.spawn(client.send(event).then(move|_| {Ok(())}));
                         }
                         _ => {}
                     }
@@ -70,5 +54,4 @@ fn main() {
                 })
             })
         })).unwrap();
-
 }

@@ -59,6 +59,7 @@ impl Encoder for XMPPCodec {
                 }
             },
             NonStanza(non_stanza, _) => match non_stanza {
+                CloseStreamEvent => String::from("</stream:stream>"),
                 OpenStreamEvent(event) => event.to_string(),
                 AuthEvent(event) => event.to_string(),
                 ProceedTlsEvent(event) => event.to_string(),

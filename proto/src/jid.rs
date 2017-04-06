@@ -3,6 +3,13 @@ use std::str::FromStr;
 use std::string::ParseError;
 use std::fmt;
 
+///
+/// Represents a Jabber ID (JID)
+///
+/// A JID is composed by two optionals components and a required one.
+///
+/// See [RFC-6122](https://tools.ietf.org/html/rfc6122)
+///
 #[derive(Clone, Debug, PartialEq)]
 pub struct Jid {
     node: Option<String>,
