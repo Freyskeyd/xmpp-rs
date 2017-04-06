@@ -7,11 +7,11 @@ authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
 
 [dependencies]
 bytes = "0.4"
-futures = "*"
-tokio-io = "*"
-tokio-core = "*"
-tokio-tls = "*"
-native-tls = "*"
+futures = "0"
+tokio-io = "0"
+tokio-core = "0"
+tokio-tls = "0"
+native-tls = "0"
 base64 = "0.4.0"
 sasl = "0.3.0"
 log = "^0.3"
