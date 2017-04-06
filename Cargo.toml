@@ -17,8 +17,8 @@ tokio-core = "0.1"
 tokio-tls = "0.1.2"
 native-tls = "0.1"
 base64 = "0.4.0"
-log = "*"
-env_logger = "*"
+log = "0"
+env_logger = "0"
 regex = "0.2"
 lazy_static = "0.2.5"
 
@@ -28,9 +28,11 @@ unicode-width = "0.1.4"
 
 [dependencies.xmpp-proto]
 path = "./proto"
+version = "0"
 
 [dependencies.xmpp-client]
 path = "./client"
+version = "0"
 
 [workspace]
 members = ["client/", "proto/", "server/"]
