@@ -1,7 +1,7 @@
 extern crate log;
 extern crate xmpp_proto;
 extern crate base64;
-extern crate futures;
+#[macro_use]extern crate futures;
 extern crate tokio_core;
 extern crate native_tls;
 extern crate tokio_tls;

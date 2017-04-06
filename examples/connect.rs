@@ -17,6 +17,11 @@ use xmpp_proto::events::Event::Stanza;
 use xmpp_proto::events::StanzaEvent::MessageEvent;
 use xmpp_proto::credentials::Credentials;
 use xmpp_proto::jid::Jid;
+use std::{thread, time};
+
+use tokio_core::reactor::Handle;
+use xmpp_client::Client;
+use futures::future;
 
 fn main() {
     env_logger::init().unwrap();
@@ -39,18 +44,22 @@ fn main() {
         TcpStream::connect(&addr, &handle).and_then(|stream| {
             xmpp_client::Client::connect(stream, config, Some(credentials))
         }).and_then(|mut client| {
-            handle.spawn(client.send_ping().then(move|_| {
-                Ok(())
-            }));
+
+            handle.spawn(client.send_ping()
+                         .then(move|x| {
+                             println!("X: {:?}", x);
+                             Ok(())
+                         }));
+
             handle.spawn(client.send_presence().then(move|_| {
                 Ok(())
             }));
 
             client.handle().and_then(move |stream| {
-
                 stream.for_each(move |m| {
                     match m {
                         Stanza(MessageEvent(_), _) => {
+                            println!("New message");
                             let jid = client.get_jid();
                             let event = Stanza(MessageEvent(Message::new(&jid.jid.to_string(), "user1@example.com/MacBook-Pro-de-Simon")), String::new());
                             handle.spawn(client.send(event).then(move|_| {Ok(())}));

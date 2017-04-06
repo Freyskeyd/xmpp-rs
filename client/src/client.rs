@@ -1,8 +1,13 @@
 #![allow(unused_must_use)]
-use futures::{Async,Poll};
+use futures::future::poll_fn;
+use futures::future::PollFn;
+use futures::future::{loop_fn, LoopFn, Loop};
+use futures::{Async,Poll, Sink, StartSend};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::MutexGuard;
 use tokio_io::{AsyncRead};
+use futures::AsyncSink;
 use std::io::{self};
 use futures::Future;
 use futures::future;
@@ -17,6 +22,8 @@ use xmpp_proto::config::XMPPConfig;
 use futures::Stream;
 use xmpp_proto::credentials::Credentials;
 use xmpp_proto::events::Event;
+use futures::sync::oneshot;
+use futures::sync::oneshot::Receiver;
 
 #[derive(Clone)]
 pub struct Client {
@@ -56,20 +63,10 @@ impl Client {
              }))
   }
 
-  pub fn send_ping(&self) -> Box<Future<Item = (), Error = io::Error>> {
-    if let Ok(mut transport) = self.transport.lock() {
-      transport.send_ping()
-        .and_then(|_| {
-          Ok(Box::new(future::ok(())))
-        }).unwrap()
-    } else {
-      panic!("")
-    }
-  }
-
   pub fn send_presence(&self) -> Box<Future<Item = (), Error = io::Error>> {
     if let Ok(mut transport) = self.transport.lock() {
       transport.send_presence()
+        .map_err(|_| ())
         .and_then(|_| {
 
           Ok(Box::new(future::ok(())))
@@ -94,12 +91,21 @@ impl Client {
     }
   }
 
+  pub fn send_ping(&mut self) -> Receiver<Event> {
+    let (tx, rx) = oneshot::channel();
+    let t = self.transport.clone();
+    if let Ok(mut transport) = self.transport.lock() {
+      transport.send_ping(tx);
+    }
+
+    rx
+  }
   pub fn handle(&mut self) -> Box<Future<Item = Consumer, Error = io::Error>> {
     let t = self.transport.clone();
     if let Ok(mut transport) = self.transport.lock() {
       transport.send_frames();
       transport.handle_frames();
-
+    }
       let consumer = Consumer {
         transport: t.clone()
       };
@@ -107,9 +113,6 @@ impl Client {
       Box::new(wait_for_answer(t.clone()).map(move |_| {
         consumer
       }))
-    } else {
-      panic!("")
-    }
   }
 }
 
@@ -157,3 +160,29 @@ pub fn wait_for_answer(transport: Arc<Mutex<XMPPTransport>>) -> Box<Future<Item 
   }))
 
 }
+
+// pub fn wait_for_answer_2(transport: Arc<Mutex<XMPPTransport>>, request_id: String) -> Box<Future<Item = Event, Error = io::Error>> {
+//   Box::new(future::poll_fn(move || {
+//     if let Ok(mut tr) = transport.try_lock() {
+//       tr.handle_frames();
+//       if ! tr.connection.is_finished(&request_id) {
+//         //retry because we might have obtained a new frame
+//         tr.handle_frames();
+//         if tr.connection.is_finished(&request_id) {
+//           println!("Ready and returned");
+//           return Ok(Async::Ready(tr.connection.fetch_iq_response(&request_id)))
+//         } else {
+//           println!("Not ready");
+//           return Ok(Async::NotReady)
+//         }
+//       } else {
+//           println!("Ready and returned");
+//         return Ok(Async::Ready(tr.connection.fetch_iq_response(&request_id)))
+//       }
+//     } else {
+//           println!("Not ready");
+//       return Ok(Async::NotReady);
+//     };
+//   }))
+
+// }

@@ -1,4 +1,4 @@
-use std::collections::{VecDeque};
+use std::collections::{HashMap,VecDeque};
 use std::io::Result;
 use jid::Jid;
 use config::XMPPConfig;
@@ -11,6 +11,9 @@ use events::IqType::*;
 use events::*;
 use std::str::FromStr;
 use ns;
+use std::sync::Arc;
+use futures::sync::oneshot::Sender;
+use std::sync::Mutex;
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum ConnectionState {
@@ -58,6 +61,7 @@ pub struct Connection {
     /// list of message to send
     pub frame_queue:       VecDeque<Event>,
     pub input_queue:       VecDeque<Event>,
+    pub iq_queue: HashMap<String, Box<Sender<Event>>>,
 }
 
 impl Connection {
@@ -67,10 +71,28 @@ impl Connection {
             credentials: credentials,
             config: config.clone(),
             frame_queue: VecDeque::new(),
-            input_queue: VecDeque::new()
+            input_queue: VecDeque::new(),
+            iq_queue: HashMap::new()
         }
     }
 
+    // pub fn fetch_iq_response(&mut self, id: &str) -> Event {
+    //     let event = match self.iq_queue.get(id) {
+    //         Some(e) => e.clone().unwrap(),
+    //         None => panic!("")
+    //     };
+    //     self.iq_queue.remove(id);
+    //     event
+    // }
+    // pub fn is_finished(&mut self, id: &str) -> bool {
+    //     match self.iq_queue.get(id) {
+    //         Some(e) => match *e {
+    //             Some(ref e) => true,
+    //             None => false
+    //         },
+    //         None => false
+    //     }
+    // }
     pub fn connect(&mut self) -> Result<ConnectionState> {
         self.frame_queue.push_back(NonStanza(OpenStreamEvent(OpenStream::new(&self.config)), String::new()));
 
@@ -98,12 +120,12 @@ impl Connection {
         self.frame_queue.push_back(event);
     }
 
-    pub fn compile_ping(&mut self) {
+    pub fn compile_ping(&mut self) -> Ping {
         if let Some(ref c) = self.credentials {
 
-            let event = Stanza(IqRequestEvent(PingIq(Ping::new(c.jid.clone(), self.config.get_domain()))), String::new());
-            self.frame_queue.push_back(event);
+            return Ping::new(c.jid.clone(), self.config.get_domain());
         }
+        panic!("")
     }
 
     pub fn compile_presence(&mut self) {
@@ -162,19 +184,43 @@ impl Connection {
                 }
             },
             Stanza(IqEvent(GenericIq(event)), source) => {
+                let e = event.clone();
                 if event.body.is_some() {
                     if event.body.unwrap().find((ns::BIND, "bind")).is_some() {
                         if event.iq_type == "result" {
                             self.handle_frame(Stanza(IqResponseEvent(BindIq(Bind::from_str(&source).unwrap())), source));
                         }
+                    } else if event.iq_type == "result" {
+                        self.handle_iq(event.id.to_string(), Stanza(IqEvent(GenericIq(e.clone())), String::new()));
+                        // self.handle_frame(Stanza(IqEvent(GenericIq(event)), source));
                     }
                 }
             },
+            // Stanza(IqResponseEvent(iq), _) => {
+            //     println!("hey");
+            //     match iq {
+            //         PingIq(ping) => {
+            //             if self.iq_queue.contains_key(&ping.id) {
+            //                 self.iq_queue.insert(ping.id.to_string(), Some(PingIq(ping)));
+            //             }
+            //         },
+            //         _ => {},
+            //     }
+            // },
             _ => {
                 if self.state == ConnectionState::Connected {
                     self.add_input_frame(f);
                 }
             }
+        }
+    }
+
+    fn handle_iq(&mut self, id: String, event: Event) {
+        match self.iq_queue.remove(&id) {
+            Some(tx) => {
+                tx.send(event);
+            },
+            None => {}
         }
     }
 }

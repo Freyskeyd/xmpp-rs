@@ -1,6 +1,9 @@
 #![allow(unused_must_use)]
 use events::Event;
+use events::Event::Stanza;
 use events::NonStanzaEvent::*;
+use events::StanzaEvent::*;
+use events::IqType::*;
 use events::Event::NonStanza;
 use std::str;
 use stream::XMPPStream;
@@ -9,6 +12,9 @@ use futures::future;
 use futures::{Async,Poll,Sink,Stream,StartSend,Future};
 use connection::{ConnectionState, ConnectingState, Connection};
 use credentials::Credentials;
+use futures::sync::oneshot::Sender;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 pub struct XMPPTransport {
     pub stream: XMPPStream,
@@ -51,24 +57,28 @@ impl XMPPTransport
         Box::new(connector)
     }
 
-    pub fn send_ping(&mut self) -> Result<Async<Option<Event>>, io::Error> {
-        self.connection.compile_ping();
+
+    pub fn send_ping(&mut self, tx: Sender<Event>) {
+        let ping = self.connection.compile_ping();
+        let id = ping.id.to_string();
+        let event = Stanza(IqRequestEvent(PingIq(ping)), String::new());
+        let e = event.clone();
+        self.connection.iq_queue.insert(id.clone(),Box::new(tx));
 
         match self.stream {
             XMPPStream::Tcp(ref mut stream) => {
-                let f = self.connection.next_frame().unwrap();
-                stream.start_send(f);
+                stream.start_send(event);
                 stream.poll_complete();
-                stream.poll()
+                stream.poll();
             },
             XMPPStream::Tls(ref mut stream) => {
-                let f = self.connection.next_frame().unwrap();
-                stream.start_send(f);
+                stream.start_send(event);
                 stream.poll_complete();
-                stream.poll()
+                stream.poll();
             }
-        }
+        };
     }
+
 
     pub fn send_presence(&mut self) -> Result<Async<Option<Event>>, io::Error> {
         self.connection.compile_presence();
