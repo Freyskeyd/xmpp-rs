@@ -1,17 +1,19 @@
 [package]
 name = "xmpp-proto"
 version = "0.1.0"
+description = "A work in progress xmpp lib"
+license = "MPL-2.0"
 authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
 
 [dependencies]
-futures = "*"
-tokio-io = "*"
-tokio-core = "*"
+futures = "0"
+tokio-io = "0"
+tokio-core = "0"
 tokio-tls = "0.1.2"
-bytes = "*"
-native-tls = "*"
-base64 = "*"
-log = "*"
+bytes = "0"
+native-tls = "0"
+base64 = "0"
+log = "0"
 regex = "0.2"
 lazy_static = "0.2.5"
 elementtree = "0.2.0"
