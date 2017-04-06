@@ -12,6 +12,8 @@ mod unknown;
 mod presence;
 mod auth;
 mod bind;
+mod message;
+mod ping;
 
 pub use events::open_stream::OpenStream;
 pub use events::stream_features::StreamFeatures;
@@ -22,6 +24,8 @@ pub use events::unknown::Unknown;
 pub use events::presence::Presence;
 pub use events::auth::Auth;
 pub use events::bind::Bind;
+pub use events::ping::Ping;
+pub use events::message::Message;
 pub use events::bind::Generic;
 
 impl EventTrait for OpenStream {}
@@ -33,29 +37,33 @@ impl EventTrait for Unknown {}
 impl EventTrait for Presence {}
 impl EventTrait for Auth {}
 impl EventTrait for Bind {}
+impl EventTrait for Ping {}
+impl EventTrait for Message {}
 impl EventTrait for Generic {}
 
 #[derive(Debug, Clone)]
 pub enum IqType {
-    Bind(Bind),
-    Generic(Generic),
+    BindIq(Bind),
+    GenericIq(Generic),
+    PingIq(Ping)
 }
 #[derive(Debug, Clone)]
 pub enum StanzaEvent {
-    Presence(Presence),
-    Iq(IqType),
-    IqRequest(IqType),
-    IqResponse(IqType)
+    PresenceEvent(Presence),
+    IqEvent(IqType),
+    IqRequestEvent(IqType),
+    IqResponseEvent(IqType),
+    MessageEvent(Message),
 }
 
 #[derive(Debug, Clone)]
 pub enum NonStanzaEvent {
-    OpenStream(OpenStream),
-    ProceedTls(ProceedTls),
-    SuccessTls(SuccessTls),
-    StartTls(StartTls),
-    StreamFeatures(StreamFeatures),
-    Auth(Auth),
+    OpenStreamEvent(OpenStream),
+    ProceedTlsEvent(ProceedTls),
+    SuccessTlsEvent(SuccessTls),
+    StartTlsEvent(StartTls),
+    StreamFeaturesEvent(StreamFeatures),
+    AuthEvent(Auth),
 }
 
 #[derive(Debug, Clone)]

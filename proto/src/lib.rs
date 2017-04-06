@@ -1,5 +1,5 @@
 #[macro_use]extern crate log;
-#[macro_use]extern crate futures;
+extern crate futures;
 extern crate tokio_core;
 extern crate native_tls;
 extern crate tokio_tls;

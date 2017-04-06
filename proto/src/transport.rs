@@ -1,14 +1,14 @@
 #![allow(unused_must_use)]
 use events::Event;
-use events::NonStanzaEvent;
+use events::NonStanzaEvent::*;
+use events::Event::NonStanza;
 use std::str;
 use stream::XMPPStream;
 use std::io;
 use futures::future;
 use futures::{Async,Poll,Sink,Stream,StartSend,Future};
 use connection::{ConnectionState, ConnectingState, Connection};
-
-
+use credentials::Credentials;
 
 pub struct XMPPTransport {
     pub stream: XMPPStream,
@@ -51,6 +51,25 @@ impl XMPPTransport
         Box::new(connector)
     }
 
+    pub fn send_ping(&mut self) -> Result<Async<Option<Event>>, io::Error> {
+        self.connection.compile_ping();
+
+        match self.stream {
+            XMPPStream::Tcp(ref mut stream) => {
+                let f = self.connection.next_frame().unwrap();
+                stream.start_send(f);
+                stream.poll_complete();
+                stream.poll()
+            },
+            XMPPStream::Tls(ref mut stream) => {
+                let f = self.connection.next_frame().unwrap();
+                stream.start_send(f);
+                stream.poll_complete();
+                stream.poll()
+            }
+        }
+    }
+
     pub fn send_presence(&mut self) -> Result<Async<Option<Event>>, io::Error> {
         self.connection.compile_presence();
 
@@ -69,11 +88,18 @@ impl XMPPTransport
             }
         }
     }
-    pub fn stream_poll(&mut self) {
+
+    pub fn get_credentials(&mut self) -> Credentials {
+        match self.connection.credentials {
+            Some(ref c) => c.clone(),
+            None => panic!("")
+        }
+    }
+    pub fn stream_poll(&mut self) -> Result<Async<Option<Event>>, io::Error> {
         match self.stream {
             XMPPStream::Tcp(ref mut s) => s.poll(),
             XMPPStream::Tls(ref mut s) => s.poll()
-        };
+        }
     }
 
     pub fn send_frames(&mut self) {
@@ -112,7 +138,7 @@ impl XMPPTransport
                     break;
                 },
                 Ok(Async::NotReady) => {
-                    trace!("handle frames: upstream poll gave NotReady");
+                    // trace!("handle frames: upstream poll gave NotReady");
                     match self.stream {
                         XMPPStream::Tls(ref mut stream) => {
                             stream.poll();
@@ -171,10 +197,10 @@ impl Future for XMPPTransportConnector
             transport.connection.handle_frame(f);
             while let Some(fr) = transport.connection.next_frame() {
                 match fr {
-                    Event::NonStanza(NonStanzaEvent::StartTls(_), _) => {
+                    NonStanza(StartTlsEvent(_), _) => {
                         transport.connection.state = ConnectionState::Connecting(ConnectingState::SentAuthenticationMechanism)
                     },
-                    Event::NonStanza(NonStanzaEvent::OpenStream(_), _) => {
+                    NonStanza(OpenStreamEvent(_), _) => {
                         if transport.connection.state == ConnectionState::Connecting(ConnectingState::ReceivedProceedCommand) {
                             return Ok(Async::Ready(transport));
                         }
@@ -209,20 +235,44 @@ impl Stream for XMPPTransport
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, io::Error> {
-        match try_ready!(match self.stream {
+        // trace!("Connected:: Polling connected stream");
+        while let Some(frame) = match match self.stream {
             XMPPStream::Tcp(ref mut stream) => stream.poll(),
             XMPPStream::Tls(ref mut stream) => stream.poll(),
-        }) {
-            Some(frame) => {
-                info!("XMPPTransport received frame: {:?}", frame);
-                try!(self.poll_complete());
-                Ok(Async::Ready(Some(frame)))
+        } {
+            Ok(Async::Ready(t)) => t,
+            Ok(Async::NotReady) => {
+                // trace!("Connected:: stream poll gave NotReady");
+                match self.stream {
+                    XMPPStream::Tcp(ref mut stream) => stream.poll(),
+                    XMPPStream::Tls(ref mut stream) => stream.poll(),
+                };
+                // self.transport = Some(transport);
+                return Ok(Async::NotReady);
             },
-            None => {
-                trace!("XMPPTransport returned NotReady");
-                Ok(Async::NotReady)
+            Err(e) => {
+                error!("Connected:: stream poll got error: {:?}", e);
+                return Err(From::from(e));
             }
-        }
+        } {
+            self.connection.handle_frame(frame);
+        };
+
+        Ok(Async::NotReady)
+        // match match self.stream {
+        //     XMPPStream::Tcp(ref mut stream) => stream.poll(),
+        //     XMPPStream::Tls(ref mut stream) => stream.poll(),
+        // } {
+        //     Some(frame) => {
+        //         info!("XMPPTransport received frame: {:?}", frame);
+        //         try!(self.poll_complete());
+        //         Ok(Async::Ready(Some(frame)))
+        //     },
+        //     None => {
+        //         trace!("XMPPTransport returned NotReady");
+        //         Ok(Async::NotReady)
+        //     }
+        // }
     }
 }
 

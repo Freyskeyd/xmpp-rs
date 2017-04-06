@@ -1,3 +1,4 @@
+#![allow(unused_must_use)]
 use futures::{Async,Poll};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -47,8 +48,23 @@ impl Client {
                  transport: Arc::new(Mutex::new(transport)),
                };
 
+               if let Ok(mut transport) = client.transport.lock() {
+                 transport.handle_frames();
+               }
+
                future::ok(client)
              }))
+  }
+
+  pub fn send_ping(&self) -> Box<Future<Item = (), Error = io::Error>> {
+    if let Ok(mut transport) = self.transport.lock() {
+      transport.send_ping()
+        .and_then(|_| {
+          Ok(Box::new(future::ok(())))
+        }).unwrap()
+    } else {
+      panic!("")
+    }
   }
 
   pub fn send_presence(&self) -> Box<Future<Item = (), Error = io::Error>> {
@@ -63,6 +79,13 @@ impl Client {
     }
   }
 
+  pub fn get_jid(&self) -> Credentials {
+    if let Ok(mut transport) = self.transport.lock() {
+      transport.get_credentials()
+    } else {
+      panic!("")
+    }
+  }
   pub fn send(&mut self, f: Event) -> Box<Future<Item = (), Error = io::Error>> {
     if let Ok(mut transport) = self.transport.lock() {
       transport.send_frame(f)
@@ -100,7 +123,6 @@ impl Stream for Consumer {
   type Error = io::Error;
 
   fn poll(&mut self) -> Poll<Option<Event>, io::Error> {
-    trace!("consumer[{}] poll", self.consumer_tag);
     if let Ok(mut transport) = self.transport.try_lock() {
       transport.handle_frames();
       //FIXME: if the consumer closed, we should return Ok(Async::Ready(None))
