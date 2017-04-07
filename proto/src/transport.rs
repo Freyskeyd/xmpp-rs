@@ -1,6 +1,9 @@
 #![allow(unused_must_use)]
 use events::Event;
+use events::Event::Stanza;
 use events::NonStanzaEvent::*;
+use events::StanzaEvent::*;
+use events::IqType::*;
 use events::Event::NonStanza;
 use std::str;
 use stream::XMPPStream;
@@ -51,24 +54,34 @@ impl XMPPTransport
         Box::new(connector)
     }
 
-    pub fn send_ping(&mut self) -> Result<Async<Option<Event>>, io::Error> {
-        self.connection.compile_ping();
+
+    pub fn send_ping(&mut self) -> Poll<Event, io::Error>{
+        let ping = self.connection.compile_ping();
+        let id = ping.id.to_string();
+        let event = Stanza(IqRequestEvent(PingIq(ping)), String::new());
+        let e = event.clone();
+        self.connection.iq_queue.insert(id.clone(), None);
 
         match self.stream {
             XMPPStream::Tcp(ref mut stream) => {
-                let f = self.connection.next_frame().unwrap();
-                stream.start_send(f);
+                stream.start_send(event);
                 stream.poll_complete();
-                stream.poll()
+                // stream.poll()
             },
             XMPPStream::Tls(ref mut stream) => {
-                let f = self.connection.next_frame().unwrap();
-                stream.start_send(f);
+                stream.start_send(event);
                 stream.poll_complete();
-                stream.poll()
+                // stream.poll()
             }
+        };
+
+        while let Some(f) = self.connection.is_finished(&id) {
+            println!("f found");
+            return Ok(Async::Ready(f))
         }
+        Ok(Async::NotReady)
     }
+
 
     pub fn send_presence(&mut self) -> Result<Async<Option<Event>>, io::Error> {
         self.connection.compile_presence();

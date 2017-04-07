@@ -17,7 +17,9 @@ impl Decoder for XMPPCodec {
     type Error = io::Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, io::Error> {
-        info!("Buffer contain: {:?}", str::from_utf8(buf.as_ref()));
+
+        println!("   ");
+        println!("Buffer contain: {:?}", str::from_utf8(buf.as_ref()));
         let (consumed, f): (usize, Option<Event>) = {
             match Parser::parse(str::from_utf8(buf.as_ref()).unwrap()) {
                 Some(s) => {
@@ -32,6 +34,7 @@ impl Decoder for XMPPCodec {
         };
 
         buf.split_to(consumed);
+        println!("f: {:?}", f);
 
         Ok(f)
     }

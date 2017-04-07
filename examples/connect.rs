@@ -39,7 +39,8 @@ fn main() {
         TcpStream::connect(&addr, &handle).and_then(|stream| {
             xmpp_client::Client::connect(stream, config, Some(credentials))
         }).and_then(|mut client| {
-            handle.spawn(client.send_ping().then(move|_| {
+            handle.spawn(client.send_ping().and_then(move|x| {
+                println!("X: {:?}", x);
                 Ok(())
             }));
             handle.spawn(client.send_presence().then(move|_| {

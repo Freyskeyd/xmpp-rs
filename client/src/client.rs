@@ -1,4 +1,6 @@
 #![allow(unused_must_use)]
+use futures::future::poll_fn;
+use futures::future::PollFn;
 use futures::{Async,Poll};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -56,12 +58,9 @@ impl Client {
              }))
   }
 
-  pub fn send_ping(&self) -> Box<Future<Item = (), Error = io::Error>> {
+  pub fn send_ping(&self) -> Result<Async<Event>, io::Error> {
     if let Ok(mut transport) = self.transport.lock() {
       transport.send_ping()
-        .and_then(|_| {
-          Ok(Box::new(future::ok(())))
-        }).unwrap()
     } else {
       panic!("")
     }
@@ -70,6 +69,7 @@ impl Client {
   pub fn send_presence(&self) -> Box<Future<Item = (), Error = io::Error>> {
     if let Ok(mut transport) = self.transport.lock() {
       transport.send_presence()
+        .map_err(|_| ())
         .and_then(|_| {
 
           Ok(Box::new(future::ok(())))
