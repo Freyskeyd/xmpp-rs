@@ -1,8 +1,9 @@
 [package]
 name = "xmpp-client"
-version = "0.1.1"
+version = "0.1.2"
 description = "A work in progress xmpp lib"
 license = "MPL-2.0"
+documentation = "https://docs.rs/xmpp-client"
 authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
 
 [dependencies]

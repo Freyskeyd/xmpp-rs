@@ -1,8 +1,9 @@
 [package]
 name = "xmpp-rs"
-version = "0.1.1"
+version = "0.1.2"
 description = "A work in progress xmpp lib"
 license = "MPL-2.0"
+documentation = "https://docs.rs/xmpp-rs"
 authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
 
 [lib]

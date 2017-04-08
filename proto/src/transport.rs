@@ -12,6 +12,9 @@ use futures::future;
 use futures::{Async,Poll,Sink,Stream,StartSend,Future};
 use connection::{ConnectionState, ConnectingState, Connection};
 use credentials::Credentials;
+use futures::sync::oneshot::Sender;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 pub struct XMPPTransport {
     pub stream: XMPPStream,
@@ -55,31 +58,42 @@ impl XMPPTransport
     }
 
 
-    pub fn send_ping(&mut self) -> Poll<Event, io::Error>{
+    pub fn ping(&mut self) -> Event {
+        Stanza(IqRequestEvent(PingIq(self.connection.compile_ping())), String::new())
+    }
+
+    pub fn send_ping(&mut self, tx: Sender<Event>) {
         let ping = self.connection.compile_ping();
         let id = ping.id.to_string();
         let event = Stanza(IqRequestEvent(PingIq(ping)), String::new());
         let e = event.clone();
-        self.connection.iq_queue.insert(id.clone(), None);
+        self.connection.iq_queue.insert(id.clone(),Box::new(tx));
 
         match self.stream {
             XMPPStream::Tcp(ref mut stream) => {
                 stream.start_send(event);
                 stream.poll_complete();
-                // stream.poll()
+                stream.poll();
             },
             XMPPStream::Tls(ref mut stream) => {
                 stream.start_send(event);
                 stream.poll_complete();
-                // stream.poll()
+                stream.poll();
             }
         };
 
-        while let Some(f) = self.connection.is_finished(&id) {
-            println!("f found");
-            return Ok(Async::Ready(f))
-        }
-        Ok(Async::NotReady)
+        // while let f = self.connection.is_finished(&id) {
+        //     match f {
+        //         Some(frame) => {
+        //             println!("frame: {:?}", frame);
+        //             return Ok(Async::Ready(frame))
+        //         },
+        //         None => {
+        //             return Ok(Async::NotReady)
+        //         }
+        //     }
+        // }
+        // Ok(Async::NotReady)
     }
 
 

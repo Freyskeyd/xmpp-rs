@@ -11,6 +11,9 @@ use events::IqType::*;
 use events::*;
 use std::str::FromStr;
 use ns;
+use std::sync::Arc;
+use futures::sync::oneshot::Sender;
+use std::sync::Mutex;
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum ConnectionState {
@@ -58,7 +61,7 @@ pub struct Connection {
     /// list of message to send
     pub frame_queue:       VecDeque<Event>,
     pub input_queue:       VecDeque<Event>,
-    pub iq_queue: HashMap<String, Option<Event>>,
+    pub iq_queue: HashMap<String, Box<Sender<Event>>>,
 }
 
 impl Connection {
@@ -73,12 +76,23 @@ impl Connection {
         }
     }
 
-    pub fn is_finished(&mut self, id: &str) -> Option<Event> {
-        match self.iq_queue.get(id) {
-            Some(e) => e.clone(),
-            None => None
-        }
-    }
+    // pub fn fetch_iq_response(&mut self, id: &str) -> Event {
+    //     let event = match self.iq_queue.get(id) {
+    //         Some(e) => e.clone().unwrap(),
+    //         None => panic!("")
+    //     };
+    //     self.iq_queue.remove(id);
+    //     event
+    // }
+    // pub fn is_finished(&mut self, id: &str) -> bool {
+    //     match self.iq_queue.get(id) {
+    //         Some(e) => match *e {
+    //             Some(ref e) => true,
+    //             None => false
+    //         },
+    //         None => false
+    //     }
+    // }
     pub fn connect(&mut self) -> Result<ConnectionState> {
         self.frame_queue.push_back(NonStanza(OpenStreamEvent(OpenStream::new(&self.config)), String::new()));
 
@@ -177,7 +191,7 @@ impl Connection {
                             self.handle_frame(Stanza(IqResponseEvent(BindIq(Bind::from_str(&source).unwrap())), source));
                         }
                     } else if event.iq_type == "result" {
-                        self.iq_queue.insert(event.id.to_string(), Some(Stanza(IqEvent(GenericIq(e.clone())), String::new())));
+                        self.handle_iq(event.id.to_string(), Stanza(IqEvent(GenericIq(e.clone())), String::new()));
                         // self.handle_frame(Stanza(IqEvent(GenericIq(event)), source));
                     }
                 }
@@ -198,6 +212,15 @@ impl Connection {
                     self.add_input_frame(f);
                 }
             }
+        }
+    }
+
+    fn handle_iq(&mut self, id: String, event: Event) {
+        match self.iq_queue.remove(&id) {
+            Some(tx) => {
+                tx.send(event);
+            },
+            None => {}
         }
     }
 }
