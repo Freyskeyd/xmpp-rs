@@ -44,7 +44,8 @@ fn main() {
         TcpStream::connect(&addr, &handle).and_then(|stream| {
             xmpp_client::Client::connect(stream, config, Some(credentials))
         }).and_then(|mut client| {
-            handle.spawn(client.ping()
+
+            handle.spawn(client.send_ping()
                          .then(move|x| {
                              println!("X: {:?}", x);
                              Ok(())
@@ -55,7 +56,6 @@ fn main() {
             }));
 
             client.handle().and_then(move |stream| {
-
                 stream.for_each(move |m| {
                     match m {
                         Stanza(MessageEvent(_), _) => {

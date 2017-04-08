@@ -58,10 +58,6 @@ impl XMPPTransport
     }
 
 
-    pub fn ping(&mut self) -> Event {
-        Stanza(IqRequestEvent(PingIq(self.connection.compile_ping())), String::new())
-    }
-
     pub fn send_ping(&mut self, tx: Sender<Event>) {
         let ping = self.connection.compile_ping();
         let id = ping.id.to_string();
@@ -81,19 +77,6 @@ impl XMPPTransport
                 stream.poll();
             }
         };
-
-        // while let f = self.connection.is_finished(&id) {
-        //     match f {
-        //         Some(frame) => {
-        //             println!("frame: {:?}", frame);
-        //             return Ok(Async::Ready(frame))
-        //         },
-        //         None => {
-        //             return Ok(Async::NotReady)
-        //         }
-        //     }
-        // }
-        // Ok(Async::NotReady)
     }
 
 

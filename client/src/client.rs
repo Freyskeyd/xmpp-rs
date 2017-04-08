@@ -63,24 +63,6 @@ impl Client {
              }))
   }
 
-//   pub fn send_ping(&self) -> LoopFn<Result<Loop<Event, MutexGuard<XMPPTransport>>, io::Error>, io::Error>
-//     {
-//     if let Ok(mut transport) = self.transport.lock() {
-//       transport.send_ping();
-//       let id = String::from("c2s1");
-
-//       let r = loop_fn(transport, |t| {
-//         match t.connection.is_finished(&id) {
-//           Some(f) => Ok(Loop::Break(f)),
-//           None => Ok(Loop::Continue(t))
-//         }
-//       });
-
-//       r
-//     } else {
-//       panic!("")
-//     }
-//   }
   pub fn send_presence(&self) -> Box<Future<Item = (), Error = io::Error>> {
     if let Ok(mut transport) = self.transport.lock() {
       transport.send_presence()
@@ -109,12 +91,11 @@ impl Client {
     }
   }
 
-  pub fn ping(&mut self) -> Receiver<Event> {
+  pub fn send_ping(&mut self) -> Receiver<Event> {
     let (tx, rx) = oneshot::channel();
     let t = self.transport.clone();
     if let Ok(mut transport) = self.transport.lock() {
       transport.send_ping(tx);
-      let id = String::from("c2s1");
     }
 
     rx
