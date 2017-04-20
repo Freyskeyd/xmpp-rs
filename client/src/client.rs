@@ -2,8 +2,9 @@ use futures::{Async, future, Future, Poll, Stream};
 use futures::sync::oneshot::{self, Receiver};
 use std::io::{self};
 use std::sync::{Arc, Mutex};
-use xmpp_proto::{XMPPConfig, Connection, XMPPTransport, Credentials, XMPPCodec, XMPPStream};
+use xmpp_proto::{XMPPConfig, ConnectionState, Connection, XMPPTransport, Credentials, XMPPCodec, XMPPStream};
 use xmpp_proto::events::Event;
+use xmpp_proto::events::Ping;
 use native_tls::TlsConnector;
 use tokio_io::AsyncRead;
 use tokio_tls::TlsConnectorExt;
@@ -51,6 +52,13 @@ impl Client {
                  }))
     }
 
+    /// ok
+    pub fn close(&self) {
+        if let Ok(mut transport) = self.transport.lock() {
+            let _ = transport.shutdown();
+        }
+    }
+
     /// Send the first presence
     pub fn send_presence(&self) -> Box<Future<Item = (), Error = io::Error>> {
         if let Ok(mut transport) = self.transport.lock() {
@@ -85,11 +93,22 @@ impl Client {
         }
     }
 
+    /// ok
+    pub fn shutdown(&mut self) -> Result<Async<()>, io::Error> {
+        if let Ok(mut transport) = self.transport.lock() {
+            transport.shutdown()
+        } else {
+            panic!("")
+        }
+    }
+
     /// Send a ping request
-    pub fn send_ping(&mut self) -> Receiver<Event> {
+    pub fn send_ping(&mut self, ping: &mut Ping) -> Receiver<Event> {
         let (tx, rx) = oneshot::channel();
         if let Ok(mut transport) = self.transport.lock() {
-            transport.send_ping(tx);
+            let jid = transport.get_credentials().jid.clone();
+            let ping = ping.set_from(Some(&jid));
+            transport.send_ping(tx, ping.unwrap());
         }
 
         rx
@@ -125,6 +144,9 @@ impl Stream for Consumer {
 
     fn poll(&mut self) -> Poll<Option<Event>, io::Error> {
         if let Ok(mut transport) = self.transport.try_lock() {
+            if transport.connection.state == ConnectionState::Closed {
+            //     return Ok(Async::Ready(None));
+            }
             transport.handle_frames();
             //FIXME: if the consumer closed, we should return Ok(Async::Ready(None))
             if let Some(message) = transport.connection.next_input_frame() {

@@ -1,10 +1,14 @@
 use std::str::FromStr;
+use super::Event;
+use super::NonStanzaEvent;
+use super::EventTrait;
 use elementtree::Element;
 use std::string::ParseError;
 use ns;
-use events::XMPPConfig;
+use config::XMPPConfig;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, XmppEvent)]
+#[non_stanza(event = "NonStanzaEvent::OpenStreamEvent(_)")]
 pub struct OpenStream {
     config: XMPPConfig,
     pub to: Option<String>,
@@ -63,6 +67,9 @@ impl ToString for OpenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use events::*;
+    use config::*;
+    use events::interface::EventTrait;
 
     #[test]
     fn check_compilation() {
@@ -71,5 +78,27 @@ mod tests {
 
         assert!(OpenStream::new(&XMPPConfig::new().set_domain("hey")).to_string() == initial_stream.to_string(), OpenStream::new(&XMPPConfig::new()).to_string());
         assert!(OpenStream::new(&XMPPConfig::new()).to_string() == initial_stream_example.to_string());
+    }
+
+    #[test]
+    fn compile() {
+        let o = OpenStream::new(&XMPPConfig::new().set_domain("hey"));
+
+        let e = o.to_event();
+
+        assert!(!e.is_message());
+        assert!(!e.is_iq());
+        assert!(e.is_non_stanza());
+
+        // assert!(e.is::)
+        match o.to_event() {
+            Event::NonStanza(non_stanza, _) => match *non_stanza {
+                NonStanzaEvent::OpenStreamEvent(_) => {
+                    assert!(true);
+                },
+                _ => panic!("")
+            },
+            _ => panic!("")
+        }
     }
 }

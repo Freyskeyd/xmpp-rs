@@ -1,35 +1,59 @@
 use std::str::FromStr;
-use std::string::ParseError;
+use events::*;
+use jid::{Jid, ToJid};
+use super::Event;
+use super::EventTrait;
 use std::str;
+use std::io;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, XmppEvent)]
+#[stanza(is="message")]
 pub struct Message {
-    from: String,
-    to: String,
+    generic: GenericMessage,
     message_type: String,
-    body: String,
-    pub msg: String
+    pub body: String
 }
 
 impl Message {
-    pub fn new(from: &str, to: &str) -> Message {
+    pub fn new<T: ToJid + ?Sized, S: ToString>(to: &T, msg: &S) -> Message {
         Message {
-            msg: to.to_string(),
-            from: from.to_string(),
-            to: to.to_string(),
+            generic: GenericMessage::new(to),
             message_type: String::from("chat"),
-            body: String::from("heyy"),
+            body: msg.to_string(),
         }
     }
 }
 
 impl FromStr for Message {
-    type Err = ParseError;
+    type Err = io::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // return Err(io::Error::new(io::ErrorKind::InvalidInput, ""))
+        // let root = match Element::from_reader(s.as_bytes()) {
+        //     Ok(r) => r,
+        //     Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e))
+        // };
+
+
+        // // `id` is REQUIRED
+        // let id = match root.get_attr("id") {
+        //     Some(id) => id.to_string(),
+        //     None => return Err(io::Error::new(io::ErrorKind::InvalidInput, "ID is required"))
+        // };
+
+        // let iq_type = match IqType::from_str(root.get_attr("type").unwrap_or("")) {
+        //     Ok(t) => t,
+        //     Err(e) => return Err(e)
+        // };
+
+        // let from = match Jid::from_str(root.get_attr("from").unwrap_or("")) {
+        //     Ok(j) => Some(j),
+        //     Err(_) => None
+        // };
+
+        let generic = GenericMessage::from_str(s).unwrap();
+
         Ok(Message {
-            msg: String::from_str(s).unwrap(),
-            from: String::new(),
-            to: String::new(),
+            generic: generic,
             message_type: String::new(),
             body: String::new(),
         })
@@ -38,6 +62,6 @@ impl FromStr for Message {
 
 impl ToString for Message {
     fn to_string(&self) -> String {
-        format!("<message to='{to}' from='{from}' type='{message_type}' id='purple6d50c1ba'><body>{body}</body></message>", to=self.to, from=self.from, message_type=self.message_type, body=self.body)
+        format!("<message to='{to}' from='{from}' type='{message_type}' id='purple6d50c1ba'><body>{body}</body></message>", to=self.get_to(), from=self.get_from().unwrap(), message_type=self.message_type, body=self.body)
     }
 }

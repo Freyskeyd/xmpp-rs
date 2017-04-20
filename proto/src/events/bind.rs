@@ -1,113 +1,72 @@
-use elementtree::Element;
+use events::IqEvent::BindEvent;
+use events::StanzaEvent;
+use events::Event;
+use events::EventTrait;
+use events::GenericIq;
+use events::IqType;
+use events::FromGeneric;
+use jid::{Jid, ToJid};
+use std::io;
 use std::str::FromStr;
 use std::string::ParseError;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, XmppEvent)]
+#[stanza(event = "BindEvent(_)", is="iq", no_transpile)]
 pub struct Bind {
-    id: String,
-    bind_type: String,
-    pub body: Option<Element>,
-    pub jid: String
+    pub generic: GenericIq,
+    pub jid: Option<Jid>
 }
 
 impl Bind {
     pub fn new() -> Bind {
         Bind {
-            id: String::new(),
-            bind_type: String::new(),
-            jid: String::new(),
-            body: None
+            generic: GenericIq::new(&GenericIq::unique_id(), IqType::Get),
+            jid: Some(Jid::from_str("").unwrap())
         }
-    }
-
-    pub fn set_type(mut self, t: &str) -> Self {
-        self.bind_type = t.to_string();
-
-        self
-    }
-
-    pub fn set_id(mut self, id: &str) -> Self {
-        self.id = id.to_string();
-
-        self
     }
 }
 
-impl FromStr for Bind {
-    type Err = ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let root = Element::from_reader(s.as_bytes()).unwrap();
+impl FromGeneric for Bind {
+    type Generic = GenericIq;
+    type Out = Self;
 
-        let bind_type = root.get_attr("type").unwrap_or("").to_string();
-        let id = root.get_attr("id").unwrap_or("").to_string();
-        let jid = match root.find("jid") {
-            Some(jid) => jid.text().to_string(),
-            None => String::new()
+    fn from_generic<'a>(event: &'a Self::Generic) -> Result<Self::Out, io::Error> {
+        let jid = match event.get_element() {
+            Some(body) => match body.find("jid") {
+                Some(jid) => Some(Jid::from_str(jid.text()).unwrap()),
+                None => None
+            },
+            None => None
         };
 
         Ok(Bind {
-            bind_type: bind_type,
-            id: id,
-            jid: jid,
-            body: Some(root)
+            generic: event.clone(),
+            jid: jid
+        })
+    }
+}
+impl FromStr for Bind {
+    type Err = ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let generic = GenericIq::from_str(s).unwrap();
+
+        let body = generic.get_element().unwrap();
+        let jid = match body.find("jid") {
+            Some(jid) => Jid::from_str(jid.text()).unwrap(),
+            None => Jid::from_str("").unwrap()
+        };
+
+        Ok(Bind {
+            generic: generic.clone(),
+            jid: Some(jid),
         })
     }
 }
 
 impl ToString for Bind {
     fn to_string(&self) -> String {
-        format!("<iq type='{bind_type}' id='{id}'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>", id=self.id, bind_type=self.bind_type)
+        format!("<iq type='{bind_type}' id='{id}'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>", id=self.get_id(), bind_type=self.get_type())
     }
 }
 
 
-#[derive(Debug, Clone)]
-pub struct Generic {
-    pub id: String,
-    pub iq_type: String,
-    pub body: Option<Element>
-}
-
-impl Generic {
-    pub fn new() -> Generic {
-        Generic {
-            id: String::new(),
-            iq_type: String::new(),
-            body: None
-        }
-    }
-
-    pub fn set_type(mut self, t: &str) -> Self {
-        self.iq_type = t.to_string();
-
-        self
-    }
-
-    pub fn set_id(mut self, id: &str) -> Self {
-        self.id = id.to_string();
-
-        self
-    }
-}
-
-impl FromStr for Generic {
-    type Err = ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let root = Element::from_reader(s.as_bytes()).unwrap();
-
-        let iq_type = root.get_attr("type").unwrap_or("").to_string();
-        let id = root.get_attr("id").unwrap_or("").to_string();
-
-        Ok(Generic {
-            iq_type: iq_type,
-            id: id,
-            body: Some(root)
-        })
-    }
-}
-
-impl ToString for Generic {
-    fn to_string(&self) -> String {
-        String::new()
-    }
-}

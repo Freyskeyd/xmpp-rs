@@ -2,7 +2,7 @@ use std::str::FromStr;
 use elementtree::Element;
 use std::string::ParseError;
 use ns;
-use events::XMPPConfig;
+use config::XMPPConfig;
 
 #[derive(Debug, Clone)]
 pub struct OpenStream {

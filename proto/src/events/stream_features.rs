@@ -1,9 +1,12 @@
+use events::{Event, EventTrait};
+use events::NonStanzaEvent::StreamFeaturesEvent;
 use std::str::FromStr;
 use std::string::ParseError;
 use ns;
-use events::XMPPConfig;
+use config::XMPPConfig;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, XmppEvent)]
+#[non_stanza(event="StreamFeaturesEvent(_)")]
 pub struct StreamFeatures {
     config: XMPPConfig,
 }

@@ -1,7 +1,7 @@
 use std::result::Result;
 use std::str::FromStr;
-use std::string::ParseError;
 use std::fmt;
+use std::io;
 
 ///
 /// Represents a Jabber ID (JID)
@@ -12,9 +12,9 @@ use std::fmt;
 ///
 #[derive(Clone, Debug, PartialEq)]
 pub struct Jid {
-    node: Option<String>,
-    domain: String,
-    resource: Option<String>
+    pub node: Option<String>,
+    pub domain: String,
+    pub resource: Option<String>
 }
 
 impl Jid {
@@ -46,6 +46,12 @@ impl Jid {
     }
 }
 
+impl ToJid for Jid {
+    fn to_jid(&self) -> Result<Jid, io::Error> {
+        Ok(self.clone())
+    }
+}
+
 impl fmt::Display for Jid {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         // TODO: may need escaping
@@ -60,16 +66,38 @@ impl fmt::Display for Jid {
     }
 }
 impl FromStr for Jid {
-    type Err = ParseError;
+    type Err = io::Error;
 
-    fn from_str(input: &str) -> Result<Self, ParseError> {
-        Ok(Jid {
-            node: None,
-            domain: input.to_string(),
-            resource: None
-        })
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        Ok(Jid::from_full_jid(input))
     }
 }
+
+pub trait ToJid {
+    fn to_jid(&self) -> Result<Jid, io::Error>;
+}
+
+impl<'a> ToJid for &'a str {
+    fn to_jid(&self) -> Result<Jid, io::Error> {
+        Jid::from_str(self)
+    }
+}
+
+impl ToJid for str {
+    fn to_jid(&self) -> Result<Jid, io::Error> {
+        Jid::from_str(self)
+    }
+}
+
+impl<'a,T> ToJid for Option<&'a T> where T: ToJid + ?Sized {
+    fn to_jid(&self) -> Result<Jid, io::Error> {
+        match *self {
+            Some(t) => t.to_jid(),
+            None => Err(io::Error::new(io::ErrorKind::InvalidInput, ""))
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

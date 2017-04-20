@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use std::string::ParseError;
-use events::XMPPConfig;
+use config::XMPPConfig;
 
 
 #[derive(Debug, Clone)]

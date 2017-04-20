@@ -1,11 +1,15 @@
 use std::str::FromStr;
 use std::string::ParseError;
-use events::XMPPConfig;
+use events::NonStanzaEvent::AuthEvent;
+use events::Event;
+use events::EventTrait;
+use config::XMPPConfig;
 use credentials::Credentials;
 use base64::encode;
 use std::str;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, XmppEvent)]
+#[non_stanza(event = "AuthEvent(_)")]
 pub struct Auth {
     config: XMPPConfig,
     credentials: Credentials

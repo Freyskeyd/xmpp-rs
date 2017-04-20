@@ -1,9 +1,13 @@
+use events::{Event, EventTrait};
+use events::NonStanzaEvent::StartTlsEvent;
+
 use std::str::FromStr;
 use std::string::ParseError;
 use ns;
-use events::XMPPConfig;
+use config::XMPPConfig;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, XmppEvent)]
+#[non_stanza(event="StartTlsEvent(_)")]
 pub struct StartTls {
     config: XMPPConfig,
 }

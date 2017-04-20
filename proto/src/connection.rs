@@ -7,9 +7,9 @@ use events::Event;
 use events::Event::*;
 use events::NonStanzaEvent::*;
 use events::StanzaEvent::*;
-use events::IqType::*;
+use events::IqEvent::*;
 use events::*;
-use std::str::FromStr;
+use events::FromGeneric;
 use ns;
 use futures::sync::oneshot::Sender;
 
@@ -74,25 +74,8 @@ impl Connection {
         }
     }
 
-    // pub fn fetch_iq_response(&mut self, id: &str) -> Event {
-    //     let event = match self.iq_queue.get(id) {
-    //         Some(e) => e.clone().unwrap(),
-    //         None => panic!("")
-    //     };
-    //     self.iq_queue.remove(id);
-    //     event
-    // }
-    // pub fn is_finished(&mut self, id: &str) -> bool {
-    //     match self.iq_queue.get(id) {
-    //         Some(e) => match *e {
-    //             Some(ref e) => true,
-    //             None => false
-    //         },
-    //         None => false
-    //     }
-    // }
     pub fn connect(&mut self) -> Result<ConnectionState> {
-        self.frame_queue.push_back(NonStanza(OpenStreamEvent(OpenStream::new(&self.config)), String::new()));
+        self.frame_queue.push_back(NonStanza(Box::new(OpenStreamEvent(OpenStream::new(&self.config))), String::new()));
 
         Ok(ConnectionState::Connecting(ConnectingState::SentInitialStreamHeader))
     }
@@ -114,99 +97,157 @@ impl Connection {
     }
 
     pub fn start_tls(&mut self) {
-        let event = NonStanza(OpenStreamEvent(OpenStream::new(&self.config)), String::new());
+        let event = NonStanza(Box::new(OpenStreamEvent(OpenStream::new(&self.config))), String::new());
         self.frame_queue.push_back(event);
     }
 
     pub fn compile_ping(&mut self) -> Ping {
         if let Some(ref c) = self.credentials {
-
-            return Ping::new(c.jid.clone(), self.config.get_domain());
+            return Ping::new(&c.jid, self.config.get_domain());
         }
         panic!("")
     }
 
     pub fn compile_presence(&mut self) {
-        if let Some(ref c) = self.credentials {
-            let event = Stanza(PresenceEvent(Presence::new(&self.config, c.jid.clone())), String::new());
-            self.frame_queue.push_back(event);
+        if let Some(_) = self.credentials {
+            let presence = Presence::new();
+            self.frame_queue.push_back(presence.to_event());
         }
     }
 
     pub fn handle_frame(&mut self, f: Event) {
+        let returnable_event = f.clone();
         match f {
-            NonStanza(ProceedTlsEvent(_), _) => {
-                self.state = ConnectionState::Connecting(ConnectingState::ReceivedProceedCommand);
-                self.start_tls();
-            }
-            NonStanza(SuccessTlsEvent(_), _) => {
-                self.frame_queue.push_back(NonStanza(OpenStreamEvent(OpenStream::new(&self.config)), String::new()));
-            },
-            NonStanza(StreamFeaturesEvent(_), source) => {
-                if source.contains("starttls") {
-                    self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStreamFeatures);
-                    self.frame_queue.push_back(NonStanza(StartTlsEvent(StartTls::new(&self.config)), String::new()));
-                } else if source.contains("PLAIN") {
-                    self.state = ConnectionState::Connecting(ConnectingState::ReceivedAuthenticatedFeatures);
-                    let credentials = match self.credentials {
-                        Some(ref c) => c.clone(),
-                        None => Credentials { ..Credentials::default() }
-                    };
-                    self.frame_queue.push_back(NonStanza(AuthEvent(Auth::new(&self.config, credentials)), String::new()));
-                } else if source.contains("session") {
-                    let bind = Bind::new()
-                        .set_type("set")
-                        .set_id("bind_1");
-
-                    self.frame_queue.push_back(Stanza(IqEvent(BindIq(bind)), String::new()));
-                } else {
-                    self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStream);
-                }
-            },
-            Stanza(IqResponseEvent(BindIq(event)), _) => {
-                match event.body {
-                    Some(body) => match body.find((ns::BIND, "bind")) {
-                        Some(bind) => match bind.find((ns::BIND, "jid")) {
-                            Some(jid) => {
-                                self.state = ConnectionState::Connected;
-                                match self.credentials {
-                                    Some(ref mut c) => c.jid = Jid::from_full_jid(&jid.text()),
-                                    None => {}
-                                };
-                            },
-                            None => {}
-                        },
-                        None => {}
+            NonStanza(non_stanza, source) => {
+                match *non_stanza {
+                    CloseStreamEvent => {
+                        self.state = ConnectionState::Closed;
+                        self.frame_queue.push_back(returnable_event);
+                    }
+                    ProceedTlsEvent(_) => {
+                        self.state = ConnectionState::Connecting(ConnectingState::ReceivedProceedCommand);
+                        self.start_tls();
+                    }
+                    SuccessTlsEvent(_) => {
+                        self.frame_queue.push_back(NonStanza(Box::new(OpenStreamEvent(OpenStream::new(&self.config))), String::new()));
                     },
-                    None => {}
+                    StreamFeaturesEvent(_) => {
+                        if source.contains("starttls") {
+                            self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStreamFeatures);
+                            self.frame_queue.push_back(NonStanza(Box::new(StartTlsEvent(StartTls::new(&self.config))), String::new()));
+                        } else if source.contains("PLAIN") {
+                            self.state = ConnectionState::Connecting(ConnectingState::ReceivedAuthenticatedFeatures);
+                            let credentials = match self.credentials {
+                                Some(ref c) => c.clone(),
+                                None => Credentials { ..Credentials::default() }
+                            };
+                            let auth = Auth::new(&self.config, credentials);
+
+                            self.frame_queue.push_back(auth.to_event());
+                        } else if source.contains("session") {
+                            let mut bind = Bind::new();
+                            bind.set_type(IqType::Set)
+                                .unwrap()
+                                .set_id("bind_1");
+
+                            self.frame_queue.push_back(bind.to_event());
+                        } else {
+                            self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStream);
+                        }
+                    },
+                    _ => {
+                        if self.state == ConnectionState::Connected {
+                            self.add_input_frame(returnable_event);
+                        }
+                    }
                 }
             },
-            Stanza(IqEvent(GenericIq(event)), source) => {
-                let e = event.clone();
-                if event.body.is_some() {
-                    if event.body.unwrap().find((ns::BIND, "bind")).is_some() {
-                        if event.iq_type == "result" {
-                            self.handle_frame(Stanza(IqResponseEvent(BindIq(Bind::from_str(&source).unwrap())), source));
+            Stanza(stanza, _) => {
+                match *stanza {
+                    IqRequestEvent(iq) => {
+                        match *iq {
+                            _ => {
+                                if self.state == ConnectionState::Connected {
+                                    self.add_input_frame(returnable_event);
+                                }
+                            }
                         }
-                    } else if event.iq_type == "result" {
-                        self.handle_iq(event.id.to_string(), Stanza(IqEvent(GenericIq(e.clone())), String::new()));
+                    },
+                    IqEvent(iq) => {
+                        match *iq {
+                            GenericEvent(event) => {
+                                if event.get_type() == IqType::Result {
+                                    match event.get_element() {
+                                        Some(body) if body.find((ns::BIND, "bind")).is_some() => {
+                                            let bind = Bind::from_generic(&event).unwrap();
+                                            self.handle_frame(bind.to_event());
+                                        },
+                                        Some(_) => self.handle_iq(event.get_id(), returnable_event),
+                                        None => {}
+                                    }
+                                }
+                            },
+                            _ => {
+                                if self.state == ConnectionState::Connected {
+                                    self.add_input_frame(returnable_event);
+                                }
+                            }
+                        }
+
+                    },
+                    IqResponseEvent(iq) => {
+                        match *iq {
+                            GenericEvent(event) => {
+                                if event.get_type() == IqType::Result {
+                                    match event.get_element() {
+                                        Some(body) if body.find((ns::BIND, "bind")).is_some() => {
+                                            let bind = Bind::from_generic(&event).unwrap();
+                                            self.handle_frame(bind.to_event());
+                                        },
+                                        Some(_) => self.handle_iq(event.get_id(), returnable_event),
+                                        None => {}
+                                    }
+                                }
+                            },
+                            BindEvent(event) => {
+                                if let Some(body) = event.generic.get_element() {
+                                    if let Some(bind) = body.find((ns::BIND, "bind")) {
+                                        if let Some(jid) = bind.find((ns::BIND, "jid")) {
+                                            self.state = ConnectionState::Connected;
+                                            if let Some(ref mut c) = self.credentials {
+                                                c.jid = Jid::from_full_jid(jid.text())
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            _ => {
+                                if self.state == ConnectionState::Connected {
+                                    self.add_input_frame(returnable_event);
+                                }
+                            }
+                        }
+                    },
+                    _ => {
+                        if self.state == ConnectionState::Connected {
+                            self.add_input_frame(returnable_event);
+                        }
                     }
                 }
             },
             _ => {
                 if self.state == ConnectionState::Connected {
-                    self.add_input_frame(f);
+                    self.add_input_frame(returnable_event);
                 }
             }
         }
     }
 
-    fn handle_iq(&mut self, id: String, event: Event) {
-        match self.iq_queue.remove(&id) {
-            Some(tx) => {
+    fn handle_iq(&mut self, id: &str, event: Event) {
+        if let Some(tx) = self.iq_queue.remove(id) {
                 let _ = tx.send(event);
-            },
-            None => {}
+        } else {
+            self.add_input_frame(event);
         }
     }
 }

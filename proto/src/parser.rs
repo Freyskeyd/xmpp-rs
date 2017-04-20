@@ -1,14 +1,17 @@
 use regex::Regex;
 use regex::RegexSet;
+use ns;
 use events::Event;
 use events::Event::*;
+use events::IqType;
 use events::NonStanzaEvent::*;
 use events::StanzaEvent::*;
-use events::IqType::*;
-use events::Generic;
+use events::IqEvent::*;
+// use events::Generic;
+use events::*;
 
 use std::ops::Fn;
-use events::{OpenStream, Presence, Message,StreamFeatures, Unknown, SuccessTls, ProceedTls};
+use events::{OpenStream, EventTrait, Presence, Message,StreamFeatures, Unknown, SuccessTls, ProceedTls};
 use std::str::FromStr;
 
 /// Used to parse incoming stanza into Event
@@ -27,7 +30,7 @@ pub struct Parser;
 impl Parser {
     /// Parse an incoming `stanza` and return matching event
     ///
-    pub fn parse(f: &str) -> Option<Event> {
+    pub fn parse(f: &str) -> Option<(Event, String)> {
         let matches:Vec<_> = SET.matches(f).into_iter().collect();
 
         if !matches.is_empty() {
@@ -37,7 +40,7 @@ impl Parser {
                         Some(s) => {
                             let c = s.1.captures(f).unwrap();
                             let cl = &s.2;
-                            Some(cl(&c[0]))
+                            Some((cl(&c[0]), c[0].to_string()))
                         },
                         None => None
                     }
@@ -58,7 +61,7 @@ lazy_static! {
     static ref PROCEED: &'static str = r"(<proceed[^<]*)";
     static ref SUCCESS: &'static str = r"(<success[^<]*)";
     static ref IQ: &'static str = r"(?i)((<iq[^<]*/>|<iq(.*?)(?:</iq>)))";
-    static ref PRESENCE: &'static str = r"(?i)(<presence(.*?)(?:/>))";
+    static ref PRESENCE: &'static str = r"(?i)((<presence[^<]*/>|<presence(.*?)(?:</presence>)))";
     static ref MESSAGE: &'static str = r"(?i)(<message(.*?)(?:</message>))";
 
     static ref HASHMAP_R: Vec<(&'static str, Regex, Box<Fn(&str) -> Event + Sync>)> = {
@@ -75,15 +78,18 @@ lazy_static! {
         m.push((*STREAM_STREAM,
                 Regex::new(&STREAM_STREAM).unwrap(),
                 Box::new(|c:&str| {
-                    NonStanza(OpenStreamEvent(OpenStream::from_str(c).unwrap()), c.to_string())
+                    let o = OpenStream::from_str(c).unwrap();
+
+                    o.to_event()
                 })
                 as Box<Fn(&str) -> Event + Sync>
                 ));
 
         m.push((*STREAM_CLOSE,
                 Regex::new(&STREAM_CLOSE).unwrap(),
-                Box::new(|c:&str| {
-                    NonStanza(CloseStreamEvent, c.to_string())
+                Box::new(|_:&str| {
+                    let o = CloseStream {};
+                    o.to_event()
                 })
                 as Box<Fn(&str) -> Event + Sync>
                 ));
@@ -91,7 +97,7 @@ lazy_static! {
         m.push((*STREAM_FEATURES,
                 Regex::new(&STREAM_FEATURES).unwrap(),
                 Box::new(|c:&str| {
-                    NonStanza(StreamFeaturesEvent(StreamFeatures::from_str(c).unwrap()), c.to_string())
+                    NonStanza(Box::new(StreamFeaturesEvent(StreamFeatures::from_str(c).unwrap())), c.to_string())
                 })
                 as Box<Fn(&str) -> Event + Sync>
                 ));
@@ -99,7 +105,7 @@ lazy_static! {
         m.push((*PROCEED,
                 Regex::new(&PROCEED).unwrap(),
                 Box::new(|c:&str| {
-                    NonStanza(ProceedTlsEvent(ProceedTls::from_str(c).unwrap()), c.to_string())
+                    NonStanza(Box::new(ProceedTlsEvent(ProceedTls::from_str(c).unwrap())), c.to_string())
                 })
                 as Box<Fn(&str) -> Event + Sync>
                 ));
@@ -107,7 +113,7 @@ lazy_static! {
         m.push((*SUCCESS,
                 Regex::new(&SUCCESS).unwrap(),
                 Box::new(|c:&str| {
-                    NonStanza(SuccessTlsEvent(SuccessTls::from_str(c).unwrap()), c.to_string())
+                    NonStanza(Box::new(SuccessTlsEvent(SuccessTls::from_str(c).unwrap())), c.to_string())
                 })
                 as Box<Fn(&str) -> Event + Sync>
                 ));
@@ -115,7 +121,20 @@ lazy_static! {
         m.push((*IQ,
                 Regex::new(&IQ).unwrap(),
                 Box::new(|c:&str| {
-                    Stanza(IqEvent(GenericIq(Generic::from_str(c).unwrap())), c.to_string())
+                    let g = GenericIq::from_str(c).unwrap();
+                    match g.get_type() {
+                        IqType::Get => {
+                            match g.get_element() {
+                                Some(body) if body.find((ns::PING, "ping")).is_some() => {
+                                    return Stanza(Box::new(IqRequestEvent(Box::new(PingEvent(Ping::from_str(c).unwrap())))), c.to_string())},
+                                _ => {}
+                            };
+                            Stanza(Box::new(IqRequestEvent(Box::new(GenericEvent(g)))), c.to_string())
+                        },
+                        IqType::Set => g.to_event(),
+                        IqType::Result => Stanza(Box::new(IqResponseEvent(Box::new(GenericEvent(g)))), c.to_string()),
+                        IqType::Error => g.to_event()
+                    }
                 })
                 as Box<Fn(&str) -> Event + Sync>
                 ));
@@ -123,7 +142,7 @@ lazy_static! {
         m.push((*PRESENCE,
                 Regex::new(&PRESENCE).unwrap(),
                 Box::new(|c:&str| {
-                    Stanza(PresenceEvent(Presence::from_str(c).unwrap()), c.to_string())
+                    Stanza(Box::new(PresenceEvent(Presence::from_str(c).unwrap())), c.to_string())
                 })
                 as Box<Fn(&str) -> Event + Sync>
                 ));
@@ -131,7 +150,8 @@ lazy_static! {
         m.push((*MESSAGE,
                 Regex::new(&MESSAGE).unwrap(),
                 Box::new(|c:&str| {
-                    Stanza(MessageEvent(Message::from_str(c).unwrap()), c.to_string())
+                    let o = Message::from_str(c).unwrap();
+                    o.to_event()
                 })
                 as Box<Fn(&str) -> Event + Sync>
                 ));

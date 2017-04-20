@@ -27,7 +27,7 @@ impl XMPPConfig {
     }
 
     /// Return the configured domain
-    pub fn get_domain(&self) -> &str {
+    pub fn get_domain<'a>(&'a self) -> &'a str {
         &self.domain
     }
 }

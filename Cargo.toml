@@ -31,9 +31,13 @@ unicode-width = "0.1.4"
 path = "./proto"
 version = "0"
 
+[dependencies.xmpp-derive]
+path = "./derive"
+version = "0"
+
 [dependencies.xmpp-client]
 path = "./client"
 version = "0"
 
 [workspace]
-members = ["client/", "proto/", "server/"]
+members = ["client/", "proto/", "server/", "derive/"]

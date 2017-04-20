@@ -1,8 +1,11 @@
+use events::{Event, EventTrait};
+use events::NonStanzaEvent::SuccessTlsEvent;
 use std::str::FromStr;
 use std::string::ParseError;
-use events::XMPPConfig;
+use config::XMPPConfig;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, XmppEvent)]
+#[non_stanza(event="SuccessTlsEvent(_)")]
 pub struct SuccessTls {
 }
 

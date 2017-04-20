@@ -1,10 +1,9 @@
 #![allow(unused_must_use)]
 use events::Event;
-use events::Event::Stanza;
+use events::Ping;
 use events::NonStanzaEvent::*;
-use events::StanzaEvent::*;
-use events::IqType::*;
 use events::Event::NonStanza;
+use events::EventTrait;
 use std::str;
 use stream::XMPPStream;
 use std::io;
@@ -19,7 +18,7 @@ pub struct XMPPTransport {
     /// Current stream connected to xmpp
     pub stream: XMPPStream,
     /// Connection state machine
-    pub connection: Connection
+    pub connection: Connection,
 }
 
 impl XMPPTransport
@@ -66,11 +65,12 @@ impl XMPPTransport
     }
 
     /// Send a ping IQ and register the Receiver for the response IQ
-    pub fn send_ping(&mut self, tx: Sender<Event>) {
-        let ping = self.connection.compile_ping();
-        let id = ping.id.to_string();
-        let event = Stanza(IqRequestEvent(PingIq(ping)), String::new());
-        self.connection.iq_queue.insert(id.clone(),Box::new(tx));
+    pub fn send_ping(&mut self, tx: Sender<Event>, ping: &Ping) {
+        // let ping = self.connection.compile_ping();
+        let id = ping.get_id();
+        let event = ping.to_event();
+        // let event = Stanza(IqRequestEvent(PingIq(ping)), String::new());
+        self.connection.iq_queue.insert(id.to_string(),Box::new(tx));
 
         match self.stream {
             XMPPStream::Tcp(ref mut stream) => {
@@ -165,10 +165,11 @@ impl XMPPTransport
                     break;
                 },
                 Ok(Async::NotReady) => {
-                    // trace!("handle frames: upstream poll gave NotReady");
+                    trace!("handle frames: upstream poll gave NotReady");
                     match self.stream {
                         XMPPStream::Tls(ref mut stream) => {
                             stream.poll();
+                            stream.poll_complete();
                         },
                         XMPPStream::Tcp(_) => panic!("")
                     }
@@ -224,16 +225,18 @@ impl Future for XMPPTransportConnector
         } {
             transport.connection.handle_frame(f);
             while let Some(fr) = transport.connection.next_frame() {
-                match fr {
-                    NonStanza(StartTlsEvent(_), _) => {
-                        transport.connection.state = ConnectionState::Connecting(ConnectingState::SentAuthenticationMechanism)
-                    },
-                    NonStanza(OpenStreamEvent(_), _) => {
-                        if transport.connection.state == ConnectionState::Connecting(ConnectingState::ReceivedProceedCommand) {
-                            return Ok(Async::Ready(transport));
-                        }
-                    },
-                    _ => {}
+                if let NonStanza(ref non_stanza, _) = fr {
+                    match **non_stanza {
+                        StartTlsEvent(_) => {
+                            transport.connection.state = ConnectionState::Connecting(ConnectingState::SentAuthenticationMechanism)
+                        },
+                        OpenStreamEvent(_) => {
+                            if transport.connection.state == ConnectionState::Connecting(ConnectingState::ReceivedProceedCommand) {
+                                return Ok(Async::Ready(transport));
+                            }
+                        },
+                        _ => {}
+                    }
                 }
 
                 match transport.stream {
@@ -270,7 +273,7 @@ impl Stream for XMPPTransport
         } {
             Ok(Async::Ready(t)) => t,
             Ok(Async::NotReady) => {
-                // trace!("Connected:: stream poll gave NotReady");
+                trace!("Connected:: stream poll gave NotReady");
                 match self.stream {
                     XMPPStream::Tcp(ref mut stream) => stream.poll(),
                     XMPPStream::Tls(ref mut stream) => stream.poll(),
@@ -283,6 +286,27 @@ impl Stream for XMPPTransport
                 return Err(From::from(e));
             }
         } {
+            // if let NonStanza(ref non_stanza, _) = frame {
+            //     match **non_stanza {
+            //         CloseStreamEvent => {
+            //             println!("Closing");
+            //             return Ok(Async::Ready(None));
+            //             // return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "Connection closed"));
+            //         },
+            //         _ => {}
+            //     }
+            // }
+            // match frame {
+            //     NonStanza(ref non_stanza, _) => {
+            //         match **non_stanza {
+            //             CloseStreamEvent => {
+            //                 return Ok(Async::Ready(None));
+            //             },
+            //             _ => {}
+            //         }
+            //     },
+            //     _ => {}
+            // };
             self.connection.handle_frame(frame);
         };
 

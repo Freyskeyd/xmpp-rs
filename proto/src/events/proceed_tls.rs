@@ -1,8 +1,12 @@
+use events::{Event, EventTrait};
+use events::NonStanzaEvent::ProceedTlsEvent;
+
 use std::str::FromStr;
 use std::string::ParseError;
-use events::XMPPConfig;
+use config::XMPPConfig;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, XmppEvent)]
+#[non_stanza(event="ProceedTlsEvent(_)")]
 pub struct ProceedTls {}
 
 impl ProceedTls {

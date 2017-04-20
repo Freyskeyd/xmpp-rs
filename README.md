@@ -39,10 +39,9 @@ To build xmpp-rs:
       servers.
         - [x] Can connect to IP
         - [x] Can connect to domain
-        - [ ] Can connect to untrusted domain
     - [x] **TLS Connection and negociation**: TLS connection is mandatory.
     - [x] **PLAIN authentication**: Authentification with a PLAIN mechanism must be possible.
-    - [ ] **Ping IQ client**: We need to be able to send a ping to the server and listen for the anwser.
+    - [x] **Ping IQ client**: We need to be able to send a ping to the server and listen for the anwser.
     - [x] **Send First presence**: We need to be able to send our presence to the server.
 - [ ] :satellite: Components
     - [ ] **SASL**: Handle every needed SASL auth mechanisms
