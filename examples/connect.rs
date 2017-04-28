@@ -74,7 +74,6 @@ fn main() {
                         Stanza(stanza, _) => match *stanza {
                             MessageEvent(_) => {
                                 println!("New message");
-                                client.send(CloseStream::new().to_event());
                             },
                             _ => {}
                         },

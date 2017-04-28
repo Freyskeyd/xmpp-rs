@@ -5,7 +5,6 @@ use ns;
 use jid::{Jid, ToJid};
 use std::io;
 use std::str::FromStr;
-use std::string::ParseError;
 use std::str;
 
 #[derive(Debug, Clone, XmppEvent)]
@@ -27,9 +26,26 @@ impl Ping {
 }
 
 impl FromStr for Ping {
-    type Err = ParseError;
+    type Err = io::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let generic = GenericIq::from_str(s).unwrap();
+        let generic = match GenericIq::from_str(s) {
+            Ok(g) => g,
+            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e))
+        };
+
+        match generic.get_type() {
+            IqType::Get => {
+                if let None = generic.get_element().unwrap().find((ns::PING, "ping")) {
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput, "Ping element not found"));
+                }
+            }
+            IqType::Result => {
+                if generic.get_element().unwrap().child_count() > 0 {
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput, "Ping result can't have body"));
+                }
+            }
+            _ => {}
+        }
 
         Ok(Ping { generic: generic})
     }

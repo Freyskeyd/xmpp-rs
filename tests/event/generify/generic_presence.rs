@@ -7,7 +7,7 @@ use xmpp_proto::events::Presence;
 fn create_a_presence() {
     let mut g = Presence::new();
 
-    g.set_to(Some("test@example.com"));
+    let _ = g.set_to(Some("test@example.com"));
     // Presence can have a TO
     match g.get_to() {
         Some(to) => {
@@ -17,16 +17,15 @@ fn create_a_presence() {
         None => {}
     }
     // Presence can have a TYPE
-    g.set_type(Some(PresenceType::Available));
+    let _ = g.set_type(Some(PresenceType::Available));
     match g.get_type() {
         None => assert!(false),
         Some(t) => match *t {
-            PresenceType::Available => assert!(true),
-            _ => assert!(false)
+            PresenceType::Available => assert!(true)
         }
     }
 
-    g.set_from(Some("test@example.com"));
+    let _ = g.set_from(Some("test@example.com"));
     // Presence can have a FROM
     match g.get_from() {
         Some(from) => {
@@ -46,7 +45,7 @@ fn check_send_first_presence() {
             assert_eq!(presence.get_type(), None);
             assert_eq!(presence.to_string(), "<presence />");
         },
-        Err(e) => assert!(false)
+        Err(_) => assert!(false)
     };
 }
 

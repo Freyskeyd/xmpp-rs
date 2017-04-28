@@ -121,6 +121,29 @@ impl FromStr for GenericIq {
             Err(_) => None
         };
 
+        match iq_type {
+            IqType::Result => {
+                if root.child_count() > 1 {
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput, "An IQ stanza of type \"result\" MUST include zero or one child elements."));
+                }
+            },
+            IqType::Error => {
+                match root.find("error") {
+                    None => {
+                        return Err(io::Error::new(io::ErrorKind::InvalidInput, "An IQ stanza of type \"error\" SHOULD include the child element contained in the associated \"get\" or \"set\" and MUST include an <error/> child"));
+                    },
+                    _ => {}
+                }
+            }
+            IqType::Set |
+            IqType::Get => {
+                if root.child_count() != 1 {
+                    // https://xmpp.org/rfcs/rfc3920.html#stanzas
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput, "IqType Get/Set MUST contain one and only one child"));
+                }
+            }
+        }
+
         Ok(GenericIq {
             id: id,
             iq_type: iq_type,
