@@ -69,6 +69,8 @@ To build xmpp-rs:
 - [ ] [XEP-0048: Bookmarks](https://xmpp.org/extensions/xep-0048.html)
 - [ ] [XEP-0049: Private XML Storage](https://xmpp.org/extensions/xep-0049.html)
 
+- [ ] [Stanza errors](https://tools.ietf.org/html/rfc6120#section-8.3)
+
 ## License
 
 xmpp-rs is primarily distributed under the terms of both the MIT license

@@ -1,1 +1,2 @@
 mod generify;
+mod ping;
