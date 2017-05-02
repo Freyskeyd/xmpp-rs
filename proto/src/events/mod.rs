@@ -44,6 +44,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_event1() {
         let ping = match Ping::from_str("<iq from=\"x\" type=\"get\" id=\"1\"><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>") {
             Ok(ping) => ping,
