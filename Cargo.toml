@@ -10,22 +10,13 @@ authors = ["Freyskeyd <simon.paitrault@iadvize.com>"]
 name = "xmpp"
 path = "src/lib.rs"
 
-[dependencies]
-bytes = "0.4"
-futures = "0.1"
-tokio-io = "0.1.1"
-tokio-core = "0.1"
-tokio-tls = "0.1.2"
-native-tls = "0.1"
-base64 = "0.4.0"
-log = "0"
-env_logger = "0"
-regex = "0.2"
-lazy_static = "0.2.5"
-
 [dev-dependencies]
-cursive = "0.3.7"
-unicode-width = "0.1.4"
+elementtree = {git = "https://github.com/Freyskeyd/elementtree-rust"}
+env_logger = "0"
+futures = "0.1"
+log = "0"
+tokio-core = "0.1"
+xml-rs = {git = "https://github.com/Freyskeyd/xml-rs"}
 
 [dependencies.xmpp-proto]
 path = "./proto"
@@ -41,3 +32,4 @@ version = "0"
 
 [workspace]
 members = ["client/", "proto/", "server/", "derive/"]
+

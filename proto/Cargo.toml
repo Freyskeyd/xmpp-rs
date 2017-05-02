@@ -7,16 +7,16 @@ documentation = "https://docs.rs/xmpp-proto"
 authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
 
 [dependencies]
-futures = "0"
-tokio-io = "0"
-tokio-core = "0"
-tokio-tls = "0.1.2"
-bytes = "0"
-native-tls = "0"
 base64 = "0"
+bytes = "0"
+circular = "0"
+elementtree = {git = "https://github.com/Freyskeyd/elementtree-rust"}
+futures = "0"
 log = "0"
-regex = "0.2"
-lazy_static = "0.2.5"
-elementtree = "0.4.0"
+native-tls = "0"
+tokio-core = "0"
+tokio-io = "0"
+tokio-tls = "0.1.2"
 uuid = { version = "0.4", features = ["v4"] }
+xml-rs = {git = "https://github.com/Freyskeyd/xml-rs"}
 xmpp-derive = {path = "../derive" }

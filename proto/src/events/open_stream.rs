@@ -57,7 +57,7 @@ impl ToString for OpenStream {
             None => ""
         };
 
-        format!("<stream:stream version='1.0' xmlns:stream='{ns_stream}' to='{to}' xmlns='{ns}'>",
+        format!("<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='{ns_stream}' to='{to}' xmlns='{ns}'>",
                 to=to,
                 ns_stream=ns::STREAM,
                 ns=self.xmlns)
@@ -73,8 +73,8 @@ mod tests {
 
     #[test]
     fn check_compilation() {
-        let initial_stream         = "<stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='hey' xmlns='jabber:client'>";
-        let initial_stream_example = "<stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' xmlns='jabber:client'>";
+        let initial_stream         = "<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='hey' xmlns='jabber:client'>";
+        let initial_stream_example = "<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' xmlns='jabber:client'>";
 
         assert!(OpenStream::new(&XMPPConfig::new().set_domain("hey")).to_string() == initial_stream.to_string(), OpenStream::new(&XMPPConfig::new()).to_string());
         assert!(OpenStream::new(&XMPPConfig::new()).to_string() == initial_stream_example.to_string());

@@ -21,7 +21,7 @@ impl Client {
     pub fn connect(stream: TcpStream, config: XMPPConfig, credentials: Option<Credentials>) -> Box<Future<Item=Client, Error=io::Error>>
     {
         let connection = Connection::new(&config, credentials);
-        Box::new(XMPPTransport::connect(XMPPStream::Tcp(stream.framed(XMPPCodec)), connection)
+        Box::new(XMPPTransport::connect(XMPPStream::Tcp(stream.framed(XMPPCodec::new())), connection)
                  .and_then(move |transport| {
                      let builder = TlsConnector::builder().unwrap();
                      let cx = builder.build().unwrap();
@@ -37,7 +37,7 @@ impl Client {
                      }).map(|socket| (connection, socket))
                  })
                  .and_then(|(connection, s)| {
-                     XMPPTransport::connect(XMPPStream::Tls(s.framed(XMPPCodec)), connection)
+                     XMPPTransport::connect(XMPPStream::Tls(s.framed(XMPPCodec::new())), connection)
                  }).and_then(|transport| {
 
                      let client = Client {

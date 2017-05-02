@@ -37,6 +37,35 @@ impl GenericIq {
         }
     }
 
+    pub fn from_element(e: Element) -> Result<Self, io::Error> {
+        let id = match e.get_attr("id") {
+            Some(id) => id.to_string(),
+            None => return Err(io::Error::new(io::ErrorKind::InvalidInput, "ID is required"))
+        };
+
+        let iq_type = match IqType::from_str(e.get_attr("type").unwrap_or("")) {
+            Ok(t) => t,
+            Err(e) => return Err(e)
+        };
+
+        let to = match Jid::from_str(e.get_attr("to").unwrap_or("")) {
+            Ok(j) => Some(j),
+            Err(_) => None
+        };
+
+        let from = match Jid::from_str(e.get_attr("from").unwrap_or("")) {
+            Ok(j) => Some(j),
+            Err(_) => None
+        };
+        Ok(GenericIq {
+            id: id,
+            iq_type: iq_type,
+            to: to,
+            from: from,
+            element: Some(e.clone())
+        })
+    }
+
     pub fn unique_id() -> String {
         Uuid::new_v4().to_string()
     }
@@ -360,21 +389,3 @@ impl fmt::Display for PresenceType {
         })
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn test_generic_1() {
-//         let g = Generic::from_str("<iq type=\"get\" id=\"1\" />");
-
-//         match g {
-//             Ok(g) => {
-//                 assert!(g.id == "1");
-//                 assert!(g.iq_type == IqType::Get);
-//             },
-//             Err(e) => panic!(e)
-//         }
-//     }
-// }

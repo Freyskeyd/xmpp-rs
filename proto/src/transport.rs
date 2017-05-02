@@ -286,27 +286,6 @@ impl Stream for XMPPTransport
                 return Err(From::from(e));
             }
         } {
-            // if let NonStanza(ref non_stanza, _) = frame {
-            //     match **non_stanza {
-            //         CloseStreamEvent => {
-            //             println!("Closing");
-            //             return Ok(Async::Ready(None));
-            //             // return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "Connection closed"));
-            //         },
-            //         _ => {}
-            //     }
-            // }
-            // match frame {
-            //     NonStanza(ref non_stanza, _) => {
-            //         match **non_stanza {
-            //             CloseStreamEvent => {
-            //                 return Ok(Async::Ready(None));
-            //             },
-            //             _ => {}
-            //         }
-            //     },
-            //     _ => {}
-            // };
             self.connection.handle_frame(frame);
         };
 

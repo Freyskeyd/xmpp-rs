@@ -60,10 +60,12 @@ To build xmpp-rs:
 
 ## XEPs
 
+## Client
+
 - [ ] [RFC-6122: (XMPP): Address Format](https://tools.ietf.org/html/rfc6122)
 - [ ] [RFC-7590: Use of TLS](https://tools.ietf.org/html/rfc7590)
 - [ ] [XEP-0368: SRV records for XMPP over TLS](https://xmpp.org/extensions/xep-0368.html)
-- [ ] [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
+- [x] [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
 - [ ] [XEP-0004: Data Forms](https://xmpp.org/extensions/xep-0004.html)
 - [ ] [XEP-0030: Service Discovery](https://xmpp.org/extensions/xep-0030.html)
 - [ ] [XEP-0048: Bookmarks](https://xmpp.org/extensions/xep-0048.html)
