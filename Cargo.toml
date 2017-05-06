@@ -24,7 +24,6 @@ regex = "0.2"
 lazy_static = "0.2.5"
 
 [dev-dependencies]
-cursive = "0.3.7"
 unicode-width = "0.1.4"
 
 [dependencies.xmpp-proto]
