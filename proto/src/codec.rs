@@ -2,15 +2,35 @@ use bytes::{BytesMut};
 use std::str;
 use std::{io};
 use tokio_io::codec::{Encoder, Decoder};
-use parser::{Parser};
+// use parser::{Parser};
+// use events;
 use events::Event;
 use events::Event::*;
 use events::NonStanzaEvent::*;
 use events::StanzaEvent::*;
 use events::IqEvent::*;
-
+// use config::XMPPConfig;
+// use events::EventTrait;
+// use elementtree::Element;
+// use xml::reader::{EventReader,XmlEvent};
+// use xml::reader::EventReader;
+// use xml::common::Position;
+// use ns;
+// use std::io::{Read};
+// use tokio_core::net::TcpStream;
+use parser::XmppParser;
 /// Our line-based codec
-pub struct XMPPCodec;
+pub struct XMPPCodec {
+    pub parser: XmppParser
+}
+
+impl XMPPCodec {
+    pub fn new() -> XMPPCodec {
+        XMPPCodec {
+            parser: XmppParser::new()
+        }
+    }
+}
 
 impl Decoder for XMPPCodec {
     type Item = Event;
@@ -18,25 +38,22 @@ impl Decoder for XMPPCodec {
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, io::Error> {
 
-        let (consumed, f): (usize, Option<Event>) = {
-            match Parser::parse(str::from_utf8(buf.as_ref()).unwrap()) {
-                Some((s, source)) => {
-                    (source.as_bytes().len(), Some(s.clone()))
-                    // match s {
-                    //     NonStanza(_, _) |
-                    //     Stanza(_, _) |
-                    //     Unknown(_, _) => (source.as_bytes().len(), Some(s.clone())),
-                    // }
-                },
-                None => return Ok(None)
-            }
+        trace!("");
+        trace!("==================================================");
+        self.parser.feed(&buf[..]);
+
+        trace!("Buffer contains: {}", str::from_utf8(self.parser.source().data()).unwrap());
+        trace!("");
+        let event = match self.parser.next_event() {
+            Some(e) => {
+                trace!("Decode: event: {:?}", e);
+                Some(e)
+            },
+            _ => None
         };
-
-        buf.split_to(consumed);
-
-        trace!("extract from buffer: {:?}", f);
-        trace!("remained in buffer: {}", str::from_utf8(buf.as_ref()).unwrap());
-        Ok(f)
+        let l = buf.len();
+        buf.split_to(l);
+        Ok(event)
     }
 }
 

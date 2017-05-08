@@ -11,10 +11,10 @@ extern crate tokio_tls;
 extern crate tokio_io;
 extern crate bytes;
 extern crate base64;
-#[macro_use] extern crate lazy_static;
-extern crate regex;
 extern crate elementtree;
+extern crate xml;
 extern crate uuid;
+extern crate circular;
 
 mod default;
 mod config;
@@ -29,7 +29,7 @@ mod transport;
 mod credentials;
 mod parser;
 
-pub use parser::Parser;
+pub use parser::*;
 pub use config::XMPPConfig;
 pub use transport::XMPPTransport;
 pub use connection::Connection;

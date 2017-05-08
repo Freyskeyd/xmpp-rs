@@ -155,7 +155,8 @@ impl Connection {
                             self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStream);
                         }
                     },
-                    _ => {
+                    e => {
+                        trace!("{:?}", e);
                         if self.state == ConnectionState::Connected {
                             self.add_input_frame(returnable_event);
                         }

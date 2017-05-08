@@ -2,6 +2,8 @@ use std::str::FromStr;
 use xmpp_proto::ToJid;
 use xmpp_proto::events::Ping;
 use xmpp_proto::events::IqType;
+use xml::reader::{EventReader,XmlEvent};
+use elementtree::Element;
 
 #[test]
 fn parse_ping() {
@@ -105,5 +107,23 @@ fn parse_iq_error3_ping() {
       assert_eq!(ping.get_from().unwrap(), &"montague.lit".to_jid().unwrap());
     },
     Err(e) => panic!("{:?}", e)
+  }
+}
+
+#[test]
+fn parser_second() {
+  let mut p = "<iq from='capulet.lit' to='juliet@capulet.lit/balcony' id='s2c1' type='get'>
+    <ping xmlns='urn:xmpp:ping'/>
+    </iq><stream:stream".as_bytes();
+
+  loop {
+    match Element::from_reader(&mut p) {
+      Ok(_) => {
+        break;
+      },
+      Err(_) => {
+        break;
+      }
+    };
   }
 }

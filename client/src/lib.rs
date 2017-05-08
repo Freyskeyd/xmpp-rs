@@ -50,9 +50,12 @@
 //!             client.handle().and_then(move |stream| {
 //!                 stream.for_each(move |m| {
 //!                     match m {
-//!                         Stanza(MessageEvent(_), _) => {
-//!                             println!("New message");
-//!                         }
+//!                         Stanza(event, _) => match *event {
+//!                             MessageEvent(_) => {
+//!                                 println!("New message");
+//!                             },
+//!                             _ => {}
+//!                         },
 //!                         _ => {}
 //!                     }
 //!                     Ok(())
@@ -70,6 +73,7 @@ extern crate native_tls;
 extern crate tokio_core;
 extern crate tokio_tls;
 extern crate tokio_io;
+// extern crate xml;
 
 mod client;
 

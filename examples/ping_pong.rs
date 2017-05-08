@@ -1,11 +1,9 @@
 extern crate xmpp_client;
-#[macro_use]extern crate xmpp_derive;
 extern crate tokio_core;
 extern crate futures;
 extern crate env_logger;
 extern crate log;
 
-use std::str::FromStr;
 use tokio_core::reactor::Core;
 use futures::Future;
 use futures::Stream;
@@ -14,12 +12,10 @@ use tokio_core::net::TcpStream;
 use xmpp_client::events::Event::Stanza;
 use xmpp_client::events::StanzaEvent;
 use xmpp_client::events::IqType;
-use xmpp_client::events::Message;
 use xmpp_client::events::CloseStream;
 use xmpp_client::events::Ping;
-use xmpp_client::events::Event;
 use xmpp_client::events::IqEvent;
-use xmpp_client::events::StanzaEvent::{IqRequestEvent, MessageEvent};
+use xmpp_client::events::StanzaEvent::{IqRequestEvent};
 use xmpp_client::events::EventTrait;
 use std::thread;
 

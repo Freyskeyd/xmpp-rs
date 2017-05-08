@@ -44,32 +44,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    fn test_event1() {
-        let ping = match Ping::from_str("<iq from=\"x\" type=\"get\" id=\"1\"><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>") {
-            Ok(ping) => ping,
-            _ => panic!("fail to parse")
-        };
-
-        match ping.to_event() {
-            Event::Stanza(stanza_event, _) => match *stanza_event {
-                StanzaEvent::IqRequestEvent(iq_request) => match *iq_request {
-                    IqEvent::PingEvent(event) => assert!(event.get_id() == "1".to_string()),
-                    _ => panic!("Not a PingEvent")
-                },
-                _ => panic!("Not an IqRequestEvent")
-            },
-            _ => panic!("Not a stanza")
-        }
-    }
-
-    #[test]
     fn test_event() {
         let event = OpenStream::new(&XMPPConfig::new());
 
-        let initial_stream = "<stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' xmlns='jabber:client'>";
+        let initial_stream = "<?xml version='1.0'?><stream:stream version='1.0' xmlns:stream='http://etherx.jabber.org/streams' to='example.com' xmlns='jabber:client'>";
 
-        assert!(compile(&event) == initial_stream.to_string(), compile(&event));
+        assert!(compile(&event) == initial_stream.to_string(), format!("{} == {}", compile(&event), initial_stream.to_string()));
     }
 
     #[test]
