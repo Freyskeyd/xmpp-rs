@@ -3,7 +3,7 @@
 `xmpp-rs` is an XMPP client library (for now). Under active development.
 
 [![Build Status](https://travis-ci.org/Freyskeyd/xmpp-rs.svg?branch=master)](https://travis-ci.org/Freyskeyd/xmpp-rs)
-
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2FFreyskeyd%2Fxmpp-rs.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2FFreyskeyd%2Fxmpp-rs?ref=badge_shield)
 ## Install
 
 This library is splitted in 3 crates (`client`, `server`, `proto`). As defined by the naming, you can use every crate
