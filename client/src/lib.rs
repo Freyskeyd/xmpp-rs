@@ -50,7 +50,7 @@
 //!             client.handle().and_then(move |stream| {
 //!                 stream.for_each(move |m| {
 //!                     match m {
-//!                         Stanza(event, _) => match *event {
+//!                         Stanza(event) => match *event {
 //!                             MessageEvent(_) => {
 //!                                 println!("New message");
 //!                             },

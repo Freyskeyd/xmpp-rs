@@ -20,3 +20,9 @@ tokio-tls = "0.1.2"
 uuid = { version = "0.4", features = ["v4"] }
 xml-rs = {git = "https://github.com/Freyskeyd/xml-rs"}
 xmpp-derive = {path = "../derive" }
+sasl = "0.4.1"
+clippy = {version = "*", optional = true}
+
+[features]
+default = []
+lint = ["clippy"]

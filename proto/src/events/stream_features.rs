@@ -1,17 +1,16 @@
-use events::{Event, EventTrait};
+use events::{Event, FromXmlElement, ToXmlElement, EventTrait};
 use events::NonStanzaEvent::StreamFeaturesEvent;
-use std::str::FromStr;
-use std::string::ParseError;
 use config::XMPPConfig;
 use ns;
-use elementtree::{WriteOptions, Element};
+use elementtree::Element;
+use std::io;
 
-#[derive(Debug, Clone)]
-enum Features {
+#[derive(Debug, Clone, PartialEq)]
+pub enum Features {
     StartTlsInit,
     Bind,
     Mechanims(Vec<String>),
-    Unknown
+    Unknown,
 }
 
 #[derive(Debug, Clone, XmppEvent)]
@@ -19,7 +18,7 @@ enum Features {
 pub struct StreamFeatures {
     config: XMPPConfig,
     features: Features,
-    session: Option<Element>
+    session: Option<Element>,
 }
 
 impl StreamFeatures {
@@ -27,15 +26,53 @@ impl StreamFeatures {
         StreamFeatures {
             config: config.clone(),
             features: Features::Unknown,
-            session: None
+            session: None,
         }
     }
 
-    pub fn from_element(e: Element) -> StreamFeatures {
+    pub fn get_features(&self) -> Features {
+        self.features.clone()
+    }
+}
+
+impl ToXmlElement for StreamFeatures {
+    type Error = io::Error;
+    fn to_element(&self) -> Result<Element, io::Error> {
+        let mut root = Element::new("stream:features");
+        match self.features {
+            Features::Bind => {
+                root.append_new_child((ns::BIND, "bind"));
+                if let Some(ref session) = self.session {
+                    root.append_child(session.clone());
+                }
+            }
+            Features::StartTlsInit => {
+                root.append_new_child((ns::TLS, "starttls"))
+                    .append_new_child((ns::TLS, "required"));
+            }
+            Features::Mechanims(ref vec_mecha) => {
+                let mechs = root.append_new_child((ns::SASL, "mechanisms"));
+
+                for mech in vec_mecha {
+                    mechs
+                        .append_new_child((ns::SASL, "mechanism"))
+                        .set_text(mech.to_string());
+                }
+            }
+            _ => {}
+        }
+
+        Ok(root)
+    }
+}
+
+impl FromXmlElement for StreamFeatures {
+    type Error = io::Error;
+    fn from_element(e: Element) -> Result<StreamFeatures, Self::Error> {
         let mut features = Features::Unknown;
         let mut session = None;
 
-        if let Some(_) = e.find((ns::BIND, "bind")) {
+        if e.find((ns::BIND, "bind")).is_some() {
             features = Features::Bind;
             if let Some(sess) = e.find((ns::SESSION, "session")) {
                 session = Some(sess.clone());
@@ -57,53 +94,10 @@ impl StreamFeatures {
             features = Features::Mechanims(mechanisms_list);
         }
 
-        StreamFeatures {
-            config: XMPPConfig::new(),
-            features: features,
-            session: session
-        }
-    }
-}
-
-impl FromStr for StreamFeatures {
-    type Err = ParseError;
-    fn from_str(_: &str) -> Result<Self, Self::Err> {
         Ok(StreamFeatures {
             config: XMPPConfig::new(),
-            features: Features::Unknown,
-            session: None
+            features: features,
+            session: session,
         })
-    }
-}
-
-impl ToString for StreamFeatures {
-    fn to_string(&self) -> String {
-        let mut out:Vec<u8> = Vec::new();
-        let mut root = Element::new("stream:features");
-        let options = WriteOptions::new()
-            .set_xml_prolog(None);
-
-        match self.features {
-            Features::Bind => {
-                root.append_new_child((ns::BIND, "bind"));
-                if let Some(ref session) = self.session {
-                    root.append_child(session.clone());
-                }
-            },
-            Features::StartTlsInit => {
-                root.append_new_child((ns::TLS, "starttls")).append_new_child((ns::TLS, "required"));
-            },
-            Features::Mechanims(ref vec_mecha) => {
-                let mechs = root.append_new_child((ns::SASL, "mechanisms"));
-
-                for mech in vec_mecha {
-                    mechs.append_new_child((ns::SASL, "mechanism")).set_text(mech.to_string());
-                }
-            }
-            _ => {}
-        };
-
-        root.to_writer_with_options(&mut out, options).unwrap();
-        String::from_utf8(out).unwrap()
     }
 }

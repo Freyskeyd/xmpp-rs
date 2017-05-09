@@ -1,50 +1,55 @@
-use std::str::FromStr;
-use std::string::ParseError;
 use events::NonStanzaEvent::AuthEvent;
 use events::Event;
 use events::EventTrait;
+use events::ToXmlElement;
+use events::FromXmlElement;
 use config::XMPPConfig;
 use credentials::Credentials;
 use base64::encode;
-use std::str;
+use elementtree::Element;
+use ns;
+use sasl::client::Mechanism;
+use sasl::client::mechanisms::Plain;
+use std::io;
 
 #[derive(Debug, Clone, XmppEvent)]
 #[non_stanza(event = "AuthEvent(_)")]
 pub struct Auth {
     config: XMPPConfig,
-    credentials: Credentials
+    credentials: Credentials,
 }
 
 impl Auth {
     pub fn new(config: &XMPPConfig, credentials: Credentials) -> Auth {
         Auth {
             config: config.clone(),
-            credentials: credentials
+            credentials: credentials,
         }
     }
 }
 
-impl FromStr for Auth {
-    type Err = ParseError;
-    fn from_str(_: &str) -> Result<Self, Self::Err> {
+impl FromXmlElement for Auth {
+    type Error = io::Error;
+    fn from_element(_: Element) -> Result<Auth, Self::Error> {
         Ok(Auth {
             config: XMPPConfig::new(),
-            credentials: Credentials { ..Credentials::default() }
+            credentials: Credentials { ..Credentials::default() },
         })
     }
 }
 
-impl ToString for Auth {
-    fn to_string(&self) -> String {
-        let mut data: Vec<u8> = Vec::new();
-        data.push(0);
-        let creds = format!("{}", self.credentials.jid);
-        data.extend(creds.as_bytes());
-        data.push(0);
-        data.extend(self.credentials.password.as_bytes());
+impl ToXmlElement for Auth {
+    type Error = io::Error;
+    fn to_element(&self) -> Result<Element, Self::Error> {
+        let mut element = Element::new((ns::SASL, "auth"));
+        let creds = self.credentials.format();
+        let mut mecanism = Plain::from_credentials(creds).unwrap();
+        let bytes = mecanism.initial().unwrap();
+        let plain = encode(&bytes);
 
-        let bytes = str::from_utf8(&data).unwrap().as_bytes();
-        let plain = encode(bytes);
-        format!("<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>{}</auth>", plain)
+        element.set_attr("mechanism", "PLAIN");
+        element.set_text(plain);
+
+        Ok(element)
     }
 }

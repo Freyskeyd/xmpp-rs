@@ -1,9 +1,15 @@
+#![cfg_attr(feature = "lint", allow(unstable_features))]
+#![cfg_attr(feature = "lint", feature(plugin))]
+#![cfg_attr(feature = "lint", plugin(clippy))]
+
 #![deny(warnings)]
 
 //! Proto
 
-#[macro_use]extern crate xmpp_derive;
-#[macro_use]extern crate log;
+#[macro_use]
+extern crate xmpp_derive;
+#[macro_use]
+extern crate log;
 extern crate futures;
 extern crate tokio_core;
 extern crate native_tls;
@@ -15,6 +21,7 @@ extern crate elementtree;
 extern crate xml;
 extern crate uuid;
 extern crate circular;
+extern crate sasl;
 
 mod default;
 mod config;
@@ -43,6 +50,5 @@ pub use jid::ToJid;
 #[cfg(test)]
 mod tests {
     #[test]
-    fn it_works() {
-    }
+    fn it_works() {}
 }

@@ -14,7 +14,7 @@ use std::io;
 pub struct Jid {
     pub node: Option<String>,
     pub domain: String,
-    pub resource: Option<String>
+    pub resource: Option<String>,
 }
 
 impl Jid {
@@ -41,7 +41,7 @@ impl Jid {
         Jid {
             node: node,
             domain: domain,
-            resource: resource
+            resource: resource,
         }
     }
 }
@@ -89,11 +89,13 @@ impl ToJid for str {
     }
 }
 
-impl<'a,T> ToJid for Option<&'a T> where T: ToJid + ?Sized {
+impl<'a, T> ToJid for Option<&'a T>
+    where T: ToJid + ?Sized
+{
     fn to_jid(&self) -> Result<Jid, io::Error> {
         match *self {
             Some(t) => t.to_jid(),
-            None => Err(io::Error::new(io::ErrorKind::InvalidInput, ""))
+            None => Err(io::Error::new(io::ErrorKind::InvalidInput, "")),
         }
     }
 }
@@ -116,8 +118,21 @@ mod tests {
     fn jid_from_full() {
         let jid = Jid::from_full_jid("tt@zz.com/xx");
 
-        assert!(Some("tt".to_string()) == jid.node, format!("{:?} == {:?}", Some("tt".to_string()), jid.node));
-        assert!("zz.com".to_string() == jid.domain, format!("{:?} == {:?}", "zz.com".to_string(), jid.domain));
-        assert!(Some("xx".to_string()) == jid.resource, format!("{:?} == {:?}", Some("xx".to_string()), jid.resource));
+        assert!(Some("tt".to_string()) == jid.node,
+                format!("{:?} == {:?}", Some("tt".to_string()), jid.node));
+        assert!("zz.com".to_string() == jid.domain,
+                format!("{:?} == {:?}", "zz.com".to_string(), jid.domain));
+        assert!(Some("xx".to_string()) == jid.resource,
+                format!("{:?} == {:?}", Some("xx".to_string()), jid.resource));
+    }
+
+    #[test]
+    fn to_jid_fail() {
+        let j = "x";
+
+        match j.to_jid() {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false)
+        }
     }
 }

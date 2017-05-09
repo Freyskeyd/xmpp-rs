@@ -1,24 +1,31 @@
-use bytes::{BytesMut};
+use bytes::BytesMut;
 use std::str;
-use std::{io};
+use std::io;
 use tokio_io::codec::{Encoder, Decoder};
+use events::ToXmlElement;
 use events::Event;
 use events::Event::*;
 use events::NonStanzaEvent::*;
-use events::StanzaEvent::*;
-use events::IqEvent::*;
+// use events::StanzaEvent::*;
+// use events::IqEvent::*;
 use parser::XmppParser;
+use elementtree::WriteOptions;
+// use elementtree::XmlProlog;
 
 /// Our line-based codec
 pub struct XMPPCodec {
-    pub parser: XmppParser
+    pub parser: XmppParser,
 }
 
 impl XMPPCodec {
     pub fn new() -> XMPPCodec {
-        XMPPCodec {
-            parser: XmppParser::new()
-        }
+        XMPPCodec { parser: XmppParser::new() }
+    }
+}
+
+impl Default for XMPPCodec {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -32,14 +39,15 @@ impl Decoder for XMPPCodec {
         trace!("==================================================");
         self.parser.feed(&buf[..]);
 
-        trace!("Buffer contains: {}", str::from_utf8(self.parser.source().data()).unwrap());
+        trace!("Buffer contains: {}",
+               str::from_utf8(self.parser.source().data()).unwrap());
         trace!("");
         let event = match self.parser.next_event() {
             Some(e) => {
                 trace!("Decode: event: {:?}", e);
                 Some(e)
-            },
-            _ => None
+            }
+            _ => None,
         };
         let l = buf.len();
         buf.split_to(l);
@@ -55,30 +63,76 @@ impl Encoder for XMPPCodec {
         trace!("will send frame: {:?}", frame);
 
         let f = match frame {
-            Unknown(event, _) => event.to_string(),
-            Stanza(stanza, _) => match *stanza {
-                PresenceEvent(event) => event.to_string(),
-                MessageEvent(event) => event.to_string(),
-                IqResponseEvent(boxed_iq) |
-                IqRequestEvent(boxed_iq) => match *boxed_iq {
-                    PingEvent(event) => event.to_string(),
-                    BindEvent(event) => event.to_string(),
-                    GenericEvent(event) => event.to_string()
-                },
-                IqEvent(iq_event) => match *iq_event {
-                    PingEvent(event) => event.to_string(),
-                    BindEvent(event) => event.to_string(),
-                    GenericEvent(event) => event.to_string()
+            Stanza(stanza) => {
+                if let Ok(root) = stanza.to_element() {
+                    let mut out: Vec<u8> = Vec::new();
+                    let options = WriteOptions::new().set_xml_prolog(None);
+
+                    root.to_writer_with_options(&mut out, options).unwrap();
+                    String::from_utf8(out).unwrap()
+                } else {
+                    String::new()
                 }
-            },
-            NonStanza(non_stanza, _) => match *non_stanza {
-                CloseStreamEvent => String::from("</stream:stream>"),
-                OpenStreamEvent(event) => event.to_string(),
-                AuthEvent(event) => event.to_string(),
-                ProceedTlsEvent(event) => event.to_string(),
-                SuccessTlsEvent(event) => event.to_string(),
-                StartTlsEvent(event) => event.to_string(),
-                StreamFeaturesEvent(event) => event.to_string()
+            }
+            NonStanza(non_stanza) => {
+                match *non_stanza {
+                    AuthEvent(event) => {
+                        if let Ok(root) = event.to_element() {
+                            let mut out: Vec<u8> = Vec::new();
+                            let options = WriteOptions::new().set_xml_prolog(None);
+
+                            root.to_writer_with_options(&mut out, options).unwrap();
+                            String::from_utf8(out).unwrap()
+                        } else {
+                            String::new()
+                        }
+                    }
+                    StartTlsEvent(event) => {
+                        if let Ok(root) = event.to_element() {
+                            let mut out: Vec<u8> = Vec::new();
+                            let options = WriteOptions::new().set_xml_prolog(None);
+
+                            root.to_writer_with_options(&mut out, options).unwrap();
+                            String::from_utf8(out).unwrap()
+                        } else {
+                            String::new()
+                        }
+                    }
+                    CloseStreamEvent => String::from("</stream:stream>"),
+                    OpenStreamEvent(event) => {
+                        if let Ok(root) = event.to_element() {
+                            let mut out: Vec<u8> = Vec::new();
+                            // let options = WriteOptions::new().set_xml_prolog(Some(XmlProlog::Version10));
+                            let options = WriteOptions::new().set_xml_prolog(None);
+
+                            root.to_writer_with_options(&mut out, options).unwrap();
+
+                            // TODO: remove ugly, deal with />
+                            if out.ends_with(&[32, 47, 62]) {
+                                let len = out.len();
+                                out.remove(len - 2);
+                                let len = out.len();
+                                out.remove(len - 2);
+                            }
+                            String::from_utf8(out).unwrap()
+                        } else {
+                            String::new()
+                        }
+                    }
+                    ProceedTlsEvent(_) |
+                    SuccessTlsEvent(_) => String::new(),
+                    StreamFeaturesEvent(event) => {
+                        if let Ok(root) = event.to_element() {
+                            let mut out: Vec<u8> = Vec::new();
+                            let options = WriteOptions::new().set_xml_prolog(None);
+
+                            root.to_writer_with_options(&mut out, options).unwrap();
+                            String::from_utf8(out).unwrap()
+                        } else {
+                            String::new()
+                        }
+                    }
+                }
             }
         };
 
@@ -92,34 +146,39 @@ mod tests {
     use super::*;
     use super::super::events::*;
     use super::super::config::*;
-    use bytes::{BytesMut};
+    use bytes::BytesMut;
 
-     #[test]
+    #[test]
     fn decode_open_stream() {
         let mut codec = XMPPCodec::new();
 
         let _ = OpenStream::new(&XMPPConfig::new());
 
         let mut buffer = BytesMut::with_capacity(64);
-        buffer.extend("<?xml version=\'1.0\'?><stream:stream version=\'1.0\' xmlns:stream=\'http://etherx.jabber.org/streams\' to=\'example.com\' xmlns=\'jabber:client\'>".as_bytes());
+        buffer.extend("<?xml version=\'1.0\'?><stream:stream version=\'1.0\' \
+                      xmlns:stream=\'http://etherx.jabber.org/streams\' \
+                      to=\'example.com\' xmlns=\'jabber:client\'>"
+                              .as_bytes());
 
         match codec.decode(&mut buffer) {
             Ok(x) => {
                 let event = x.unwrap();
                 assert!(event.is_non_stanza());
                 assert!(match event {
-                    NonStanza(x, _) => match *x {
-                        OpenStreamEvent(_) => true,
-                        _ => false
-                    },
-                    _ => false
-                });
-            },
+                            NonStanza(x) => {
+                                match *x {
+                                    OpenStreamEvent(_) => true,
+                                    _ => false,
+                                }
+                            }
+                            _ => false,
+                        });
+            }
             _ => {}
         };
     }
 
-     #[test]
+    #[test]
     fn encode_open_stream() {
         let mut codec = XMPPCodec::new();
 
@@ -131,8 +190,13 @@ mod tests {
             Ok(_) => {
                 let x = buffer.clone();
 
-                assert!(str::from_utf8(&x[..]).unwrap() == "<?xml version=\'1.0\'?><stream:stream version=\'1.0\' xmlns:stream=\'http://etherx.jabber.org/streams\' to=\'example.com\' xmlns=\'jabber:client\'>", format!("{:?}", str::from_utf8(&buffer[..])));
-            },
+                let t = "<stream:stream \
+                         xmlns=\"jabber:client\" \
+                         xmlns:stream=\"http://etherx.jabber.org/streams\" \
+                         to=\"example.com\" version=\"1.0\">";
+                assert!(str::from_utf8(&x[..]).unwrap() == t,
+                        format!("{} == {}", str::from_utf8(&x[..]).unwrap(), t));
+            }
             _ => {}
         };
     }

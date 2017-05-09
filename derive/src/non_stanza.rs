@@ -84,17 +84,17 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
     let impl_to_generic = match typology.as_ref() {
         "presence" => quote! {
             pub fn to_presence(&self) -> Presence {
-                Presence::from_str(self.to_string().as_ref()).unwrap()
+                Presence::from_element(self.to_element().unwrap()).unwrap()
             }
         },
         "message" => quote! {
-            pub fn to_message(&self) -> Message {
-                Message::from_str(self.to_string().as_ref()).unwrap()
+            pub fn to_message(&self) -> GenericMessage {
+                GenericMessage::from_element(self.to_element().unwrap()).unwrap()
             }
         },
         "iq" => quote! {
             pub fn to_generic(&self) -> GenericIq {
-                GenericIq::from_str(self.to_string().as_ref()).unwrap()
+                GenericIq::from_element(self.to_element().unwrap()).unwrap()
             }
         },
         _ => quote!{}
@@ -169,17 +169,17 @@ impl StanzaAttributes {
         match self.is.as_ref() {
             "iq" => {
                 (format!("match self.generic.get_type() {{\
-                    IqType::Result =>  return Event::Stanza(Box::new(StanzaEvent::IqResponseEvent(Box::new({event}))), self.to_string()),
-                    _ =>  return Event::Stanza(Box::new(StanzaEvent::IqRequestEvent(Box::new({event}))), self.to_string())
+                    IqType::Result =>  return Event::Stanza(Box::new(StanzaEvent::IqResponseEvent(Box::new({event})))),
+                    _ =>  return Event::Stanza(Box::new(StanzaEvent::IqRequestEvent(Box::new({event}))))
                 }}", event=self.event), "iq".to_string())
             },
             "presence" => {
-                (format!("return Event::Stanza(Box::new(StanzaEvent::PresenceEvent({event})), self.to_string())", event=self.event), "presence".to_string())
+                (format!("return Event::Stanza(Box::new(StanzaEvent::PresenceEvent({event})))", event=self.event), "presence".to_string())
             },
             "message" => {
-                (format!("return Event::Stanza(Box::new(StanzaEvent::MessageEvent({event})), self.to_string())", event=self.event), "message".to_string())
+                (format!("return Event::Stanza(Box::new(StanzaEvent::MessageEvent(Box::new({event}))))", event=self.event), "message".to_string())
             },
-            _ => (format!("return Event::Stanza(Box::new({}), self.to_string())", self.event), String::new())
+            _ => (format!("return Event::Stanza(Box::new({}))", self.event), String::new())
         }
     }
 }
@@ -197,7 +197,7 @@ impl NonStanzaAttributes {
     }
 
     fn format(&self) -> (String, String) {
-        (format!("return Event::NonStanza(Box::new({}), self.to_string())", self.event), String::new())
+        (format!("return Event::NonStanza(Box::new({}))", self.event), String::new())
     }
 }
 
@@ -236,7 +236,7 @@ fn parse_meta_items_non_stanza(meta_items: &Vec<NestedMetaItem>) -> NonStanzaAtt
         match *i {
             NestedMetaItem::MetaItem(MetaItem::NameValue(ref tag, Lit::Str(ref v,_))) => {
                 if tag == "event" {
-                    attr.event = v.to_string().replace("_", "self.clone()");
+                    attr.event = v.to_string().replace("_", "Box::new(self.clone())");
                 } else if tag == "value" {
                     attr.value = v.to_string();
                 }

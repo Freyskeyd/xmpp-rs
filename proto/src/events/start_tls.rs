@@ -1,9 +1,10 @@
 use events::{Event, EventTrait};
 use events::NonStanzaEvent::StartTlsEvent;
 
-use std::str::FromStr;
-use std::string::ParseError;
+use events::ToXmlElement;
+use std::io;
 use ns;
+use elementtree::Element;
 use config::XMPPConfig;
 
 #[derive(Debug, Clone, XmppEvent)]
@@ -14,23 +15,13 @@ pub struct StartTls {
 
 impl StartTls {
     pub fn new(config: &XMPPConfig) -> StartTls {
-        StartTls {
-            config: config.clone(),
-        }
+        StartTls { config: config.clone() }
     }
 }
 
-impl FromStr for StartTls {
-    type Err = ParseError;
-    fn from_str(_: &str) -> Result<Self, Self::Err> {
-        Ok(StartTls {
-            config: XMPPConfig::new(),
-        })
-    }
-}
-
-impl ToString for StartTls {
-    fn to_string(&self) -> String {
-        format!("<starttls xmlns='{ns}' />",ns=ns::TLS)
+impl ToXmlElement for StartTls {
+    type Error = io::Error;
+    fn to_element(&self) -> Result<Element, Self::Error> {
+        Ok(Element::new((ns::TLS, "starttls")))
     }
 }

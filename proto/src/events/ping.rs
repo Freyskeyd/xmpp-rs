@@ -1,41 +1,42 @@
-use elementtree::{WriteOptions, Element};
+use elementtree::Element;
 use events::IqEvent::PingEvent;
 use events::*;
 use ns;
 use jid::{Jid, ToJid};
 use std::io;
-use std::str::FromStr;
 use std::str;
 
 #[derive(Debug, Clone, XmppEvent)]
 #[stanza(event="PingEvent(_)", is="iq", no_transpile)]
 pub struct Ping {
-    pub generic: GenericIq
+    pub generic: GenericIq,
 }
 
 impl Ping {
     pub fn new<F: ToJid + ?Sized, T: ToJid + ?Sized>(from: &F, to: &T) -> Ping {
         let mut generic = GenericIq::new(&GenericIq::unique_id(), IqType::Get);
-        let _ = generic.set_from(Some(from))
-                .unwrap()
-                .set_to(Some(to));
-        Ping {
-            generic: generic
-        }
+        let _ = generic.set_from(Some(from)).unwrap().set_to(Some(to));
+        Ping { generic: generic }
     }
 }
 
-impl FromStr for Ping {
-    type Err = io::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let generic = match GenericIq::from_str(s) {
+impl FromXmlElement for Ping {
+    type Error = io::Error;
+    fn from_element(e: Element) -> Result<Self, Self::Error> {
+        let generic = match GenericIq::from_element(e) {
             Ok(g) => g,
-            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e))
+            Err(e) => {
+                return Err(io::Error::new(io::ErrorKind::InvalidInput, e));
+            }
         };
 
         match generic.get_type() {
             IqType::Get => {
-                if let None = generic.get_element().unwrap().find((ns::PING, "ping")) {
+                if generic
+                       .get_element()
+                       .unwrap()
+                       .find((ns::PING, "ping"))
+                       .is_none() {
                     return Err(io::Error::new(io::ErrorKind::InvalidInput, "Ping element not found"));
                 }
             }
@@ -47,56 +48,85 @@ impl FromStr for Ping {
             _ => {}
         }
 
-        Ok(Ping { generic: generic})
+        Ok(Ping { generic: generic })
+    }
+}
+
+impl ToXmlElement for Ping {
+    type Error = io::Error;
+    fn to_element(&self) -> Result<Element, Self::Error> {
+        let mut element = self.generic.to_element().unwrap();
+
+        match self.generic.get_type() {
+            IqType::Result => {}
+            _ => {
+                element.append_new_child((ns::PING, "ping"));
+            }
+        };
+
+        Ok(element)
     }
 }
 
 impl Default for Ping {
     fn default() -> Ping {
-        Ping {
-            generic: GenericIq::new(&GenericIq::unique_id(), IqType::Get)
-        }
-    }
-}
-
-impl ToString for Ping {
-    fn to_string(&self) -> String {
-        let mut out:Vec<u8> = Vec::new();
-        let mut root = Element::new("iq");
-        let options = WriteOptions::new()
-            .set_xml_prolog(None);
-
-        root.set_attr("type", self.generic.get_type().to_string());
-        root.set_attr("id", self.generic.get_id());
-
-        if let Some(ref from) = self.generic.get_from() {
-            root.set_attr("from", from.to_string());
-        };
-
-        if let Some(ref to) = self.generic.get_to() {
-            root.set_attr("to", to.to_string());
-        };
-
-        match self.generic.get_type() {
-            IqType::Result => {
-            },
-            _ => {
-                root.append_new_child((ns::PING, "ping"));
-            }
-        };
-        root.to_writer_with_options(&mut out, options).unwrap();
-        String::from_utf8(out).unwrap()
+        Ping { generic: GenericIq::new(&GenericIq::unique_id(), IqType::Get) }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    #[ignore]
-    fn test() {
-        let p = Ping::new("hello@example.com", "hey");
+    use std::str::FromStr;
 
-        assert_eq!(p.to_string(), "<iq id=\"c2s1\" from=\"hello@example.com\" type=\"get\" to=\"hey\"><ping xmlns=\"urn:xmpp:ping\" /></iq>")
+    #[test]
+    fn s2c_ping() {
+        let test_str = Element::from_reader(r#"<iq from='capulet.lit' to='juliet@capulet.lit/balcony' id='s2c1' type='get'><ping xmlns='urn:xmpp:ping'/></iq>"#.as_bytes());
+
+        assert!(test_str.is_ok());
+        let e = test_str.unwrap();
+        let e = Ping::from_element(e).unwrap();
+        assert!(e.get_from() == Some(&Jid::from_str("capulet.lit").unwrap()));
+        assert!(e.get_to() == Some(&Jid::from_str("juliet@capulet.lit/balcony").unwrap()));
+        assert!(e.get_id() == "s2c1");
+        assert!(e.get_type() == IqType::Get);
+    }
+
+    #[test]
+    fn s2c_pong() {
+        let test_str = Element::from_reader(r#"<iq from='juliet@capulet.lit/balcony' to='capulet.lit' id='s2c1' type='result'/>"#.as_bytes());
+
+
+        assert!(test_str.is_ok());
+        let e = test_str.unwrap();
+        let e = Ping::from_element(e).unwrap();
+        assert!(e.get_from() == Some(&Jid::from_str("juliet@capulet.lit/balcony").unwrap()));
+        assert!(e.get_to() == Some(&Jid::from_str("capulet.lit").unwrap()));
+        assert!(e.get_id() == "s2c1");
+        assert!(e.get_type() == IqType::Result);
+    }
+
+    #[test]
+    fn s2c_error() {
+        let test_str = Element::from_reader(r#"
+        <iq from='juliet@capulet.lit/balcony'
+            to='capulet.lit'
+            id='s2c1'
+            type='error'>
+            <ping xmlns='urn:xmpp:ping'/>
+            <error type='cancel'>
+                <service-unavailable
+                    xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+            </error>
+        </iq>"#.as_bytes());
+
+        assert!(test_str.is_ok());
+        let e = test_str.unwrap();
+        let e = Ping::from_element(e).unwrap();
+
+        assert!(e.get_from() == Some(&Jid::from_str("juliet@capulet.lit/balcony").unwrap()));
+        assert!(e.get_to() == Some(&Jid::from_str("capulet.lit").unwrap()));
+        assert!(e.get_id() == "s2c1");
+        assert!(e.get_type() == IqType::Error);
     }
 }

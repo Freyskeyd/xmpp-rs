@@ -9,9 +9,7 @@ pub struct XMPPConfig {
 
 impl Default for XMPPConfig {
     fn default() -> XMPPConfig {
-        XMPPConfig {
-            domain: default::DOMAIN.to_string(),
-        }
+        XMPPConfig { domain: default::DOMAIN.to_string() }
     }
 }
 impl XMPPConfig {
@@ -27,7 +25,7 @@ impl XMPPConfig {
     }
 
     /// Return the configured domain
-    pub fn get_domain<'a>(&'a self) -> &'a str {
+    pub fn get_domain(&self) -> &str {
         &self.domain
     }
 }

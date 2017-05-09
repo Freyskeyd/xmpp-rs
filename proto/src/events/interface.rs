@@ -1,19 +1,20 @@
-use std::io::{self};
+use std::io;
 use std::fmt;
 use std::str::FromStr;
 use std::fmt::Debug;
+use elementtree::Element;
 
 pub trait FromGeneric {
     type Generic;
     type Out;
-    fn from_generic<'a>(event: &'a Self::Generic) -> Result<Self::Out, io::Error>;
+    fn from_generic(event: &Self::Generic) -> Result<Self::Out, io::Error>;
 }
 
 #[derive(Debug, Clone)]
 pub enum IqEvent {
     BindEvent(super::Bind),
     GenericEvent(super::GenericIq),
-    PingEvent(super::Ping)
+    PingEvent(super::Ping),
 }
 
 #[derive(Debug, Clone)]
@@ -22,66 +23,102 @@ pub enum StanzaEvent {
     IqEvent(Box<IqEvent>),
     IqRequestEvent(Box<IqEvent>),
     IqResponseEvent(Box<IqEvent>),
-    MessageEvent(super::Message),
+    MessageEvent(Box<super::GenericMessage>),
 }
 
 #[derive(Debug, Clone)]
 pub enum NonStanzaEvent {
-    OpenStreamEvent(super::OpenStream),
+    OpenStreamEvent(Box<super::OpenStream>),
     CloseStreamEvent,
-    ProceedTlsEvent(super::ProceedTls),
-    SuccessTlsEvent(super::SuccessTls),
-    StartTlsEvent(super::StartTls),
-    StreamFeaturesEvent(super::StreamFeatures),
-    AuthEvent(super::Auth),
+    ProceedTlsEvent(Box<super::ProceedTls>),
+    SuccessTlsEvent(Box<super::SuccessTls>),
+    StartTlsEvent(Box<super::StartTls>),
+    StreamFeaturesEvent(Box<super::StreamFeatures>),
+    AuthEvent(Box<super::Auth>),
 }
 
 #[derive(Debug, Clone)]
 pub enum Event {
-    Unknown(super::Unknown, String),
-    NonStanza(Box<NonStanzaEvent>, String),
-    Stanza(Box<StanzaEvent>, String),
+    NonStanza(Box<NonStanzaEvent>),
+    Stanza(Box<StanzaEvent>),
 }
 
 impl Event {
     pub fn is_message(&self) -> bool {
         match *self {
-            Event::Stanza(ref stanza, _) => match **stanza {StanzaEvent::MessageEvent(_) => true, _ => false},
-            _ => false
+            Event::Stanza(ref stanza) => {
+                match **stanza {
+                    StanzaEvent::MessageEvent(_) => true,
+                    _ => false,
+                }
+            }
+            _ => false,
         }
     }
 
     pub fn is_presence(&self) -> bool {
         match *self {
-            Event::Stanza(ref stanza, _) => match **stanza {
-                StanzaEvent::PresenceEvent(_) => true,
-                _ => false
-            },
+            Event::Stanza(ref stanza) => {
+                match **stanza {
+                    StanzaEvent::PresenceEvent(_) => true,
+                    _ => false,
+                }
+            }
             _ => false,
         }
     }
 
     pub fn is_iq(&self) -> bool {
         match *self {
-            Event::Stanza(ref stanza, _) => match **stanza {
-                StanzaEvent::IqEvent(_) |
-                StanzaEvent::IqRequestEvent(_) |
-                StanzaEvent::IqResponseEvent(_) => true,
-                _ => false
-            },
+            Event::Stanza(ref stanza) => {
+                match **stanza {
+                    StanzaEvent::IqEvent(_) |
+                    StanzaEvent::IqRequestEvent(_) |
+                    StanzaEvent::IqResponseEvent(_) => true,
+                    _ => false,
+                }
+            }
             _ => false,
         }
     }
 
     pub fn is_non_stanza(&self) -> bool {
         match *self {
-            Event::NonStanza(_, _) => true,
-            _ => false
+            Event::NonStanza(_) => true,
+            _ => false,
         }
     }
 }
 
-pub trait EventTrait: Debug + ToString + Clone {
+impl ToXmlElement for StanzaEvent {
+    type Error = io::Error;
+    fn to_element(&self) -> Result<Element, Self::Error> {
+        match *self {
+            StanzaEvent::PresenceEvent(ref event) => event.to_element(),
+            StanzaEvent::MessageEvent(ref event) => event.to_element(),
+            StanzaEvent::IqResponseEvent(ref boxed_iq) |
+            StanzaEvent::IqEvent(ref boxed_iq) |
+            StanzaEvent::IqRequestEvent(ref boxed_iq) => {
+                match **boxed_iq {
+                    IqEvent::PingEvent(ref event) => event.to_element(),
+                    IqEvent::BindEvent(ref event) => event.to_element(),
+                    IqEvent::GenericEvent(ref event) => event.to_element(),
+                }
+            }
+        }
+    }
+}
+
+pub trait ToXmlElement {
+    type Error;
+    fn to_element(&self) -> Result<Element, Self::Error>;
+}
+pub trait FromXmlElement {
+    type Error;
+    fn from_element(e: Element) -> Result<Self, Self::Error> where Self: Sized;
+}
+
+pub trait EventTrait: Debug + Clone {
     fn to_event(&self) -> Event;
 }
 
@@ -89,7 +126,7 @@ pub trait EventTrait: Debug + ToString + Clone {
 pub enum EventType {
     Iq,
     Message,
-    Presence
+    Presence,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -97,7 +134,7 @@ pub enum IqType {
     Get,
     Set,
     Result,
-    Error
+    Error,
 }
 
 impl FromStr for IqType {
@@ -108,7 +145,7 @@ impl FromStr for IqType {
             "set" => Ok(IqType::Set),
             "result" => Ok(IqType::Result),
             "error" => Ok(IqType::Error),
-            _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported IqType"))
+            _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported IqType")),
         }
     }
 }
