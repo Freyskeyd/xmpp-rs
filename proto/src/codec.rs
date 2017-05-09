@@ -2,23 +2,13 @@ use bytes::{BytesMut};
 use std::str;
 use std::{io};
 use tokio_io::codec::{Encoder, Decoder};
-// use parser::{Parser};
-// use events;
 use events::Event;
 use events::Event::*;
 use events::NonStanzaEvent::*;
 use events::StanzaEvent::*;
 use events::IqEvent::*;
-// use config::XMPPConfig;
-// use events::EventTrait;
-// use elementtree::Element;
-// use xml::reader::{EventReader,XmlEvent};
-// use xml::reader::EventReader;
-// use xml::common::Position;
-// use ns;
-// use std::io::{Read};
-// use tokio_core::net::TcpStream;
 use parser::XmppParser;
+
 /// Our line-based codec
 pub struct XMPPCodec {
     pub parser: XmppParser
@@ -94,5 +84,70 @@ impl Encoder for XMPPCodec {
 
         buf.extend(f.as_bytes());
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::events::*;
+    use super::super::config::*;
+    use bytes::{BytesMut};
+
+     #[test]
+    fn decode_open_stream() {
+        let mut codec = XMPPCodec::new();
+
+        let _ = OpenStream::new(&XMPPConfig::new());
+
+        let mut buffer = BytesMut::with_capacity(64);
+        buffer.extend("<?xml version=\'1.0\'?><stream:stream version=\'1.0\' xmlns:stream=\'http://etherx.jabber.org/streams\' to=\'example.com\' xmlns=\'jabber:client\'>".as_bytes());
+
+        match codec.decode(&mut buffer) {
+            Ok(x) => {
+                let event = x.unwrap();
+                assert!(event.is_non_stanza());
+                assert!(match event {
+                    NonStanza(x, _) => match *x {
+                        OpenStreamEvent(_) => true,
+                        _ => false
+                    },
+                    _ => false
+                });
+            },
+            _ => {}
+        };
+    }
+
+     #[test]
+    fn encode_open_stream() {
+        let mut codec = XMPPCodec::new();
+
+        let e = OpenStream::new(&XMPPConfig::new());
+
+        let mut buffer = BytesMut::with_capacity(64);
+
+        match codec.encode(e.to_event(), &mut buffer) {
+            Ok(_) => {
+                let x = buffer.clone();
+
+                assert!(str::from_utf8(&x[..]).unwrap() == "<?xml version=\'1.0\'?><stream:stream version=\'1.0\' xmlns:stream=\'http://etherx.jabber.org/streams\' to=\'example.com\' xmlns=\'jabber:client\'>", format!("{:?}", str::from_utf8(&buffer[..])));
+            },
+            _ => {}
+        };
+    }
+
+    #[test]
+    fn encode_close_stream() {
+        let mut codec = XMPPCodec::new();
+
+        let e = CloseStream::new();
+
+        let mut buffer = BytesMut::with_capacity(64);
+
+        match codec.encode(e.to_event(), &mut buffer) {
+            Ok(_) => assert!(&buffer[..] == b"</stream:stream>"),
+            _ => {}
+        };
     }
 }

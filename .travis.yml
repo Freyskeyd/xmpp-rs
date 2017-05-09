@@ -11,19 +11,15 @@ matrix:
 
 cache: cargo
 
-env:
-  - TEST_DIR=client
-  - TEST_DIR=proto
-  - TEST_DIR=server
 before_script:
   - command -v cargo-coveralls > /dev/null 2>&1 || cargo install cargo-travis
   - export PATH=$HOME/.cargo/bin:$PATH
 
-script: cd $TEST_DIR && echo $TRAVIS_RUST_VERSION && cargo build --verbose && cargo test --verbose
+script: cargo build --all --verbose && cargo test --all --verbose
 
 after_success:
-  - cd .. && test $TEST_DIR = "proto" && test $TRAVIS_RUST_VERSION = "stable" &&
-    cargo coveralls --verbose
+  - test $TRAVIS_RUST_VERSION = "stable" &&
+    cargo coveralls --all --verbose
 
 addons:
   apt:

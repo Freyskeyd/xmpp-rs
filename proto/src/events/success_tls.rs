@@ -29,3 +29,24 @@ impl ToString for SuccessTls {
         String::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_from_string() {
+        SuccessTls::from_str("").unwrap();
+    }
+
+    #[test]
+    fn construct() {
+        let x = SuccessTls {};
+        let _ = x.clone();
+    }
+
+    #[test]
+    fn to_string() {
+        assert_eq!((SuccessTls::new(&XMPPConfig::new())).to_string(), "")
+    }
+}
