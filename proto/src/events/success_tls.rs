@@ -36,10 +36,13 @@ mod tests {
 
     #[test]
     fn check_from_string() {
-        match SuccessTls::from_str("") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false)
-        }
+        SuccessTls::from_str("").unwrap();
+    }
+
+    #[test]
+    fn construct() {
+        let x = SuccessTls {};
+        let _ = x.clone();
     }
 
     #[test]
