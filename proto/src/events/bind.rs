@@ -7,7 +7,7 @@ use events::GenericIq;
 use events::IqType;
 use events::FromGeneric;
 use events::FromXmlElement;
-use jid::{Jid, ToJid};
+use jid::Jid;
 use std::io;
 use std::str::FromStr;
 use elementtree::Element;
@@ -40,9 +40,9 @@ impl FromXmlElement for Bind {
         };
 
         Ok(Bind {
-            generic: generic.clone(),
-            jid: Some(jid),
-        })
+               generic: generic.clone(),
+               jid: Some(jid),
+           })
     }
 }
 

@@ -2,7 +2,7 @@ use elementtree::Element;
 use events::IqEvent::PingEvent;
 use events::*;
 use ns;
-use jid::{Jid, ToJid};
+use jid::Jid;
 use std::io;
 use std::str;
 
@@ -13,9 +13,11 @@ pub struct Ping {
 }
 
 impl Ping {
-    pub fn new<F: ToJid + ?Sized, T: ToJid + ?Sized>(from: &F, to: &T) -> Ping {
+    pub fn new(from: Jid, to: Jid) -> Ping {
         let mut generic = GenericIq::new(&GenericIq::unique_id(), IqType::Get);
-        let _ = generic.set_from(Some(from)).unwrap().set_to(Some(to));
+        generic.set_from(Some(from));
+        generic.set_to(Some(to));
+
         Ping { generic: generic }
     }
 }
@@ -77,7 +79,6 @@ impl Default for Ping {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str::FromStr;
 
     #[test]
     fn s2c_ping() {
@@ -86,8 +87,8 @@ mod tests {
         assert!(test_str.is_ok());
         let e = test_str.unwrap();
         let e = Ping::from_element(e).unwrap();
-        assert!(e.get_from() == Some(&Jid::from_str("capulet.lit").unwrap()));
-        assert!(e.get_to() == Some(&Jid::from_str("juliet@capulet.lit/balcony").unwrap()));
+        assert!(e.get_from() == Some(&Jid::from_full_jid("capulet.lit")));
+        assert!(e.get_to() == Some(&Jid::from_full_jid("juliet@capulet.lit/balcony")));
         assert!(e.get_id() == "s2c1");
         assert!(e.get_type() == IqType::Get);
     }
@@ -100,8 +101,8 @@ mod tests {
         assert!(test_str.is_ok());
         let e = test_str.unwrap();
         let e = Ping::from_element(e).unwrap();
-        assert!(e.get_from() == Some(&Jid::from_str("juliet@capulet.lit/balcony").unwrap()));
-        assert!(e.get_to() == Some(&Jid::from_str("capulet.lit").unwrap()));
+        assert!(e.get_from() == Some(&Jid::from_full_jid("juliet@capulet.lit/balcony")));
+        assert!(e.get_to() == Some(&Jid::from_full_jid("capulet.lit")));
         assert!(e.get_id() == "s2c1");
         assert!(e.get_type() == IqType::Result);
     }
@@ -118,14 +119,15 @@ mod tests {
                 <service-unavailable
                     xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
             </error>
-        </iq>"#.as_bytes());
+        </iq>"#
+                                                    .as_bytes());
 
         assert!(test_str.is_ok());
         let e = test_str.unwrap();
         let e = Ping::from_element(e).unwrap();
 
-        assert!(e.get_from() == Some(&Jid::from_str("juliet@capulet.lit/balcony").unwrap()));
-        assert!(e.get_to() == Some(&Jid::from_str("capulet.lit").unwrap()));
+        assert!(e.get_from() == Some(&Jid::from_full_jid("juliet@capulet.lit/balcony")));
+        assert!(e.get_to() == Some(&Jid::from_full_jid("capulet.lit")));
         assert!(e.get_id() == "s2c1");
         assert!(e.get_type() == IqType::Error);
     }

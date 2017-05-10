@@ -12,11 +12,8 @@ use events::StanzaEvent;
 use events::IqEvent;
 use events::ToXmlElement;
 use events::FromXmlElement;
+use ns;
 
-#[derive(Debug, Clone)]
-pub enum StanzaError {
-    None,
-}
 #[derive(Debug, Clone)]
 pub struct GenericIq {
     id: String,
@@ -24,7 +21,7 @@ pub struct GenericIq {
     to: Option<Jid>,
     from: Option<Jid>,
     element: Option<Element>,
-    error: StanzaError,
+    error: Option<StanzaError>,
 }
 
 impl Default for GenericIq {
@@ -41,7 +38,7 @@ impl GenericIq {
             to: None,
             from: None,
             element: None,
-            error: StanzaError::None,
+            error: None,
         }
     }
 
@@ -53,9 +50,9 @@ impl GenericIq {
         self.element.as_ref()
     }
 
-    pub fn set_type(&mut self, iq_type: IqType) -> Result<&mut Self, io::Error> {
+    pub fn set_type(&mut self, iq_type: IqType) -> &mut Self {
         self.iq_type = iq_type;
-        Ok(self)
+        self
     }
 
     pub fn get_type(&self) -> IqType {
@@ -66,29 +63,25 @@ impl GenericIq {
         self.id.as_ref()
     }
 
-    pub fn set_id<'a, T: ToString + ?Sized>(&'a mut self, id: &T) -> &'a mut Self {
+    pub fn set_id<T: ToString + ?Sized>(&mut self, id: &T) -> &mut Self {
         self.id = id.to_string();
         self
     }
 
-    pub fn set_to<'a, T: ToJid + ?Sized>(&'a mut self, jid: Option<&T>) -> Result<&'a mut Self, io::Error> {
-        self.to = match jid.to_jid() {
-            Ok(jid) => Some(jid),
-            Err(e) => return Err(e),
-        };
-        Ok(self)
+    pub fn set_to(&mut self, jid: Option<Jid>) -> &mut Self {
+        self.to = jid;
+
+        self
     }
 
     pub fn get_to(&self) -> Option<&Jid> {
         self.to.as_ref()
     }
 
-    pub fn set_from<'a, T: ToJid + ?Sized>(&'a mut self, jid: Option<&T>) -> Result<&'a mut Self, io::Error> {
-        self.from = match jid.to_jid() {
-            Ok(jid) => Some(jid),
-            Err(e) => return Err(e),
-        };
-        Ok(self)
+    pub fn set_from(&mut self, jid: Option<Jid>) -> &mut Self {
+        self.from = jid;
+
+        self
     }
 
     pub fn get_from(&self) -> Option<&Jid> {
@@ -126,10 +119,48 @@ impl FromXmlElement for GenericIq {
             None => return Err(io::Error::new(io::ErrorKind::InvalidInput, "ID is required")),
         };
 
-        let iq_type = match IqType::from_str(e.get_attr("type").unwrap_or("")) {
-            Ok(t) => t,
-            Err(e) => return Err(e),
+        let iq_type = match e.get_attr("type") {
+            Some(t) => match IqType::from_str(t) {
+                Ok(t) => t,
+                Err(e) => return Err(e),
+            },
+            None => return Err(io::Error::new(io::ErrorKind::InvalidInput, "TYPE is required")),
         };
+
+        // Validation types
+        match iq_type {
+            IqType::Result => {
+                if e.child_count() > 1 {
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
+                                              "An IQ stanza of type \"result\" MUST include zero or one child elements."));
+                }
+            }
+
+            // An error stanza MUST contain an <error/> child element
+            IqType::Error => {
+                if e.find("error").is_none() {
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
+                                              "An IQ stanza of type \"error\" SHOULD include the child element contained in the associated \"get\" or \"set\" and MUST include an <error/> child"));
+                }
+            }
+            IqType::Set | IqType::Get => {
+                if e.child_count() != 1 {
+                    // https://xmpp.org/rfcs/rfc3920.html#stanzas
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
+                                              "IqType Get/Set MUST contain one and only one child"));
+                }
+            }
+        }
+
+        // An <error/> child MUST NOT be included if the 'type' attribute has a value other than "error"
+        match iq_type {
+            IqType::Set | IqType::Get |IqType::Result => {
+                if e.find("error").is_some() {
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput, "An <error/> child MUST NOT be included if the 'type' attribute has a value other than \"error\""));
+                }
+            }
+            _ => {}
+        }
 
         let to = {
             if let Some(t) = e.get_attr("to") {
@@ -154,11 +185,17 @@ impl FromXmlElement for GenericIq {
         };
 
         let error = {
-            // if iq_type == IqType::Error {
-            StanzaError::None
-            // } else {
-            // StanzaError::None
-            // }
+            if iq_type == IqType::Error {
+                match StanzaError::from_element(e.find("error").unwrap().to_owned()) {
+                    Ok(error_element) => {
+                        Some(error_element)
+                    },
+                    Err(_) => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Unparsable error element")),
+                }
+
+            } else {
+                None
+            }
         };
 
         Ok(GenericIq {
@@ -168,73 +205,6 @@ impl FromXmlElement for GenericIq {
                from,
                element: Some(e.clone()),
                error,
-           })
-    }
-}
-impl FromStr for GenericIq {
-    type Err = io::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let root = match Element::from_reader(s.as_bytes()) {
-            Ok(r) => r,
-            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
-        };
-
-        // `id` is REQUIRED
-        let id = match root.get_attr("id") {
-            Some(id) => id.to_string(),
-            None => return Err(io::Error::new(io::ErrorKind::InvalidInput, "ID is required")),
-        };
-
-        let iq_type = match IqType::from_str(root.get_attr("type").unwrap_or("")) {
-            Ok(t) => t,
-            Err(e) => return Err(e),
-        };
-
-        let to = {
-            if let Some(t) = root.get_attr("to") {
-                match Jid::from_str(t) {
-                    Ok(j) => Some(j),
-                    Err(_) => None,
-                }
-            } else {
-                None
-            }
-        };
-
-        let from = match Jid::from_str(root.get_attr("from").unwrap_or("")) {
-            Ok(j) => Some(j),
-            Err(_) => None,
-        };
-
-        match iq_type {
-            IqType::Result => {
-                if root.child_count() > 1 {
-                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                              "An IQ stanza of type \"result\" MUST include zero or one child elements."));
-                }
-            }
-            IqType::Error => {
-                if root.find("error").is_none() {
-                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                              "An IQ stanza of type \"error\" SHOULD include the child element contained in the associated \"get\" or \"set\" and MUST include an <error/> child"));
-                }
-            }
-            IqType::Set | IqType::Get => {
-                if root.child_count() != 1 {
-                    // https://xmpp.org/rfcs/rfc3920.html#stanzas
-                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                              "IqType Get/Set MUST contain one and only one child"));
-                }
-            }
-        }
-
-        Ok(GenericIq {
-               id: id,
-               iq_type: iq_type,
-               from: from,
-               to: to,
-               element: Some(root),
-               error: StanzaError::None,
            })
     }
 }
@@ -290,54 +260,11 @@ pub struct GenericMessage {
     pub childs: Option<Vec<Element>>,
 }
 
-impl FromStr for GenericMessage {
-    type Err = io::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let root = match Element::from_reader(s.as_bytes()) {
-            Ok(r) => r,
-            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
-        };
-
-        // `id` is Optional
-        let id = match root.get_attr("id") {
-            Some(id) => Some(id.to_string()),
-            None => None,
-        };
-
-        let message_type = match MessageType::from_str(root.get_attr("type").unwrap_or("")) {
-            Ok(t) => Some(t),
-            Err(_) => None,
-        };
-
-        // `to` is REQUIRED
-        let to = match Jid::from_str(root.get_attr("to").unwrap_or("")) {
-            Ok(j) => j,
-            Err(_) => return Err(io::Error::new(io::ErrorKind::InvalidInput, "to missing")),
-        };
-
-        // `from` is OPTIONAL
-        let from = match Jid::from_str(root.get_attr("from").unwrap_or("")) {
-            Ok(j) => Some(j),
-            Err(_) => None,
-        };
-
-        Ok(GenericMessage {
-               id: id,
-               from: from,
-               to: to,
-               message_type: message_type,
-               element: Some(root),
-               childs: None,
-           })
-    }
-}
-
 impl GenericMessage {
-    pub fn new<T: ToJid + ?Sized>(to: &T) -> GenericMessage {
+    pub fn new(to: Jid) -> GenericMessage {
         GenericMessage {
             id: None,
             to: to.to_jid().unwrap(),
-            // from: Some("alice@example.com".to_jid().unwrap()),
             from: None,
             message_type: Some(MessageType::Chat),
             element: None,
@@ -345,9 +272,9 @@ impl GenericMessage {
         }
     }
 
-    pub fn set_type(&mut self, message_type: Option<MessageType>) -> Result<&mut Self, io::Error> {
+    pub fn set_type(&mut self, message_type: Option<MessageType>) -> &mut Self {
         self.message_type = message_type;
-        Ok(self)
+        self
     }
 
     pub fn get_type(&self) -> Option<&MessageType> {
@@ -366,12 +293,9 @@ impl GenericMessage {
         self
     }
 
-    pub fn set_to<'a, T: ToJid + ?Sized>(&'a mut self, jid: &T) -> Result<&'a mut Self, io::Error> {
-        self.to = match jid.to_jid() {
-            Ok(jid) => jid,
-            Err(e) => return Err(e),
-        };
-        Ok(self)
+    pub fn set_to(&mut self, jid: Jid) -> &mut Self {
+        self.to = jid;
+        self
     }
 
     pub fn get_to(&self) -> &Jid {
@@ -382,18 +306,10 @@ impl GenericMessage {
         self.from.as_ref()
     }
 
-    pub fn set_from<'a, T: ToJid + ?Sized>(&'a mut self, jid: Option<&T>) -> Result<&'a mut Self, io::Error> {
-        self.from = match jid {
-            Some(jid) => {
-                match jid.to_jid() {
-                    Ok(jid) => Some(jid),
-                    Err(e) => return Err(e),
-                }
-            }
-            None => None,
-        };
+    pub fn set_from(&mut self, jid: Option<Jid>) -> &mut Self {
+        self.from = jid;
 
-        Ok(self)
+        self
     }
 
     pub fn to_event(&self) -> Event {
@@ -473,6 +389,7 @@ impl FromXmlElement for GenericMessage {
            })
     }
 }
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PresenceType {
     Available,
@@ -506,5 +423,107 @@ impl fmt::Display for PresenceType {
         write!(f, "{}", match *self {
             PresenceType::Available => "available".to_string(),
         })
+    }
+}
+// <stanza-kind to='sender' type='error'>
+//   [RECOMMENDED to include sender XML here]
+//   <error type='error-type'>
+//     <defined-condition xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+//     <text xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'
+//           xml:lang='langcode'>
+//       OPTIONAL descriptive text
+//     </text>
+//     [OPTIONAL application-specific condition element]
+//   </error>
+// </stanza-kind>
+
+#[derive(Debug, Clone)]
+pub struct StanzaError {
+    error_type: StanzaErrorType,
+    defined_condition: StanzaDefinedCondition,
+    text: Option<Element>,
+    application_specific: Option<Element>
+}
+
+impl FromXmlElement for StanzaError {
+    type Error = io::Error;
+    fn from_element(e: Element) -> Result<Self, Self::Error> {
+        let error = StanzaError {
+            error_type: match e.get_attr("type") {
+                Some(t) => match StanzaErrorType::from_str(t) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Err(e);
+                    }
+                },
+                None => {
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
+                                              "IqType Error MUST have a type attribute"))
+                }
+            },
+            // MUST contain a child element corresponding to one of the defined stanza error conditions specified below; this element MUST be qualified by the 'urn:ietf:params:xml:ns:xmpp-stanzas' namespace.
+            defined_condition: StanzaDefinedCondition::None,
+
+            // MAY contain a <text/> child containing XML character data that describes the error in more detail; this element MUST be qualified by the 'urn:ietf:params:xml:ns:xmpp-stanzas' namespace and SHOULD possess an 'xml:lang' attribute.
+            text: e.find((ns::STANZAS, "text")).cloned(),
+
+
+            application_specific: None
+        };
+
+        Ok(error)
+    }
+}
+
+//TODO: FIX
+#[derive(Debug, Clone, PartialEq)]
+pub enum StanzaDefinedCondition {
+    None
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum StanzaErrorType {
+    Cancel,// -- do not retry (the error is unrecoverable)
+    Continue, // -- proceed (the condition was only a warning)
+    Modify, // -- retry after changing the data sent
+    Auth, // -- retry after providing credentials
+    Wait // -- retry after waiting (the error is temporary)
+}
+
+impl FromStr for StanzaErrorType {
+    type Err = io::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_ref() {
+            "cancel" => Ok(StanzaErrorType::Cancel),
+            "continue" => Ok(StanzaErrorType::Continue),
+            "modify" => Ok(StanzaErrorType::Modify),
+            "auth" => Ok(StanzaErrorType::Auth),
+            "wait" => Ok(StanzaErrorType::Wait),
+            _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported StanzaErrorType")),
+        }
+    }
+}
+
+impl Into<String> for StanzaErrorType {
+    fn into(self) -> String {
+        match self {
+            StanzaErrorType::Cancel => "cancel".to_string(),
+            StanzaErrorType::Continue => "continue".to_string(),
+            StanzaErrorType::Modify => "modify".to_string(),
+            StanzaErrorType::Auth => "auth".to_string(),
+            StanzaErrorType::Wait => "wait".to_string()
+        }
+    }
+}
+
+impl fmt::Display for StanzaErrorType {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        let s: String = self.to_string();
+        write!(f, "{}", s)
     }
 }

@@ -132,7 +132,7 @@ mod tests {
 
         match j.to_jid() {
             Ok(_) => assert!(true),
-            Err(_) => assert!(false)
+            Err(_) => assert!(false),
         }
     }
 }

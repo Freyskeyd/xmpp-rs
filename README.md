@@ -35,7 +35,7 @@ To build xmpp-rs:
 ### Client roadmap
 
 - [ ] :rocket: Root implementation
-    - [ ] **TCP Connection**: Base of all the interaction, we need to provide a way to connect to different kind of
+    - [x] **TCP Connection**: Base of all the interaction, we need to provide a way to connect to different kind of
       servers.
         - [x] Can connect to IP
         - [x] Can connect to domain

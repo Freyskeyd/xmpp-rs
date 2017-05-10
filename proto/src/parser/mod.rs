@@ -37,9 +37,8 @@ impl XmppParser {
         if name.local_name == "features" && name.namespace_ref() == Some(ns::STREAM) {
             trace!("     -> Start stream:features");
             if let Ok(e) = Element::from_start_element(name, attributes, namespace, None, &mut self.parser) {
-                match StreamFeatures::from_element(e) {
-                    Ok(e) => return Some(e.to_event()),
-                    _ => {}
+                if let Ok(e) = StreamFeatures::from_element(e) {
+                    return Some(e.to_event());
                 }
             }
         } else if name.local_name == "proceed" && name.namespace_ref() == Some(ns::TLS) {

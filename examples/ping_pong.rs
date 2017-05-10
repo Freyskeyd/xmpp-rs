@@ -18,6 +18,7 @@ use xmpp_client::events::IqEvent;
 use xmpp_client::events::StanzaEvent::IqRequestEvent;
 use xmpp_client::events::EventTrait;
 use std::thread;
+use xmpp_client::ToJid;
 
 fn main() {
     env_logger::init().unwrap();
@@ -51,7 +52,7 @@ fn main() {
                                            IqRequestEvent(ref iq) => {
                                                match **iq {
                                                    IqEvent::PingEvent(ref ping) => {
-                                                       let mut p = Ping::new("", ping.get_from().unwrap());
+                                                       let mut p = Ping::new("".to_jid().unwrap(), ping.get_from().unwrap().to_owned());
                                                        let _ = p.set_id(ping.get_id());
                                                        let _ = p.set_type(IqType::Result);
 
@@ -105,7 +106,7 @@ fn main() {
                                                    match jid.node {
                                                        Some(ref node) => {
                                                            if node == "alice" {
-                                                               let mut p = Ping::new("", jid);
+                                                               let mut p = Ping::new("".to_jid().unwrap(), jid.clone());
                                                                let mut c = client.clone();
                                                                let ping = client
                                                                    .send_ping(&mut p)
