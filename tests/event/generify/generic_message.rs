@@ -27,7 +27,7 @@ fn create_a_generic_message() {
         Some(from) => {
             assert_eq!(&Jid::from_str("test@example.com").unwrap(), from);
             assert_eq!("test@example.com", from.to_string())
-        },
+        }
         None => {}
     }
 }

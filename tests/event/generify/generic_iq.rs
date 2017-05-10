@@ -24,9 +24,9 @@ fn create_a_generic_iq() {
     // An IQ stanza of type "error" SHOULD include the child element contained in the associated "get" or "set" and MUST include an <error/> child; for details, see Stanza Errors.
 }
 
-#[test]
-fn create_bind() {
-    let g = GenericIq::new("12345", IqType::Set);
+// #[test]
+// fn create_bind() {
+//     let g = GenericIq::new("12345", IqType::Set);
 
-    assert_eq!(g.to_string(), "<iq id=\"12345\" type=\"set\" />");
-}
+// assert_eq!(g.to_string(), "<iq id=\"12345\" type=\"set\" />");
+// }
