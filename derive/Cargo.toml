@@ -1,9 +1,24 @@
 [package]
 name = "xmpp-derive"
-version = "0.1.0"
+version = "0.1.3"
 authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
+
+description = """
+xmpp-rs is an implementation of the Extensible Messaging and Presence Protocol (XMPP).
+
+Based on tokio-rs and futures-rs. It's goal is to be fully tested and usable.
+"""
+
+license = "MPL-2.0"
+documentation = "https://docs.rs/xmpp-derive"
+repository = "https://github.com/Freyskeyd/xmpp-rs"
+readme = "../README.md"
+keywords = ["xmpp", "tokio", "jabber", "IM", "instant-messaging"]
+categories = ["network-programming"]
+
 [lib]
 proc-macro = true
+
 [dependencies]
 syn = {version = "0.11.10", features = ["full"]}
 quote = "0.3.15"
