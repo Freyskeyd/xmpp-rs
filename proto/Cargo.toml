@@ -1,10 +1,26 @@
 [package]
 name = "xmpp-proto"
 version = "0.1.2"
-description = "A work in progress xmpp lib"
 license = "MPL-2.0"
 documentation = "https://docs.rs/xmpp-proto"
 authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
+
+description = """
+xmpp-rs is an implementation of the Extensible Messaging and Presence Protocol (XMPP).
+
+Based on tokio-rs and futures-rs. It's goal is to be fully tested and usable.
+
+This library is splitted in 3 crates (client, server, proto). As defined by the naming, you can use every crate independently.
+
+xmpp-client: will allow you to build a client.
+xmpp-server: is an implementation of XMPP on server side.
+xmpp-rs: Grab both client and server in a single crate.
+"""
+authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
+repository = "https://github.com/Freyskeyd/xmpp-rs"
+readme = "README.md"
+keywords = ["xmpp", "rfc6120", "rfc6121", "tokio", "jabber", "IM", "instant-messaging"]
+categories = ["network-programming"]
 
 [dependencies]
 base64 = "0"
