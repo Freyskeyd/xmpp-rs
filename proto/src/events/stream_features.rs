@@ -95,9 +95,9 @@ impl FromXmlElement for StreamFeatures {
         }
 
         Ok(StreamFeatures {
-            config: XMPPConfig::new(),
-            features: features,
-            session: session,
-        })
+               config: XMPPConfig::new(),
+               features: features,
+               session: session,
+           })
     }
 }

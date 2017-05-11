@@ -21,7 +21,7 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
             }
 
             pub fn set_id<'a, T: ToString + ?Sized>(&'a mut self, id: &T) -> &'a mut Self {
-                let _ = self.generic.set_id(id);
+                self.generic.set_id(id);
                 self
             }
         },
@@ -30,9 +30,9 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
 
     let impl_type = match typology.as_ref() {
         "iq" => quote! {
-            pub fn set_type<'a>(&'a mut self, iq_type: IqType) -> Result<&'a mut Self, io::Error> {
-                let _ = self.generic.set_type(iq_type);
-                Ok(self)
+            pub fn set_type<'a>(&'a mut self, iq_type: IqType) -> &'a mut Self {
+                self.generic.set_type(iq_type);
+                self
             }
 
             pub fn get_type(&self) -> IqType {
@@ -44,9 +44,9 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
 
     let impl_to = match typology.as_ref() {
         "message" => quote! {
-            pub fn set_to<'a, T: ToJid + ?Sized>(&'a mut self, jid: &T) -> Result<&'a mut Self, io::Error> {
-                let _ = self.generic.set_to(jid);
-                Ok(self)
+            pub fn set_to<'a>(&'a mut self, jid: Jid) -> &'a mut Self {
+                self.generic.set_to(jid);
+                self
             }
 
             pub fn get_to<'a >(&'a self) -> &'a Jid {
@@ -54,9 +54,9 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
             }
         },
         "iq" => quote! {
-            pub fn set_to<'a, T: ToJid + ?Sized>(&'a mut self, jid: Option<&T>) -> Result<&'a mut Self, io::Error> {
-                let _ = self.generic.set_to(jid);
-                Ok(self)
+            pub fn set_to<'a>(&'a mut self, jid: Option<Jid>) -> &'a mut Self {
+                self.generic.set_to(jid);
+                self
             }
 
             pub fn get_to(&self) -> Option<&Jid> {
@@ -69,9 +69,9 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
     let impl_from = match typology.as_ref() {
         "message"|
             "iq" => quote! {
-                pub fn set_from<'a, T: ToJid + ?Sized>(&'a mut self, jid: Option<&T>) -> Result<&'a mut Self, io::Error> {
-                    let _ = self.generic.set_from(jid);
-                    Ok(self)
+                pub fn set_from<'a>(&'a mut self, jid: Option<Jid>) -> &'a mut Self {
+                    self.generic.set_from(jid);
+                    self
                 }
 
                 pub fn get_from(&self) -> Option<&Jid> {

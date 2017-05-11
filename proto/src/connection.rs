@@ -11,6 +11,7 @@ use events::IqEvent::*;
 use events::*;
 use events::FromGeneric;
 use events::Features;
+use jid::ToJid;
 use ns;
 use futures::sync::oneshot::Sender;
 
@@ -105,7 +106,7 @@ impl Connection {
 
     pub fn compile_ping(&mut self) -> Ping {
         if let Some(ref c) = self.credentials {
-            return Ping::new(&c.jid, self.config.get_domain());
+            return Ping::new(c.jid.clone(), self.config.get_domain().to_jid().unwrap());
         }
         panic!("")
     }
@@ -153,7 +154,7 @@ impl Connection {
                             }
                             Features::Bind => {
                                 let mut bind = Bind::new();
-                                bind.set_type(IqType::Set).unwrap().set_id("bind_1");
+                                bind.set_type(IqType::Set).set_id("bind_1");
 
                                 self.frame_queue.push_back(bind.to_event());
                             }

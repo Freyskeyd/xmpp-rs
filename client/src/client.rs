@@ -107,8 +107,8 @@ impl Client {
         let (tx, rx) = oneshot::channel();
         if let Ok(mut transport) = self.transport.lock() {
             let jid = transport.get_credentials().jid.clone();
-            let ping = ping.set_from(Some(&jid));
-            transport.send_ping(tx, ping.unwrap());
+            let ping = ping.set_from(Some(jid));
+            transport.send_ping(tx, ping);
         }
 
         rx

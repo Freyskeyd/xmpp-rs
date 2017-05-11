@@ -2,7 +2,7 @@ use events::{PresenceType, Event, EventTrait, StanzaEvent};
 use elementtree::Element;
 use std::io;
 use std::str::FromStr;
-use jid::{Jid, ToJid};
+use jid::Jid;
 use events::FromXmlElement;
 use events::ToXmlElement;
 
@@ -38,24 +38,18 @@ impl Presence {
         self.presence_type.as_ref()
     }
 
-    pub fn set_from<'a, T: ToJid + ?Sized>(&'a mut self, jid: Option<&T>) -> Result<&'a mut Self, io::Error> {
-        self.from = match jid.to_jid() {
-            Ok(jid) => Some(jid),
-            Err(e) => return Err(e),
-        };
-        Ok(self)
+    pub fn set_from(&mut self, jid: Option<Jid>) -> &mut Self {
+        self.from = jid;
+        self
     }
 
     pub fn get_from(&self) -> Option<&Jid> {
         self.from.as_ref()
     }
 
-    pub fn set_to<'a, T: ToJid + ?Sized>(&'a mut self, jid: Option<&T>) -> Result<&'a mut Self, io::Error> {
-        self.to = match jid.to_jid() {
-            Ok(jid) => Some(jid),
-            Err(e) => return Err(e),
-        };
-        Ok(self)
+    pub fn set_to(&mut self, jid: Option<Jid>) -> &mut Self {
+        self.to = jid;
+        self
     }
 
     pub fn get_to(&self) -> Option<&Jid> {

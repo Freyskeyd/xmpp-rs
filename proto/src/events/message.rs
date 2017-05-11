@@ -1,5 +1,5 @@
 use events::*;
-use jid::{Jid, ToJid};
+use jid::Jid;
 use super::Event;
 use super::EventTrait;
 use std::io;
@@ -14,7 +14,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new<T: ToJid + ?Sized, S: ToString>(to: &T, msg: &S) -> Message {
+    pub fn new<S: ToString>(to: Jid, msg: &S) -> Message {
         Message {
             generic: GenericMessage::new(to),
             message_type: String::from("chat"),
@@ -41,9 +41,9 @@ impl FromXmlElement for Message {
         let generic = GenericMessage::from_element(e).unwrap();
 
         Ok(Message {
-            generic,
-            message_type: "chat".to_string(),
-            body: String::new(),
-        })
+               generic,
+               message_type: "chat".to_string(),
+               body: String::new(),
+           })
     }
 }

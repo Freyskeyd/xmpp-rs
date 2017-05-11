@@ -1,10 +1,11 @@
 use std::str::FromStr;
 use xmpp_proto::Jid;
 use xmpp_proto::events::GenericMessage;
+use xmpp_proto::ToJid;
 
 #[test]
 fn create_a_generic_message() {
-    let mut g = GenericMessage::new("");
+    let mut g = GenericMessage::new("".to_jid().unwrap());
 
     let _ = g.set_id(Some("ok"));
 
@@ -14,13 +15,14 @@ fn create_a_generic_message() {
         None => {}
     }
 
-    let _ = g.set_to("test@example.com");
+    g.set_to("test@example.com".to_jid().unwrap());
 
     // GenericMessage should have an to
     assert_eq!(&Jid::from_str("test@example.com").unwrap(), g.get_to());
     assert_eq!("test@example.com", g.get_to().to_string());
 
-    let _ = g.set_from(Some("test@example.com"));
+    g.set_from(Some("test@example.com".to_jid().unwrap()));
+
     // GenericMessage should have an from not sent by the client but by the server to the end
     // client
     match g.get_from() {

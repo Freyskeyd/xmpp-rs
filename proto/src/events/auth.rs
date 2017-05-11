@@ -32,9 +32,9 @@ impl FromXmlElement for Auth {
     type Error = io::Error;
     fn from_element(_: Element) -> Result<Auth, Self::Error> {
         Ok(Auth {
-            config: XMPPConfig::new(),
-            credentials: Credentials { ..Credentials::default() },
-        })
+               config: XMPPConfig::new(),
+               credentials: Credentials { ..Credentials::default() },
+           })
     }
 }
 

@@ -79,7 +79,7 @@ fn main() {
                             match *stanza {
                                 MessageEvent(_) => {
                                     println!("New message");
-                                    let e = MessageOk { generic: GenericMessage::new("user1@example.com/MacBook-Pro-de-Simon") };
+                                    let e = MessageOk { generic: GenericMessage::new("user1@example.com/MacBook-Pro-de-Simon".to_jid().unwrap()) };
 
                                     let x = e.to_event();
                                     println!("");
