@@ -1,7 +1,7 @@
 use events::IqEvent::BindEvent;
 use events::StanzaEvent;
 use events::Event;
-use events::EventTrait;
+use events::ToEvent;
 use events::ToXmlElement;
 use events::GenericIq;
 use events::IqType;
@@ -10,7 +10,7 @@ use events::FromXmlElement;
 use jid::Jid;
 use std::io;
 use std::str::FromStr;
-use elementtree::Element;
+use xmpp_xml::Element;
 use ns;
 
 #[derive(Debug, Default, Clone, XmppEvent)]

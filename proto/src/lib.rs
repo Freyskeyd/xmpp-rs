@@ -17,11 +17,12 @@ extern crate tokio_tls;
 extern crate tokio_io;
 extern crate bytes;
 extern crate base64;
-extern crate elementtree;
+// extern crate elementtree;
 extern crate xml;
 extern crate uuid;
 extern crate circular;
 extern crate sasl;
+extern crate string_cache;
 
 mod default;
 mod config;
@@ -35,6 +36,7 @@ mod ns;
 mod transport;
 mod credentials;
 mod parser;
+mod xmpp_xml;
 
 pub use parser::*;
 pub use config::XMPPConfig;
@@ -46,6 +48,7 @@ pub use codec::XMPPCodec;
 pub use credentials::Credentials;
 pub use jid::Jid;
 pub use jid::ToJid;
+pub use xmpp_xml::{Element, WriteOptions};
 
 #[cfg(test)]
 mod tests {

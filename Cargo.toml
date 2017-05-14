@@ -25,7 +25,8 @@ name = "xmpp"
 path = "src/lib.rs"
 
 [dev-dependencies]
-elementtree = {git = "https://github.com/Freyskeyd/elementtree-rust"}
+# elementtree = {git = "https://github.com/Freyskeyd/elementtree-rust"}
+elementtree = "0"
 env_logger = "0"
 futures = "0.1"
 log = "0"

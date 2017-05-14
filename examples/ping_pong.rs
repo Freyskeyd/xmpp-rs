@@ -16,7 +16,7 @@ use xmpp_client::events::CloseStream;
 use xmpp_client::events::Ping;
 use xmpp_client::events::IqEvent;
 use xmpp_client::events::StanzaEvent::IqRequestEvent;
-use xmpp_client::events::EventTrait;
+use xmpp_client::events::ToEvent;
 use std::thread;
 use xmpp_client::ToJid;
 

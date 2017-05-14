@@ -3,7 +3,7 @@ use events::Event;
 use events::Ping;
 use events::NonStanzaEvent::*;
 use events::Event::NonStanza;
-use events::EventTrait;
+use events::ToEvent;
 use std::str;
 use stream::XMPPStream;
 use std::io;

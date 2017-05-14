@@ -31,10 +31,10 @@ pub use events::interface::*;
 #[cfg(test)]
 mod tests {
     use config::XMPPConfig;
-    use events::EventTrait;
+    use events::ToEvent;
     use super::*;
 
-    fn compile<M: EventTrait>(_: &M) -> String {
+    fn compile<M: ToEvent>(_: &M) -> String {
         String::new()
     }
 

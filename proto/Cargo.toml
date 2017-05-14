@@ -19,7 +19,8 @@ categories = ["network-programming"]
 base64 = "0"
 bytes = "0"
 circular = "0"
-elementtree = {git = "https://github.com/Freyskeyd/elementtree-rust"}
+# elementtree = {git = "https://github.com/Freyskeyd/elementtree-rust"}
+elementtree = "0"
 futures = "0"
 log = "0"
 native-tls = "0"
@@ -31,6 +32,7 @@ xml-rs = {git = "https://github.com/Freyskeyd/xml-rs"}
 xmpp-derive = {path = "../derive", version = "0" }
 sasl = "0.4.1"
 clippy = {version = "*", optional = true}
+string_cache = "0"
 
 [features]
 default = []

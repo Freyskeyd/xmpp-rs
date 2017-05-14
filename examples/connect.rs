@@ -21,10 +21,10 @@ use xmpp_client::events::StanzaEvent;
 use xmpp_client::events::NonStanzaEvent;
 use xmpp_client::events::Event;
 use xmpp_client::events::StanzaEvent::MessageEvent;
-use xmpp_client::events::EventTrait;
-use elementtree::Element;
+use xmpp_client::events::ToEvent;
 use xmpp_client::events::ToXmlElement;
 use xmpp_client::events::FromXmlElement;
+use xmpp_client::Element;
 
 #[derive(Debug, Clone, XmppEvent)]
 #[stanza(is="message")]

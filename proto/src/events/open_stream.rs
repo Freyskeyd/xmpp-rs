@@ -1,8 +1,8 @@
 use super::Event;
 use super::NonStanzaEvent;
-use super::EventTrait;
-use elementtree::Element;
-use elementtree::QName;
+use super::ToEvent;
+use xmpp_xml::Element;
+use xmpp_xml::QName;
 use ns;
 use config::XMPPConfig;
 use events::ToXmlElement;
@@ -48,7 +48,7 @@ mod tests {
     use super::*;
     use events::*;
     use config::*;
-    use events::interface::EventTrait;
+    use events::interface::ToEvent;
 
     #[test]
     fn compile() {

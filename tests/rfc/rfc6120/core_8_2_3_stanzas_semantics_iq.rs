@@ -2,7 +2,7 @@
 
 use xmpp_proto::events::GenericIq;
 use xmpp_proto::events::IqType;
-use elementtree::Element;
+use xmpp_proto::Element;
 use std::io::ErrorKind;
 
 mod id_is_required {

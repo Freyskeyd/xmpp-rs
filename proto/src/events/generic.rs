@@ -2,7 +2,7 @@
 use std::fmt;
 use uuid::Uuid;
 use std::io;
-use elementtree::Element;
+use xmpp_xml::Element;
 use std::string::ToString;
 use std::str::FromStr;
 use jid::{Jid, ToJid};

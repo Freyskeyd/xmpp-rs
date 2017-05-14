@@ -1,12 +1,12 @@
 use events::NonStanzaEvent::AuthEvent;
 use events::Event;
-use events::EventTrait;
+use events::ToEvent;
 use events::ToXmlElement;
 use events::FromXmlElement;
 use config::XMPPConfig;
 use credentials::Credentials;
 use base64::encode;
-use elementtree::Element;
+use xmpp_xml::Element;
 use ns;
 use sasl::client::Mechanism;
 use sasl::client::mechanisms::Plain;

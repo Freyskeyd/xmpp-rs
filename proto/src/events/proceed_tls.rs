@@ -1,4 +1,4 @@
-use events::{Event, EventTrait};
+use events::{Event, ToEvent};
 use events::NonStanzaEvent::ProceedTlsEvent;
 
 use config::XMPPConfig;

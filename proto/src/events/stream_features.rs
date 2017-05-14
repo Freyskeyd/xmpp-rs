@@ -1,8 +1,8 @@
-use events::{Event, FromXmlElement, ToXmlElement, EventTrait};
+use events::{Event, FromXmlElement, ToXmlElement, ToEvent};
 use events::NonStanzaEvent::StreamFeaturesEvent;
 use config::XMPPConfig;
 use ns;
-use elementtree::Element;
+use xmpp_xml::Element;
 use std::io;
 
 #[derive(Debug, Clone, PartialEq)]

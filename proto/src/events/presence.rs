@@ -1,5 +1,5 @@
-use events::{PresenceType, Event, EventTrait, StanzaEvent};
-use elementtree::Element;
+use events::{PresenceType, Event, ToEvent, StanzaEvent};
+use xmpp_xml::Element;
 use std::io;
 use std::str::FromStr;
 use jid::Jid;

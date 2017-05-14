@@ -1,10 +1,10 @@
-use events::{Event, EventTrait};
+use events::{Event, ToEvent};
 use events::NonStanzaEvent::StartTlsEvent;
 
 use events::ToXmlElement;
 use std::io;
 use ns;
-use elementtree::Element;
+use xmpp_xml::Element;
 use config::XMPPConfig;
 
 #[derive(Debug, Clone, XmppEvent)]

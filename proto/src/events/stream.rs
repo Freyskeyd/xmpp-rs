@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use elementtree::Element;
+use xmpp_xml::Element;
 use std::string::ParseError;
 use ns;
 use config::XMPPConfig;

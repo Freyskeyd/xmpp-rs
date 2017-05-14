@@ -9,15 +9,17 @@ use events::NonStanzaEvent::*;
 // use events::StanzaEvent::*;
 // use events::IqEvent::*;
 use parser::XmppParser;
-use elementtree::WriteOptions;
-// use elementtree::XmlProlog;
+use xmpp_xml::WriteOptions;
+// use xmpp_xml::XmlProlog;
 
-/// Our line-based codec
+/// A codec that will transform I/O into Event
 pub struct XMPPCodec {
+    /// The parser hold our buffer and try to extract Event
     pub parser: XmppParser,
 }
 
 impl XMPPCodec {
+    /// Return a new XMPPCodec with an initialized buffer inside
     pub fn new() -> XMPPCodec {
         XMPPCodec { parser: XmppParser::new() }
     }

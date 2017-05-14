@@ -5,7 +5,6 @@ use std::str;
 use std::borrow::Cow;
 use circular::Buffer;
 use config::XMPPConfig;
-use elementtree::Element;
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use xml::namespace::Namespace;
@@ -13,6 +12,7 @@ use xml::name::OwnedName;
 use xml::common::Position;
 // use std::io::Read;
 use xml::reader::ErrorKind as XmlErrorKind;
+use xmpp_xml::Element;
 
 pub struct XmppParser {
     pub parser: EventReader<Buffer>,
@@ -106,6 +106,7 @@ impl XmppParser {
                                 return Some(e);
                             }
                         }
+
                         e => {
                             trace!("----------> Hit something");
                             trace!("{:?}", e);

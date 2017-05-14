@@ -3,8 +3,8 @@ use xmpp_proto::events::PresenceType;
 use xmpp_proto::Jid;
 use xmpp_proto::ToJid;
 use xmpp_proto::events::Presence;
-use elementtree::Element;
-use elementtree::WriteOptions;
+use xmpp_proto::Element;
+use xmpp_proto::WriteOptions;
 use xmpp_proto::events::FromXmlElement;
 
 fn element_to_string(e: Element) -> String {

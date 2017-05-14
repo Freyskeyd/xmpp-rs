@@ -1,4 +1,4 @@
-use elementtree::Element;
+use xmpp_xml::Element;
 use events::IqEvent::PingEvent;
 use events::*;
 use ns;

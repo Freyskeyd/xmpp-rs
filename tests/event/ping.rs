@@ -2,7 +2,7 @@ use xmpp_proto::ToJid;
 use xmpp_proto::events::Ping;
 use xmpp_proto::events::IqType;
 use xmpp_proto::events::FromXmlElement;
-use elementtree::Element;
+use xmpp_proto::Element;
 
 #[test]
 fn parse_ping() {
