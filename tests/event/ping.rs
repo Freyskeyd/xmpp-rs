@@ -1,8 +1,8 @@
-use xmpp_proto::ToJid;
-use xmpp_proto::events::Ping;
-use xmpp_proto::events::IqType;
-use xmpp_proto::events::FromXmlElement;
-use xmpp_proto::Element;
+use xmpp_jid::ToJid;
+use xmpp_events::Ping;
+use xmpp_events::IqType;
+use xmpp_events::FromXmlElement;
+use xmpp_xml::Element;
 
 #[test]
 fn parse_ping() {

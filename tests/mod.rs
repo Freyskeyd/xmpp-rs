@@ -1,4 +1,9 @@
 extern crate xmpp_proto;
+extern crate xmpp_config;
+extern crate xmpp_credentials;
+extern crate xmpp_events;
+extern crate xmpp_jid;
+extern crate xmpp_xml;
 extern crate xml;
 
 mod event;

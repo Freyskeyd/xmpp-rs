@@ -1,14 +1,14 @@
 /// https://xmpp.org/rfcs/rfc6120.html#stanzas-semantics-iq
 
-use xmpp_proto::events::GenericIq;
-use xmpp_proto::events::IqType;
-use xmpp_proto::Element;
+use xmpp_events::GenericIq;
+use xmpp_events::IqType;
+use xmpp_xml::Element;
 use std::io::ErrorKind;
 
 mod id_is_required {
     use super::*;
     use std::error::Error;
-    use xmpp_proto::events::FromXmlElement;
+    use xmpp_events::FromXmlElement;
 
     #[test]
     fn valid() {
@@ -43,7 +43,7 @@ mod id_is_required {
 mod type_is_required {
     use super::*;
     use std::error::Error;
-    use xmpp_proto::events::FromXmlElement;
+    use xmpp_events::FromXmlElement;
 
     #[test]
     fn get() {
@@ -135,7 +135,7 @@ mod type_is_required {
 mod child_get_set {
     use super::*;
     use std::error::Error;
-    use xmpp_proto::events::FromXmlElement;
+    use xmpp_events::FromXmlElement;
 
     #[test]
     fn get_valid() {
@@ -203,7 +203,7 @@ mod child_get_set {
 mod child_result {
     use super::*;
     use std::error::Error;
-    use xmpp_proto::events::FromXmlElement;
+    use xmpp_events::FromXmlElement;
 
     #[test]
     fn result_valid() {
@@ -240,7 +240,7 @@ mod child_result {
 mod child_error {
     use super::*;
     use std::error::Error;
-    use xmpp_proto::events::FromXmlElement;
+    use xmpp_events::FromXmlElement;
 
     #[test]
     fn error_valid() {

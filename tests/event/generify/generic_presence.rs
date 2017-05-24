@@ -1,11 +1,11 @@
-use xmpp_proto::events::ToXmlElement;
-use xmpp_proto::events::PresenceType;
-use xmpp_proto::Jid;
-use xmpp_proto::ToJid;
-use xmpp_proto::events::Presence;
-use xmpp_proto::Element;
-use xmpp_proto::WriteOptions;
-use xmpp_proto::events::FromXmlElement;
+use xmpp_events::ToXmlElement;
+use xmpp_events::PresenceType;
+use xmpp_jid::Jid;
+use xmpp_jid::ToJid;
+use xmpp_events::Presence;
+use xmpp_xml::Element;
+use xmpp_xml::WriteOptions;
+use xmpp_events::FromXmlElement;
 
 fn element_to_string(e: Element) -> String {
     let mut out: Vec<u8> = Vec::new();
