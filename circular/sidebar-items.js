@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Buffer","the Buffer contains the underlying memory and data positions"]]});

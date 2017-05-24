@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Credentials","Define Credentials used to authenticate a user"]]});

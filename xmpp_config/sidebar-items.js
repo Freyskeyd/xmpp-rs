@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["DOMAIN",""]],"mod":[["ns",""]],"struct":[["XMPPConfig","Define a struct to hold general configuration information needed by xmpp"]]});

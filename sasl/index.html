@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `sasl` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, sasl">
+
+    <title>sasl - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'></p><script>window.sidebarCurrent = {name: 'sasl', ty: 'mod', relpath: '../'};</script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>sasl</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/sasl/lib.rs.html#3-178' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>This crate provides a framework for SASL authentication and a few authentication mechanisms.</p>
+
+<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
+<h2 id='simple-client-sided-usage' class='section-header'><a href='#simple-client-sided-usage'>Simple client-sided usage</a></h2>
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">client</span>::<span class="ident">Mechanism</span>;
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">common</span>::<span class="ident">Credentials</span>;
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">client</span>::<span class="ident">mechanisms</span>::<span class="ident">Plain</span>;
+
+<span class="kw">let</span> <span class="ident">creds</span> <span class="op">=</span> <span class="ident">Credentials</span>::<span class="ident">default</span>()
+                        .<span class="ident">with_username</span>(<span class="string">&quot;user&quot;</span>)
+                        .<span class="ident">with_password</span>(<span class="string">&quot;pencil&quot;</span>);
+
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mechanism</span> <span class="op">=</span> <span class="ident">Plain</span>::<span class="ident">from_credentials</span>(<span class="ident">creds</span>).<span class="ident">unwrap</span>();
+
+<span class="kw">let</span> <span class="ident">initial_data</span> <span class="op">=</span> <span class="ident">mechanism</span>.<span class="ident">initial</span>().<span class="ident">unwrap</span>();
+
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">initial_data</span>, <span class="string">b&quot;\0user\0pencil&quot;</span>);</pre>
+
+<h2 id='more-complex-usage' class='section-header'><a href='#more-complex-usage'>More complex usage</a></h2>
+<pre class="rust rust-example-rendered">
+<span class="attribute">#[<span class="ident">macro_use</span>]</span> <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">sasl</span>;
+
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">server</span>::{<span class="ident">Validator</span>, <span class="ident">Provider</span>, <span class="ident">Mechanism</span> <span class="kw">as</span> <span class="ident">ServerMechanism</span>, <span class="ident">Response</span>};
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">server</span>::<span class="ident">mechanisms</span>::{<span class="ident">Plain</span> <span class="kw">as</span> <span class="ident">ServerPlain</span>, <span class="ident">Scram</span> <span class="kw">as</span> <span class="ident">ServerScram</span>};
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">client</span>::<span class="ident">Mechanism</span> <span class="kw">as</span> <span class="ident">ClientMechanism</span>;
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">client</span>::<span class="ident">mechanisms</span>::{<span class="ident">Plain</span> <span class="kw">as</span> <span class="ident">ClientPlain</span>, <span class="ident">Scram</span> <span class="kw">as</span> <span class="ident">ClientScram</span>};
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">common</span>::{<span class="ident">Identity</span>, <span class="ident">Credentials</span>, <span class="ident">Password</span>, <span class="ident">ChannelBinding</span>};
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">common</span>::<span class="ident">scram</span>::{<span class="ident">ScramProvider</span>, <span class="ident">Sha1</span>, <span class="ident">Sha256</span>};
+<span class="kw">use</span> <span class="ident">sasl</span>::<span class="ident">secret</span>;
+
+<span class="kw">const</span> <span class="ident">USERNAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;user&quot;</span>;
+<span class="kw">const</span> <span class="ident">PASSWORD</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;pencil&quot;</span>;
+<span class="kw">const</span> <span class="ident">SALT</span>: [<span class="ident">u8</span>; <span class="number">8</span>] <span class="op">=</span> [<span class="number">35</span>, <span class="number">71</span>, <span class="number">92</span>, <span class="number">105</span>, <span class="number">212</span>, <span class="number">219</span>, <span class="number">114</span>, <span class="number">93</span>];
+<span class="kw">const</span> <span class="ident">ITERATIONS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4096</span>;
+
+<span class="kw">struct</span> <span class="ident">MyValidator</span>;
+
+<span class="kw">impl</span> <span class="ident">Validator</span><span class="op">&lt;</span><span class="ident">secret</span>::<span class="ident">Plain</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyValidator</span> {
+    <span class="kw">fn</span> <span class="ident">validate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">identity</span>: <span class="kw-2">&amp;</span><span class="ident">Identity</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">secret</span>::<span class="ident">Plain</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">&amp;</span><span class="ident">secret</span>::<span class="ident">Plain</span>(<span class="kw-2">ref</span> <span class="ident">password</span>) <span class="op">=</span> <span class="ident">value</span>;
+        <span class="kw">if</span> <span class="ident">identity</span> <span class="op">!=</span> <span class="kw-2">&amp;</span><span class="ident">Identity</span>::<span class="ident">Username</span>(<span class="ident">USERNAME</span>.<span class="ident">to_owned</span>()) {
+            <span class="prelude-val">Err</span>(<span class="string">&quot;authentication failed&quot;</span>.<span class="ident">to_owned</span>())
+        }
+        <span class="kw">else</span> <span class="kw">if</span> <span class="ident">password</span> <span class="op">!=</span> <span class="ident">PASSWORD</span> {
+            <span class="prelude-val">Err</span>(<span class="string">&quot;authentication failed&quot;</span>.<span class="ident">to_owned</span>())
+        }
+        <span class="kw">else</span> {
+            <span class="prelude-val">Ok</span>(())
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Provider</span><span class="op">&lt;</span><span class="ident">secret</span>::<span class="ident">Pbkdf2Sha1</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyValidator</span> {
+    <span class="kw">fn</span> <span class="ident">provide</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">identity</span>: <span class="kw-2">&amp;</span><span class="ident">Identity</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">secret</span>::<span class="ident">Pbkdf2Sha1</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">identity</span> <span class="op">!=</span> <span class="kw-2">&amp;</span><span class="ident">Identity</span>::<span class="ident">Username</span>(<span class="ident">USERNAME</span>.<span class="ident">to_owned</span>()) {
+            <span class="prelude-val">Err</span>(<span class="string">&quot;authentication failed&quot;</span>.<span class="ident">to_owned</span>())
+        }
+        <span class="kw">else</span> {
+            <span class="kw">let</span> <span class="ident">digest</span> <span class="op">=</span> <span class="ident">sasl</span>::<span class="ident">common</span>::<span class="ident">scram</span>::<span class="ident">Sha1</span>::<span class="ident">derive</span>
+                ( <span class="kw-2">&amp;</span><span class="ident">Password</span>::<span class="ident">Plain</span>((<span class="ident">PASSWORD</span>.<span class="ident">to_owned</span>()))
+                , <span class="kw-2">&amp;</span><span class="ident">SALT</span>[..]
+                , <span class="ident">ITERATIONS</span> )<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(<span class="ident">secret</span>::<span class="ident">Pbkdf2Sha1</span> {
+                <span class="ident">salt</span>: <span class="ident">SALT</span>.<span class="ident">to_vec</span>(),
+                <span class="ident">iterations</span>: <span class="ident">ITERATIONS</span>,
+                <span class="ident">digest</span>: <span class="ident">digest</span>,
+            })
+        }
+    }
+}
+
+<span class="macro">impl_validator_using_provider</span><span class="macro">!</span>(<span class="ident">MyValidator</span>, <span class="ident">secret</span>::<span class="ident">Pbkdf2Sha1</span>);
+
+<span class="kw">impl</span> <span class="ident">Provider</span><span class="op">&lt;</span><span class="ident">secret</span>::<span class="ident">Pbkdf2Sha256</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyValidator</span> {
+    <span class="kw">fn</span> <span class="ident">provide</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">identity</span>: <span class="kw-2">&amp;</span><span class="ident">Identity</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">secret</span>::<span class="ident">Pbkdf2Sha256</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">identity</span> <span class="op">!=</span> <span class="kw-2">&amp;</span><span class="ident">Identity</span>::<span class="ident">Username</span>(<span class="ident">USERNAME</span>.<span class="ident">to_owned</span>()) {
+            <span class="prelude-val">Err</span>(<span class="string">&quot;authentication failed&quot;</span>.<span class="ident">to_owned</span>())
+        }
+        <span class="kw">else</span> {
+            <span class="kw">let</span> <span class="ident">digest</span> <span class="op">=</span> <span class="ident">sasl</span>::<span class="ident">common</span>::<span class="ident">scram</span>::<span class="ident">Sha256</span>::<span class="ident">derive</span>
+                ( <span class="kw-2">&amp;</span><span class="ident">Password</span>::<span class="ident">Plain</span>((<span class="ident">PASSWORD</span>.<span class="ident">to_owned</span>()))
+                , <span class="kw-2">&amp;</span><span class="ident">SALT</span>[..]
+                , <span class="ident">ITERATIONS</span> )<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(<span class="ident">secret</span>::<span class="ident">Pbkdf2Sha256</span> {
+                <span class="ident">salt</span>: <span class="ident">SALT</span>.<span class="ident">to_vec</span>(),
+                <span class="ident">iterations</span>: <span class="ident">ITERATIONS</span>,
+                <span class="ident">digest</span>: <span class="ident">digest</span>,
+            })
+        }
+    }
+}
+
+<span class="macro">impl_validator_using_provider</span><span class="macro">!</span>(<span class="ident">MyValidator</span>, <span class="ident">secret</span>::<span class="ident">Pbkdf2Sha256</span>);
+
+<span class="kw">fn</span> <span class="ident">finish</span><span class="op">&lt;</span><span class="ident">CM</span>, <span class="ident">SM</span><span class="op">&gt;</span>(<span class="ident">cm</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CM</span>, <span class="ident">sm</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SM</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Identity</span>, <span class="ident">String</span><span class="op">&gt;</span>
+    <span class="kw">where</span> <span class="ident">CM</span>: <span class="ident">ClientMechanism</span>,
+          <span class="ident">SM</span>: <span class="ident">ServerMechanism</span> {
+    <span class="kw">let</span> <span class="ident">init</span> <span class="op">=</span> <span class="ident">cm</span>.<span class="ident">initial</span>()<span class="question-mark">?</span>;
+    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;C: {}&quot;</span>, <span class="ident">String</span>::<span class="ident">from_utf8_lossy</span>(<span class="kw-2">&amp;</span><span class="ident">init</span>));
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">sm</span>.<span class="ident">respond</span>(<span class="kw-2">&amp;</span><span class="ident">init</span>)<span class="question-mark">?</span>;
+    <span class="kw">loop</span> {
+        <span class="kw">let</span> <span class="ident">msg</span>;
+        <span class="kw">match</span> <span class="ident">resp</span> {
+            <span class="ident">Response</span>::<span class="ident">Proceed</span>(<span class="kw-2">ref</span> <span class="ident">data</span>) <span class="op">=&gt;</span> {
+                <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;S: {}&quot;</span>, <span class="ident">String</span>::<span class="ident">from_utf8_lossy</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>));
+                <span class="ident">msg</span> <span class="op">=</span> <span class="ident">cm</span>.<span class="ident">response</span>(<span class="ident">data</span>)<span class="question-mark">?</span>;
+                <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;C: {}&quot;</span>, <span class="ident">String</span>::<span class="ident">from_utf8_lossy</span>(<span class="kw-2">&amp;</span><span class="ident">msg</span>));
+            },
+            _ <span class="op">=&gt;</span> <span class="kw">break</span>,
+        }
+        <span class="ident">resp</span> <span class="op">=</span> <span class="ident">sm</span>.<span class="ident">respond</span>(<span class="kw-2">&amp;</span><span class="ident">msg</span>)<span class="question-mark">?</span>;
+    }
+    <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Response</span>::<span class="ident">Success</span>(<span class="ident">ret</span>, <span class="ident">fin</span>) <span class="op">=</span> <span class="ident">resp</span> {
+        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;S: {}&quot;</span>, <span class="ident">String</span>::<span class="ident">from_utf8_lossy</span>(<span class="kw-2">&amp;</span><span class="ident">fin</span>));
+        <span class="ident">cm</span>.<span class="ident">success</span>(<span class="kw-2">&amp;</span><span class="ident">fin</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">ret</span>)
+    }
+    <span class="kw">else</span> {
+        <span class="macro">unreachable</span><span class="macro">!</span>();
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mech</span> <span class="op">=</span> <span class="ident">ServerPlain</span>::<span class="ident">new</span>(<span class="ident">MyValidator</span>);
+    <span class="kw">let</span> <span class="ident">expected_response</span> <span class="op">=</span> <span class="ident">Response</span>::<span class="ident">Success</span>(<span class="ident">Identity</span>::<span class="ident">Username</span>(<span class="string">&quot;user&quot;</span>.<span class="ident">to_owned</span>()), <span class="ident">Vec</span>::<span class="ident">new</span>());
+    <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">mech</span>.<span class="ident">respond</span>(<span class="string">b&quot;\0user\0pencil&quot;</span>), <span class="prelude-val">Ok</span>(<span class="ident">expected_response</span>));
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mech</span> <span class="op">=</span> <span class="ident">ServerPlain</span>::<span class="ident">new</span>(<span class="ident">MyValidator</span>);
+    <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">mech</span>.<span class="ident">respond</span>(<span class="string">b&quot;\0user\0marker&quot;</span>), <span class="prelude-val">Err</span>(<span class="string">&quot;authentication failed&quot;</span>.<span class="ident">to_owned</span>()));
+
+    <span class="kw">let</span> <span class="ident">creds</span> <span class="op">=</span> <span class="ident">Credentials</span>::<span class="ident">default</span>()
+                            .<span class="ident">with_username</span>(<span class="ident">USERNAME</span>)
+                            .<span class="ident">with_password</span>(<span class="ident">PASSWORD</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_mech</span> <span class="op">=</span> <span class="ident">ClientPlain</span>::<span class="ident">from_credentials</span>(<span class="ident">creds</span>.<span class="ident">clone</span>()).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_mech</span> <span class="op">=</span> <span class="ident">ServerPlain</span>::<span class="ident">new</span>(<span class="ident">MyValidator</span>);
+
+    <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">finish</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">client_mech</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">server_mech</span>), <span class="prelude-val">Ok</span>(<span class="ident">Identity</span>::<span class="ident">Username</span>(<span class="ident">USERNAME</span>.<span class="ident">to_owned</span>())));
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_mech</span> <span class="op">=</span> <span class="ident">ClientScram</span>::<span class="op">&lt;</span><span class="ident">Sha1</span><span class="op">&gt;</span>::<span class="ident">from_credentials</span>(<span class="ident">creds</span>.<span class="ident">clone</span>()).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_mech</span> <span class="op">=</span> <span class="ident">ServerScram</span>::<span class="op">&lt;</span><span class="ident">Sha1</span>, _<span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">MyValidator</span>, <span class="ident">ChannelBinding</span>::<span class="ident">Unsupported</span>);
+
+    <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">finish</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">client_mech</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">server_mech</span>), <span class="prelude-val">Ok</span>(<span class="ident">Identity</span>::<span class="ident">Username</span>(<span class="ident">USERNAME</span>.<span class="ident">to_owned</span>())));
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_mech</span> <span class="op">=</span> <span class="ident">ClientScram</span>::<span class="op">&lt;</span><span class="ident">Sha256</span><span class="op">&gt;</span>::<span class="ident">from_credentials</span>(<span class="ident">creds</span>.<span class="ident">clone</span>()).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_mech</span> <span class="op">=</span> <span class="ident">ServerScram</span>::<span class="op">&lt;</span><span class="ident">Sha256</span>, _<span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">MyValidator</span>, <span class="ident">ChannelBinding</span>::<span class="ident">Unsupported</span>);
+
+    <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">finish</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">client_mech</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">server_mech</span>), <span class="prelude-val">Ok</span>(<span class="ident">Identity</span>::<span class="ident">Username</span>(<span class="ident">USERNAME</span>.<span class="ident">to_owned</span>())));
+}</pre>
+
+<h1 id='usage' class='section-header'><a href='#usage'>Usage</a></h1>
+<p>You can use this in your crate by adding this under <code>dependencies</code> in your <code>Cargo.toml</code>:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="ident">sasl</span> <span class="op">=</span> <span class="string">&quot;*&quot;</span></pre>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="client/index.html"
+                                  title='mod sasl::client'>client</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="common/index.html"
+                                  title='mod sasl::common'>common</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="secret/index.html"
+                                  title='mod sasl::secret'>secret</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="server/index.html"
+                                  title='mod sasl::server'>server</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table><h2 id='macros' class='section-header'><a href="#macros">Macros</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.impl_validator_using_provider.html"
+                                  title='macro sasl::impl_validator_using_provider'>impl_validator_using_provider</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Error.html"
+                                  title='enum sasl::Error'>Error</a></td>
+                           <td class='docblock-short'>
+                                <p>A wrapper enum for things that could go wrong in this crate.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "sasl";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

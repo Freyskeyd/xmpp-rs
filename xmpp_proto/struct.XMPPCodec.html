@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `XMPPCodec` struct in crate `xmpp_proto`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, XMPPCodec">
+
+    <title>xmpp_proto::XMPPCodec - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>xmpp_proto</a></p><script>window.sidebarCurrent = {name: 'XMPPCodec', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>xmpp_proto</a>::<wbr><a class="struct" href=''>XMPPCodec</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/xmpp_proto/codec.rs.html#16-19' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct XMPPCodec {
+    pub parser: <a class="struct" href="../xmpp_proto/struct.XmppParser.html" title="struct xmpp_proto::XmppParser">XmppParser</a>,
+}</pre><div class='docblock'><p>A codec that will transform I/O into Event</p>
+</div><h2 class='fields'>Fields</h2><span id='structfield.parser' class="structfield">
+                           <span id='parser.v' class='invisible'>
+                           <code>parser: <a class="struct" href="../xmpp_proto/struct.XmppParser.html" title="struct xmpp_proto::XmppParser">XmppParser</a></code>
+                           </span></span><div class='docblock'><p>The parser hold our buffer and try to extract Event</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="struct" href="../xmpp_proto/struct.XMPPCodec.html" title="struct xmpp_proto::XMPPCodec">XMPPCodec</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/xmpp_proto/codec.rs.html#21-26' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; <a class="struct" href="../xmpp_proto/struct.XMPPCodec.html" title="struct xmpp_proto::XMPPCodec">XMPPCodec</a></code></span></h4>
+<div class='docblock'><p>Return a new XMPPCodec with an initialized buffer inside</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/default/trait.Default.html" title="trait core::default::Default">Default</a> for <a class="struct" href="../xmpp_proto/struct.XMPPCodec.html" title="struct xmpp_proto::XMPPCodec">XMPPCodec</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/xmpp_proto/codec.rs.html#28-32' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.default' class="method"><span id='default.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/default/trait.Default.html#tymethod.default' class='fnname'>default</a>() -&gt; Self</code></span></h4>
+<div class='docblock'><p>Returns the &quot;default value&quot; for a type. <a href="https://doc.rust-lang.org/nightly/core/default/trait.Default.html#tymethod.default">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="../tokio_io/framed_read/trait.Decoder.html" title="trait tokio_io::framed_read::Decoder">Decoder</a> for <a class="struct" href="../xmpp_proto/struct.XMPPCodec.html" title="struct xmpp_proto::XMPPCodec">XMPPCodec</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/xmpp_proto/codec.rs.html#34-58' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='associatedtype.Item' class="type"><span id='Item.t' class='invisible'><code>type <a href='../tokio_io/framed_read/trait.Decoder.html#associatedtype.Item' class="type">Item</a> = <a class="enum" href="../xmpp_events/interface/enum.Event.html" title="enum xmpp_events::interface::Event">Event</a></code></span></h4>
+<div class='docblock'><p>The type of decoded frames.</p>
+</div><h4 id='associatedtype.Error' class="type"><span id='Error.t' class='invisible'><code>type <a href='../tokio_io/framed_read/trait.Decoder.html#associatedtype.Error' class="type">Error</a> = <a class="struct" href="https://doc.rust-lang.org/nightly/std/io/error/struct.Error.html" title="struct std::io::error::Error">Error</a></code></span></h4>
+<div class='docblock'><p>The type of unrecoverable frame decoding errors. <a href="../tokio_io/framed_read/trait.Decoder.html#associatedtype.Error">Read more</a></p>
+</div><h4 id='method.decode' class="method"><span id='decode.v' class='invisible'><code>fn <a href='../tokio_io/framed_read/trait.Decoder.html#tymethod.decode' class='fnname'>decode</a>(&amp;mut self, buf: &amp;mut <a class="struct" href="../bytes/bytes/struct.BytesMut.html" title="struct bytes::bytes::BytesMut">BytesMut</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;Self::<a class="trait" href="../tokio_io/framed_read/trait.Decoder.html" title="trait tokio_io::framed_read::Decoder">Item</a>&gt;, <a class="struct" href="https://doc.rust-lang.org/nightly/std/io/error/struct.Error.html" title="struct std::io::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Attempts to decode a frame from the provided buffer of bytes. <a href="../tokio_io/framed_read/trait.Decoder.html#tymethod.decode">Read more</a></p>
+</div><h4 id='method.decode_eof' class="method"><span id='decode_eof.v' class='invisible'><code>fn <a href='../tokio_io/framed_read/trait.Decoder.html#method.decode_eof' class='fnname'>decode_eof</a>(&amp;mut self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf: &amp;mut <a class="struct" href="../bytes/bytes/struct.BytesMut.html" title="struct bytes::bytes::BytesMut">BytesMut</a>)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;Self::<a class="trait" href="../tokio_io/framed_read/trait.Decoder.html" title="trait tokio_io::framed_read::Decoder">Item</a>&gt;, Self::<a class="trait" href="../tokio_io/framed_read/trait.Decoder.html" title="trait tokio_io::framed_read::Decoder">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>A default method available to be called when there are no more bytes available to be read from the underlying I/O. <a href="../tokio_io/framed_read/trait.Decoder.html#method.decode_eof">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="../tokio_io/framed_write/trait.Encoder.html" title="trait tokio_io::framed_write::Encoder">Encoder</a> for <a class="struct" href="../xmpp_proto/struct.XMPPCodec.html" title="struct xmpp_proto::XMPPCodec">XMPPCodec</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/xmpp_proto/codec.rs.html#60-144' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='associatedtype.Item-1' class="type"><span id='Item.t-1' class='invisible'><code>type <a href='../tokio_io/framed_write/trait.Encoder.html#associatedtype.Item' class="type">Item</a> = <a class="enum" href="../xmpp_events/interface/enum.Event.html" title="enum xmpp_events::interface::Event">Event</a></code></span></h4>
+<div class='docblock'><p>The type of items consumed by the <code>Encoder</code></p>
+</div><h4 id='associatedtype.Error-1' class="type"><span id='Error.t-1' class='invisible'><code>type <a href='../tokio_io/framed_write/trait.Encoder.html#associatedtype.Error' class="type">Error</a> = <a class="struct" href="https://doc.rust-lang.org/nightly/std/io/error/struct.Error.html" title="struct std::io::error::Error">Error</a></code></span></h4>
+<div class='docblock'><p>The type of encoding errors. <a href="../tokio_io/framed_write/trait.Encoder.html#associatedtype.Error">Read more</a></p>
+</div><h4 id='method.encode' class="method"><span id='encode.v' class='invisible'><code>fn <a href='../tokio_io/framed_write/trait.Encoder.html#tymethod.encode' class='fnname'>encode</a>(&amp;mut self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; frame: <a class="enum" href="../xmpp_events/interface/enum.Event.html" title="enum xmpp_events::interface::Event">Event</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf: &amp;mut <a class="struct" href="../bytes/bytes/struct.BytesMut.html" title="struct bytes::bytes::BytesMut">BytesMut</a>)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>, Self::<a class="trait" href="../tokio_io/framed_write/trait.Encoder.html" title="trait tokio_io::framed_write::Encoder">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Encodes a frame into the buffer provided. <a href="../tokio_io/framed_write/trait.Encoder.html#tymethod.encode">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "xmpp_proto";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

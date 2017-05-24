@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["generate_nonce","Generate a nonce for SCRAM authentication."]],"struct":[["Sha1","A `ScramProvider` which provides SCRAM-SHA-1 and SCRAM-SHA-1-PLUS"],["Sha256","A `ScramProvider` which provides SCRAM-SHA-256 and SCRAM-SHA-256-PLUS"]],"trait":[["ScramProvider","A trait which defines the needed methods for SCRAM."]]});

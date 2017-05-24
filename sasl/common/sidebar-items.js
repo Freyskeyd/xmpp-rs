@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ChannelBinding","Channel binding configuration."],["Identity",""],["Password","Represents a password."],["Secret","Represents a SASL secret, like a password."]],"mod":[["scram",""]],"struct":[["Credentials","A struct containing SASL credentials."]]});

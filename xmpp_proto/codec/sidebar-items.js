@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["XMPPCodec","Our line-based codec"]]});
