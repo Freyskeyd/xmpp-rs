@@ -151,12 +151,7 @@ mod tests {
         let mut x = XmppParser::new();
 
         x.feed("<?xml version='1.0'?><stream:stream id='16243086933621190650' version='1.0' xml:lang='en' xmlns:stream='http://etherx.jabber.org/streams' from='exampl".as_bytes());
-        match x.next_event() {
-            None => assert!(true),
-            Some(_) => assert!(false),
-        }
-
-        x.feed(b"e.com' xmlns='jabber:client'>");
+        x.feed("e.com' xmlns='jabber:client'>".as_bytes());
         match x.next_event() {
             Some(_) => assert!(true),
             None => assert!(false),
