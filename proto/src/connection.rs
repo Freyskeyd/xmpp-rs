@@ -1,20 +1,21 @@
 use std::collections::{HashMap, VecDeque};
 use std::io::Result;
-use jid::Jid;
-use config::XMPPConfig;
-use credentials::Credentials;
-use events::Event;
-use events::Event::*;
-use events::NonStanzaEvent::*;
-use events::StanzaEvent::*;
-use events::IqEvent::*;
-use events::*;
-use events::FromGeneric;
-use events::Features;
-use jid::ToJid;
-use ns;
+use xmpp_jid::Jid;
+use xmpp_config::XMPPConfig;
+use xmpp_credentials::Credentials;
+use xmpp_events::Event;
+use xmpp_events::Event::*;
+use xmpp_events::NonStanzaEvent::*;
+use xmpp_events::StanzaEvent::*;
+use xmpp_events::IqEvent::*;
+use xmpp_events::*;
+use xmpp_events::FromGeneric;
+use xmpp_events::Features;
+use xmpp_jid::ToJid;
+use xmpp_config::ns;
 use futures::sync::oneshot::Sender;
 
+/// Connection state information.
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum ConnectionState {
     Initial,
@@ -24,6 +25,7 @@ pub enum ConnectionState {
     Error,
 }
 
+/// Granularity on Connecting state.
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum ConnectingState {
     Initial,
@@ -53,6 +55,7 @@ pub enum ConnectingState {
     Error,
 }
 
+/// Hold a Tcp/TlsStream and manage frames sent and receive over it.
 #[derive(Debug)]
 pub struct Connection {
     pub state: ConnectionState,
@@ -140,7 +143,7 @@ impl Connection {
                             Features::StartTlsInit => {
                                 self.state = ConnectionState::Connecting(ConnectingState::ReceivedInitialStreamFeatures);
                                 self.frame_queue
-                                    .push_back(NonStanza(Box::new(StartTlsEvent(Box::new(StartTls::new(&self.config))))));
+                                    .push_back(NonStanza(Box::new(StartTlsEvent(Box::new(StartTls::new())))));
                             }
                             Features::Mechanims(_) => {
                                 self.state = ConnectionState::Connecting(ConnectingState::ReceivedAuthenticatedFeatures);

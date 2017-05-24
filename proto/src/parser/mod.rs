@@ -1,19 +1,20 @@
 use std::io::Write;
-use events::*;
-use ns;
+use xmpp_events::*;
+use xmpp_config::ns;
 use std::str;
 use std::borrow::Cow;
 use circular::Buffer;
-use config::XMPPConfig;
+use xmpp_config::XMPPConfig;
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use xml::namespace::Namespace;
 use xml::name::OwnedName;
 use xml::common::Position;
-// use std::io::Read;
 use xml::reader::ErrorKind as XmlErrorKind;
 use xmpp_xml::Element;
 
+/// XmppParser deals with incoming bytes. You can feed the parser with bytes and try to detect new
+/// event.
 pub struct XmppParser {
     pub parser: EventReader<Buffer>,
 }
@@ -44,12 +45,12 @@ impl XmppParser {
             }
         } else if name.local_name == "proceed" && name.namespace_ref() == Some(ns::TLS) {
             if Element::from_start_element(name, attributes, namespace, None, &mut self.parser).is_ok() {
-                let e = ProceedTls::new(&XMPPConfig::new());
+                let e = ProceedTls::new();
                 return Some(e.to_event());
             }
         } else if name.local_name == "success" && name.namespace_ref() == Some(ns::SASL) {
             if Element::from_start_element(name, attributes, namespace, None, &mut self.parser).is_ok() {
-                let e = SuccessTls::new(&XMPPConfig::new());
+                let e = SuccessTls::new();
 
                 return Some(e.to_event());
             }

@@ -1,16 +1,16 @@
 #![allow(unused_must_use)]
-use events::Event;
-use events::Ping;
-use events::NonStanzaEvent::*;
-use events::Event::NonStanza;
-use events::ToEvent;
+use xmpp_events::Event;
+use xmpp_events::Ping;
+use xmpp_events::NonStanzaEvent::*;
+use xmpp_events::Event::NonStanza;
+use xmpp_events::ToEvent;
 use std::str;
 use stream::XMPPStream;
 use std::io;
 use futures::future;
 use futures::{Async, Poll, Sink, Stream, StartSend, Future};
 use connection::{ConnectionState, ConnectingState, Connection};
-use credentials::Credentials;
+use xmpp_credentials::Credentials;
 use futures::sync::oneshot::Sender;
 
 /// Deal with the communication process based on a Tcp/Tls stream
