@@ -1,29 +1,34 @@
 extern crate xmpp_client;
+extern crate xmpp_config;
+extern crate xmpp_credentials;
+extern crate xmpp_events;
+extern crate xmpp_jid;
 #[macro_use]
 extern crate xmpp_derive;
 extern crate tokio_core;
 extern crate futures;
 extern crate env_logger;
 extern crate log;
-extern crate elementtree;
 
 use std::io;
 use tokio_core::reactor::Core;
 use futures::Future;
 use futures::Stream;
-use xmpp_client::ToJid;
-use xmpp_client::{XMPPConfig, Credentials, Jid};
+use xmpp_config::XMPPConfig;
+use xmpp_credentials::Credentials;
+use xmpp_jid::ToJid;
+use xmpp_jid::Jid;
 use tokio_core::net::TcpStream;
-use xmpp_client::events::GenericMessage;
-use xmpp_client::events::Event::Stanza;
-use xmpp_client::events::Event::NonStanza;
-use xmpp_client::events::StanzaEvent;
-use xmpp_client::events::NonStanzaEvent;
-use xmpp_client::events::Event;
-use xmpp_client::events::StanzaEvent::MessageEvent;
-use xmpp_client::events::ToEvent;
-use xmpp_client::events::ToXmlElement;
-use xmpp_client::events::FromXmlElement;
+use xmpp_events::GenericMessage;
+use xmpp_events::Event::Stanza;
+use xmpp_events::Event::NonStanza;
+use xmpp_events::StanzaEvent;
+use xmpp_events::NonStanzaEvent;
+use xmpp_events::Event;
+use xmpp_events::StanzaEvent::MessageEvent;
+use xmpp_events::ToEvent;
+use xmpp_events::ToXmlElement;
+use xmpp_events::FromXmlElement;
 use xmpp_client::Element;
 
 #[derive(Debug, Clone, XmppEvent)]
