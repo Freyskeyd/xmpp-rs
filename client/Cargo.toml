@@ -14,6 +14,7 @@ repository = "https://github.com/Freyskeyd/xmpp-rs"
 readme = "../README.md"
 keywords = ["xmpp", "tokio", "jabber", "IM", "instant-messaging"]
 categories = ["network-programming"]
+workspace = ".."
 
 [dependencies]
 futures = "0"
@@ -21,11 +22,12 @@ native-tls = "0"
 tokio-core = "0"
 tokio-io = "0"
 tokio-tls = "0"
+xmpp-proto =  { path = "../proto" }
+xmpp-config = { path = "../config" }
+xmpp-events = { path = "../events" }
+xmpp-xml = { path = "../xml" }
+xmpp-jid = { path = "../jid" }
+xmpp-credentials = { path = "../credentials" }
 
 [dev-dependencies]
 env_logger = "^0.4"
-
-[dependencies.xmpp-proto]
-path = "../proto"
-version = "0"
-
