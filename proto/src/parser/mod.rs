@@ -29,7 +29,8 @@ impl XmppParser {
         self.parser.source()
     }
     pub fn new() -> XmppParser {
-        let cfg = ParserConfig::new().whitespace_to_characters(true);
+        let mut cfg = ParserConfig::new().whitespace_to_characters(true);
+        cfg.ignore_end_of_stream = true;
         XmppParser { parser: cfg.create_reader(Buffer::with_capacity(4096)) }
     }
 
@@ -83,7 +84,7 @@ impl XmppParser {
             }
 
             // Reopen the parser to check new bytes
-            self.parser.reopen_parser();
+            // self.parser.reopen_parser();
             match self.parser.next() {
                 Ok(xml_event) => {
                     match xml_event {
