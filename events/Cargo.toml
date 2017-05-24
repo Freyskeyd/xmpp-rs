@@ -1,0 +1,23 @@
+[package]
+name = "xmpp-events"
+version = "0.1.3"
+license = "MPL-2.0"
+
+description = """
+xmpp-rs is an implementation of the Extensible Messaging and Presence Protocol (XMPP).
+
+Based on tokio-rs and futures-rs. It's goal is to be fully tested and usable.
+"""
+repository = "https://github.com/Freyskeyd/xmpp-rs"
+keywords = ["xmpp", "tokio", "jabber", "IM", "instant-messaging"]
+categories = ["network-programming"]
+
+[dependencies]
+xmpp-derive = {path = "../derive", version = "0" }
+sasl = "0.4.1"
+base64 = "0"
+uuid = { version = "0.4", features = ["v4"] }
+xmpp-xml = { path = "../xml" }
+xmpp-config = { path = "../config" }
+xmpp-jid = { path = "../jid" }
+xmpp-credentials = { path = "../credentials" }

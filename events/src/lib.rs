@@ -1,0 +1,38 @@
+extern crate xmpp_xml;
+extern crate xmpp_config;
+extern crate xmpp_jid;
+extern crate xmpp_credentials;
+extern crate sasl;
+extern crate base64;
+extern crate uuid;
+#[macro_use] extern crate xmpp_derive;
+
+mod auth;
+mod bind;
+mod generic;
+mod message;
+mod open_stream;
+mod close_stream;
+mod ping;
+mod presence;
+mod proceed_tls;
+mod start_tls;
+mod stream_features;
+mod success_tls;
+mod interface;
+
+pub use auth::Auth;
+pub use bind::Bind;
+pub use generic::GenericIq;
+pub use generic::GenericMessage;
+pub use generic::PresenceType;
+pub use message::Message;
+pub use open_stream::OpenStream;
+pub use close_stream::CloseStream;
+pub use ping::Ping;
+pub use presence::Presence;
+pub use proceed_tls::ProceedTls;
+pub use start_tls::StartTls;
+pub use stream_features::{StreamFeatures, Features};
+pub use success_tls::SuccessTls;
+pub use interface::*;
