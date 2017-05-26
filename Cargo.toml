@@ -25,25 +25,21 @@ name = "xmpp"
 path = "src/lib.rs"
 
 [dev-dependencies]
-elementtree = {git = "https://github.com/Freyskeyd/elementtree-rust"}
 env_logger = "0"
 futures = "0.1"
 log = "0"
 tokio-core = "0.1"
 xml-rs = {git = "https://github.com/Freyskeyd/xml-rs"}
 
-[dependencies.xmpp-derive]
-path = "./derive"
-version = "0"
-
-[dependencies.xmpp-proto]
-path = "./proto"
-version = "0"
-
-[dependencies.xmpp-client]
-path = "./client"
-version = "0"
+[dependencies]
+xmpp-client = { path = "client" }
+xmpp-config = { path = "config" }
+xmpp-credentials = { path = "credentials" }
+xmpp-events = { path = "events" }
+xmpp-proto = { path = "proto" }
+xmpp-jid = { path = "jid" }
+xmpp-derive = { path = "derive" }
+xmpp-xml = { path = "xml" }
 
 [workspace]
-members = ["client/", "proto/", "server/", "derive/"]
-
+members = ["client/", "jid/", "credentials/", "config/", "events/", "proto/", "server/", "derive/"]

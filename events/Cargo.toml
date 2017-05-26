@@ -1,9 +1,7 @@
 [package]
-name = "xmpp-client"
+name = "xmpp-events"
 version = "0.1.3"
 license = "MPL-2.0"
-documentation = "https://docs.rs/xmpp-client"
-authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
 
 description = """
 xmpp-rs is an implementation of the Extensible Messaging and Presence Protocol (XMPP).
@@ -11,23 +9,15 @@ xmpp-rs is an implementation of the Extensible Messaging and Presence Protocol (
 Based on tokio-rs and futures-rs. It's goal is to be fully tested and usable.
 """
 repository = "https://github.com/Freyskeyd/xmpp-rs"
-readme = "../README.md"
 keywords = ["xmpp", "tokio", "jabber", "IM", "instant-messaging"]
 categories = ["network-programming"]
-workspace = ".."
 
 [dependencies]
-futures = "0"
-native-tls = "0"
-tokio-core = "0"
-tokio-io = "0"
-tokio-tls = "0"
-xmpp-proto =  { path = "../proto" }
-xmpp-config = { path = "../config" }
-xmpp-events = { path = "../events" }
+xmpp-derive = {path = "../derive", version = "0" }
+sasl = "0.4.1"
+base64 = "0"
+uuid = { version = "0.4", features = ["v4"] }
 xmpp-xml = { path = "../xml" }
+xmpp-config = { path = "../config" }
 xmpp-jid = { path = "../jid" }
 xmpp-credentials = { path = "../credentials" }
-
-[dev-dependencies]
-env_logger = "^0.4"

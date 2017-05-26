@@ -8,6 +8,7 @@ use futures::Async;
 use tokio_io::AsyncWrite;
 // use std::net::Shutdown;
 
+/// Can be both Tcp or Tls. Own the TcpStream of a connection.
 pub enum XMPPStream {
     Tcp(Framed<TcpStream, XMPPCodec>),
     Tls(Framed<TlsStream<TcpStream>, XMPPCodec>),

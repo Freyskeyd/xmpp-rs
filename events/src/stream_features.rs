@@ -1,10 +1,11 @@
-use events::{Event, FromXmlElement, ToXmlElement, EventTrait};
-use events::NonStanzaEvent::StreamFeaturesEvent;
-use config::XMPPConfig;
-use ns;
-use elementtree::Element;
+use super::{Event, FromXmlElement, ToXmlElement, ToEvent};
+use super::NonStanzaEvent::StreamFeaturesEvent;
+use xmpp_config::XMPPConfig;
+use xmpp_config::ns;
+use xmpp_xml::Element;
 use std::io;
 
+/// Define possible features found in a stream:features
 #[derive(Debug, Clone, PartialEq)]
 pub enum Features {
     StartTlsInit,

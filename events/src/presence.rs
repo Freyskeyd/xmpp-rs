@@ -1,10 +1,10 @@
-use events::{PresenceType, Event, EventTrait, StanzaEvent};
-use elementtree::Element;
+use super::{PresenceType, Event, ToEvent, StanzaEvent};
+use xmpp_xml::Element;
 use std::io;
 use std::str::FromStr;
-use jid::Jid;
-use events::FromXmlElement;
-use events::ToXmlElement;
+use xmpp_jid::Jid;
+use super::FromXmlElement;
+use super::ToXmlElement;
 
 #[derive(Debug, Clone, XmppEvent)]
 #[stanza(is="presence")]

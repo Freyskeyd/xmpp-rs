@@ -2,22 +2,24 @@ use bytes::BytesMut;
 use std::str;
 use std::io;
 use tokio_io::codec::{Encoder, Decoder};
-use events::ToXmlElement;
-use events::Event;
-use events::Event::*;
-use events::NonStanzaEvent::*;
+use xmpp_events::ToXmlElement;
+use xmpp_events::Event;
+use xmpp_events::Event::*;
+use xmpp_events::NonStanzaEvent::*;
 // use events::StanzaEvent::*;
 // use events::IqEvent::*;
 use parser::XmppParser;
-use elementtree::WriteOptions;
-// use elementtree::XmlProlog;
+use xmpp_xml::WriteOptions;
+// use xmpp_xml::XmlProlog;
 
-/// Our line-based codec
+/// A codec that will transform I/O into Event
 pub struct XMPPCodec {
+    /// The parser hold our buffer and try to extract Event
     pub parser: XmppParser,
 }
 
 impl XMPPCodec {
+    /// Return a new XMPPCodec with an initialized buffer inside
     pub fn new() -> XMPPCodec {
         XMPPCodec { parser: XmppParser::new() }
     }
@@ -144,8 +146,8 @@ impl Encoder for XMPPCodec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::events::*;
-    use super::super::config::*;
+    use xmpp_events::*;
+    use xmpp_config::{XMPPConfig};
     use bytes::BytesMut;
 
     #[test]

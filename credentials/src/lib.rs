@@ -1,7 +1,11 @@
-use super::Jid;
+extern crate xmpp_jid;
+extern crate sasl;
+
+use xmpp_jid::Jid;
 use std::str::FromStr;
 use sasl::common::Credentials as SaslCredentials;
 
+/// Define Credentials used to authenticate a user
 #[derive(Clone,Debug,PartialEq)]
 pub struct Credentials {
     pub jid: Jid,

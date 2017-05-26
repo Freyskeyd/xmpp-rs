@@ -9,16 +9,22 @@
 //!
 //! ```rust,no_run
 //! extern crate xmpp_client;
+//! extern crate xmpp_events;
+//! extern crate xmpp_jid;
+//! extern crate xmpp_credentials;
+//! extern crate xmpp_config;
 //! extern crate tokio_core;
 //! extern crate futures;
 //! 
 //! use tokio_core::reactor::Core;
 //! use futures::Future;
 //! use futures::Stream;
-//! use xmpp_client::{XMPPConfig, Credentials, Jid};
+//! use xmpp_config::XMPPConfig;
+//! use xmpp_credentials::Credentials;
+//! use xmpp_jid::Jid;
 //! use tokio_core::net::TcpStream;
-//! use xmpp_client::events::Event::Stanza;
-//! use xmpp_client::events::StanzaEvent::{MessageEvent};
+//! use xmpp_events::Event::Stanza;
+//! use xmpp_events::StanzaEvent::{MessageEvent};
 //! 
 //! fn main() {
 //!     let mut core = Core::new().unwrap();
@@ -68,6 +74,10 @@
 
 #![deny(warnings, missing_docs)]
 extern crate xmpp_proto;
+extern crate xmpp_config;
+extern crate xmpp_events;
+extern crate xmpp_xml;
+extern crate xmpp_credentials;
 extern crate futures;
 extern crate native_tls;
 extern crate tokio_core;
@@ -79,3 +89,4 @@ mod client;
 
 pub use xmpp_proto::*;
 pub use client::Client;
+pub use xmpp_xml::Element;

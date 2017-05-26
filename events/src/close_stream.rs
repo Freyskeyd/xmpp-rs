@@ -1,6 +1,6 @@
 use super::Event;
 use super::NonStanzaEvent;
-use super::EventTrait;
+use super::ToEvent;
 
 #[derive(Debug, Clone, XmppEvent)]
 #[non_stanza(event = "NonStanzaEvent::CloseStreamEvent")]

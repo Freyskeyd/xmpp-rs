@@ -1,17 +1,17 @@
-use events::IqEvent::BindEvent;
-use events::StanzaEvent;
-use events::Event;
-use events::EventTrait;
-use events::ToXmlElement;
-use events::GenericIq;
-use events::IqType;
-use events::FromGeneric;
-use events::FromXmlElement;
-use jid::Jid;
+use super::IqEvent::BindEvent;
+use super::StanzaEvent;
+use super::Event;
+use super::ToEvent;
+use super::ToXmlElement;
+use super::GenericIq;
+use super::IqType;
+use super::FromGeneric;
+use super::FromXmlElement;
+use xmpp_jid::Jid;
 use std::io;
 use std::str::FromStr;
-use elementtree::Element;
-use ns;
+use xmpp_xml::Element;
+use xmpp_config::ns;
 
 #[derive(Debug, Default, Clone, XmppEvent)]
 #[stanza(event = "BindEvent(_)", is="iq", no_transpile)]

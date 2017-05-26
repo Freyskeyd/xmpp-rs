@@ -1,7 +1,7 @@
 use std::str::FromStr;
-use xmpp_proto::Jid;
-use xmpp_proto::events::GenericMessage;
-use xmpp_proto::ToJid;
+use xmpp_jid::Jid;
+use xmpp_events::GenericMessage;
+use xmpp_jid::ToJid;
 
 #[test]
 fn create_a_generic_message() {

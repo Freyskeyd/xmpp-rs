@@ -109,7 +109,7 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
         }
     };
     let impl_block_event_trait = quote! {
-        impl EventTrait for #ident #ty_generics #where_clause {
+        impl ToEvent for #ident #ty_generics #where_clause {
             fn to_event(&self) -> Event {
                 #to_event
             }

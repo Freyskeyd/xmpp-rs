@@ -1,5 +1,5 @@
-use xmpp_proto::events::GenericIq;
-use xmpp_proto::events::IqType;
+use xmpp_events::GenericIq;
+use xmpp_events::IqType;
 
 #[test]
 fn create_a_generic_iq() {

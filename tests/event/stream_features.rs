@@ -1,8 +1,8 @@
 use xmpp_proto::XmppParser;
-use xmpp_proto::events::Event::NonStanza;
-use xmpp_proto::events::NonStanzaEvent::StreamFeaturesEvent;
-use xmpp_proto::events::ToXmlElement;
-use elementtree::{Element, WriteOptions};
+use xmpp_events::Event::NonStanza;
+use xmpp_events::NonStanzaEvent::StreamFeaturesEvent;
+use xmpp_events::ToXmlElement;
+use xmpp_xml::{Element, WriteOptions};
 
 fn element_to_string(e: Element) -> String {
     let mut out: Vec<u8> = Vec::new();

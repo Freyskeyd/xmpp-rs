@@ -1,19 +1,20 @@
 use std::io::Write;
-use events::*;
-use ns;
+use xmpp_events::*;
+use xmpp_config::ns;
 use std::str;
 use std::borrow::Cow;
 use circular::Buffer;
-use config::XMPPConfig;
-use elementtree::Element;
+use xmpp_config::XMPPConfig;
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use xml::namespace::Namespace;
 use xml::name::OwnedName;
 use xml::common::Position;
-// use std::io::Read;
 use xml::reader::ErrorKind as XmlErrorKind;
+use xmpp_xml::Element;
 
+/// XmppParser deals with incoming bytes. You can feed the parser with bytes and try to detect new
+/// event.
 pub struct XmppParser {
     pub parser: EventReader<Buffer>,
 }
@@ -29,7 +30,8 @@ impl XmppParser {
         self.parser.source()
     }
     pub fn new() -> XmppParser {
-        let cfg = ParserConfig::new().whitespace_to_characters(true);
+        let mut cfg = ParserConfig::new().whitespace_to_characters(true);
+        cfg.ignore_end_of_stream = true;
         XmppParser { parser: cfg.create_reader(Buffer::with_capacity(4096)) }
     }
 
@@ -43,12 +45,12 @@ impl XmppParser {
             }
         } else if name.local_name == "proceed" && name.namespace_ref() == Some(ns::TLS) {
             if Element::from_start_element(name, attributes, namespace, None, &mut self.parser).is_ok() {
-                let e = ProceedTls::new(&XMPPConfig::new());
+                let e = ProceedTls::new();
                 return Some(e.to_event());
             }
         } else if name.local_name == "success" && name.namespace_ref() == Some(ns::SASL) {
             if Element::from_start_element(name, attributes, namespace, None, &mut self.parser).is_ok() {
-                let e = SuccessTls::new(&XMPPConfig::new());
+                let e = SuccessTls::new();
 
                 return Some(e.to_event());
             }
@@ -83,7 +85,7 @@ impl XmppParser {
             }
 
             // Reopen the parser to check new bytes
-            self.parser.reopen_parser();
+            // self.parser.reopen_parser();
             match self.parser.next() {
                 Ok(xml_event) => {
                     match xml_event {
@@ -106,6 +108,7 @@ impl XmppParser {
                                 return Some(e);
                             }
                         }
+
                         e => {
                             trace!("----------> Hit something");
                             trace!("{:?}", e);
@@ -149,12 +152,7 @@ mod tests {
         let mut x = XmppParser::new();
 
         x.feed("<?xml version='1.0'?><stream:stream id='16243086933621190650' version='1.0' xml:lang='en' xmlns:stream='http://etherx.jabber.org/streams' from='exampl".as_bytes());
-        match x.next_event() {
-            None => assert!(true),
-            Some(_) => assert!(false),
-        }
-
-        x.feed(b"e.com' xmlns='jabber:client'>");
+        x.feed("e.com' xmlns='jabber:client'>".as_bytes());
         match x.next_event() {
             Some(_) => assert!(true),
             None => assert!(false),

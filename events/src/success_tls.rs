@@ -1,13 +1,12 @@
-use events::{Event, EventTrait};
-use events::NonStanzaEvent::SuccessTlsEvent;
-use config::XMPPConfig;
+use super::{Event, ToEvent};
+use super::NonStanzaEvent::SuccessTlsEvent;
 
 #[derive(Debug, Clone, XmppEvent)]
 #[non_stanza(event="SuccessTlsEvent(_)")]
 pub struct SuccessTls {}
 
 impl SuccessTls {
-    pub fn new(_: &XMPPConfig) -> SuccessTls {
+    pub fn new() -> SuccessTls {
         SuccessTls {}
     }
 }

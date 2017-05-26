@@ -4,10 +4,10 @@
 
 #![deny(warnings)]
 
-//! Proto
+//! XMPP Proto is the common and core structs and algorithm to interact between entities.
+//!
+//! It offer everything to connect, manager, share stanza over a TcpStream.
 
-#[macro_use]
-extern crate xmpp_derive;
 #[macro_use]
 extern crate log;
 extern crate futures;
@@ -17,35 +17,28 @@ extern crate tokio_tls;
 extern crate tokio_io;
 extern crate bytes;
 extern crate base64;
-extern crate elementtree;
 extern crate xml;
 extern crate uuid;
 extern crate circular;
 extern crate sasl;
+extern crate xmpp_events;
+extern crate xmpp_xml;
+extern crate xmpp_config;
+extern crate xmpp_credentials;
+extern crate xmpp_jid;
 
-mod default;
-mod config;
-pub mod events;
-mod jid;
 mod stream;
 mod codec;
-mod stanza;
 mod connection;
-mod ns;
 mod transport;
-mod credentials;
 mod parser;
 
-pub use parser::*;
-pub use config::XMPPConfig;
+pub use parser::XmppParser;
 pub use transport::XMPPTransport;
 pub use connection::Connection;
 pub use connection::ConnectionState;
 pub use stream::XMPPStream;
 pub use codec::XMPPCodec;
-pub use credentials::Credentials;
-pub use jid::Jid;
-pub use jid::ToJid;
 
 #[cfg(test)]
 mod tests {

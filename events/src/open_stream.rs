@@ -1,11 +1,11 @@
 use super::Event;
 use super::NonStanzaEvent;
-use super::EventTrait;
-use elementtree::Element;
-use elementtree::QName;
-use ns;
-use config::XMPPConfig;
-use events::ToXmlElement;
+use super::ToEvent;
+use xmpp_xml::Element;
+use xmpp_xml::QName;
+use xmpp_config::ns;
+use xmpp_config::XMPPConfig;
+use super::ToXmlElement;
 use std::io;
 
 #[derive(Debug, Clone, XmppEvent)]
@@ -46,9 +46,8 @@ impl ToXmlElement for OpenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use events::*;
-    use config::*;
-    use events::interface::EventTrait;
+    use xmpp_config::XMPPConfig;
+    // use su::interface::ToEvent;
 
     #[test]
     fn compile() {

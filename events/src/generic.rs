@@ -2,17 +2,17 @@
 use std::fmt;
 use uuid::Uuid;
 use std::io;
-use elementtree::Element;
+use xmpp_xml::Element;
 use std::string::ToString;
 use std::str::FromStr;
-use jid::{Jid, ToJid};
-use events::IqType;
-use events::Event;
-use events::StanzaEvent;
-use events::IqEvent;
-use events::ToXmlElement;
-use events::FromXmlElement;
-use ns;
+use xmpp_jid::{Jid, ToJid};
+use super::IqType;
+use super::Event;
+use super::StanzaEvent;
+use super::IqEvent;
+use super::ToXmlElement;
+use super::FromXmlElement;
+use xmpp_config::ns;
 
 #[derive(Debug, Clone)]
 pub struct GenericIq {

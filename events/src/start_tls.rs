@@ -1,21 +1,19 @@
-use events::{Event, EventTrait};
-use events::NonStanzaEvent::StartTlsEvent;
+use super::{Event, ToEvent};
+use super::NonStanzaEvent::StartTlsEvent;
 
-use events::ToXmlElement;
+use super::ToXmlElement;
 use std::io;
-use ns;
-use elementtree::Element;
-use config::XMPPConfig;
+use xmpp_config::ns;
+use xmpp_xml::Element;
 
 #[derive(Debug, Clone, XmppEvent)]
 #[non_stanza(event="StartTlsEvent(_)")]
 pub struct StartTls {
-    config: XMPPConfig,
 }
 
 impl StartTls {
-    pub fn new(config: &XMPPConfig) -> StartTls {
-        StartTls { config: config.clone() }
+    pub fn new() -> StartTls {
+        StartTls { }
     }
 }
 

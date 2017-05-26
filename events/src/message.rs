@@ -1,9 +1,9 @@
-use events::*;
-use jid::Jid;
+use super::*;
+use xmpp_jid::Jid;
 use super::Event;
-use super::EventTrait;
+use super::ToEvent;
 use std::io;
-use elementtree::Element;
+use xmpp_xml::Element;
 
 #[derive(Debug, Clone, XmppEvent)]
 #[stanza(is="message")]
@@ -14,7 +14,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new<S: ToString>(to: Jid, msg: &S) -> Message {
+    pub fn new<S: ToString + ?Sized>(to: Jid, msg: &S) -> Message {
         Message {
             generic: GenericMessage::new(to),
             message_type: String::from("chat"),

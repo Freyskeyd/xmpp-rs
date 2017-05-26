@@ -1,8 +1,8 @@
-use elementtree::Element;
-use events::IqEvent::PingEvent;
-use events::*;
-use ns;
-use jid::Jid;
+use xmpp_xml::Element;
+use super::IqEvent::PingEvent;
+use super::*;
+use xmpp_config::ns;
+use xmpp_jid::Jid;
 use std::io;
 use std::str;
 
