@@ -1,7 +1,7 @@
-extern crate xmpp_jid;
+extern crate jid;
 extern crate sasl;
 
-use xmpp_jid::Jid;
+use jid::Jid;
 use std::str::FromStr;
 use sasl::common::Credentials as SaslCredentials;
 

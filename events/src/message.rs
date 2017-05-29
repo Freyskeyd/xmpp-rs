@@ -1,5 +1,5 @@
 use super::*;
-use xmpp_jid::Jid;
+use jid::Jid;
 use super::Event;
 use super::ToEvent;
 use std::io;

@@ -19,5 +19,5 @@ base64 = "0"
 uuid = { version = "0.4", features = ["v4"] }
 xmpp-xml = { path = "../xml" }
 xmpp-config = { path = "../config" }
-xmpp-jid = { path = "../jid" }
+jid = "0"
 xmpp-credentials = { path = "../credentials" }

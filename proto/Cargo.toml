@@ -32,7 +32,7 @@ sasl = "0.4.1"
 clippy = {version = "*", optional = true}
 
 xmpp-credentials = { path = "../credentials" }
-xmpp-jid = { path = "../jid" }
+jid = "0"
 xmpp-config = { path = "../config" }
 xmpp-xml = { path = "../xml" }
 xmpp-events = { path = "../events" }

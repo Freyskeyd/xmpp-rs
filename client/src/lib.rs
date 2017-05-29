@@ -10,18 +10,19 @@
 //! ```rust,no_run
 //! extern crate xmpp_client;
 //! extern crate xmpp_events;
-//! extern crate xmpp_jid;
+//! extern crate jid;
 //! extern crate xmpp_credentials;
 //! extern crate xmpp_config;
 //! extern crate tokio_core;
 //! extern crate futures;
 //! 
+//! use std::str::FromStr;
 //! use tokio_core::reactor::Core;
 //! use futures::Future;
 //! use futures::Stream;
 //! use xmpp_config::XMPPConfig;
 //! use xmpp_credentials::Credentials;
-//! use xmpp_jid::Jid;
+//! use jid::Jid;
 //! use tokio_core::net::TcpStream;
 //! use xmpp_events::Event::Stanza;
 //! use xmpp_events::StanzaEvent::{MessageEvent};
@@ -38,7 +39,7 @@
 //!
 //!     // Define client credentials
 //!     let credentials = Credentials {
-//!         jid: Jid::from_full_jid("alice@example.com"),
+//!         jid: Jid::from_str("alice@example.com").unwrap(),
 //!         password: String::from("test")
 //!     };
 //!

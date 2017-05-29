@@ -7,7 +7,7 @@ use super::GenericIq;
 use super::IqType;
 use super::FromGeneric;
 use super::FromXmlElement;
-use xmpp_jid::Jid;
+use jid::Jid;
 use std::io;
 use std::str::FromStr;
 use xmpp_xml::Element;

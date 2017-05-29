@@ -1,7 +1,7 @@
+use std::str::FromStr;
 use xmpp_events::ToXmlElement;
 use xmpp_events::PresenceType;
-use xmpp_jid::Jid;
-use xmpp_jid::ToJid;
+use jid::Jid;
 use xmpp_events::Presence;
 use xmpp_xml::Element;
 use xmpp_xml::WriteOptions;
@@ -19,11 +19,11 @@ fn element_to_string(e: Element) -> String {
 fn create_a_presence() {
     let mut g = Presence::new();
 
-    let _ = g.set_to(Some("test@example.com".to_jid().unwrap()));
+    let _ = g.set_to(Some(Jid::from_str("test@example.com").unwrap()));
     // Presence can have a TO
     match g.get_to() {
         Some(to) => {
-            assert_eq!(&Jid::from_full_jid("test@example.com"), to);
+            assert_eq!(&Jid::from_str("test@example.com").unwrap(), to);
             assert_eq!("test@example.com", to.to_string())
         }
         None => {}
@@ -39,11 +39,11 @@ fn create_a_presence() {
         }
     }
 
-    let _ = g.set_from(Some("test@example.com".to_jid().unwrap()));
+    let _ = g.set_from(Some(Jid::from_str("test@example.com").unwrap()));
     // Presence can have a FROM
     match g.get_from() {
         Some(from) => {
-            assert_eq!(&Jid::from_full_jid("test@example.com"), from);
+            assert_eq!(&Jid::from_str("test@example.com").unwrap(), from);
             assert_eq!("test@example.com", from.to_string())
         }
         None => {}

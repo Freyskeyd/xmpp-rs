@@ -37,9 +37,9 @@ xmpp-config = { path = "config" }
 xmpp-credentials = { path = "credentials" }
 xmpp-events = { path = "events" }
 xmpp-proto = { path = "proto" }
-xmpp-jid = { path = "jid" }
+jid = "0"
 xmpp-derive = { path = "derive" }
 xmpp-xml = { path = "xml" }
 
 [workspace]
-members = ["client/", "jid/", "credentials/", "config/", "events/", "proto/", "server/", "derive/"]
+members = ["client/", "credentials/", "config/", "events/", "proto/", "server/", "derive/"]

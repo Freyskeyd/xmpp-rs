@@ -63,11 +63,11 @@ pub enum NonStanzaEvent {
 /// It complicated but every Event can be instanciate in a more clearer way:
 ///
 /// ```rust
-/// extern crate xmpp_jid;
+/// extern crate jid;
 /// extern crate xmpp_events;
 ///
 /// use xmpp_events::{ToEvent, Event, IqEvent, Message, Ping,  StanzaEvent};
-/// use xmpp_jid::Jid;
+/// use jid::Jid;
 /// use std::str::FromStr;
 /// 
 /// fn main() {
@@ -112,11 +112,11 @@ impl Event {
     ///
     /// # Examples
     /// ```
-    /// extern crate xmpp_jid;
+    /// extern crate jid;
     /// extern crate xmpp_events;
     ///
     /// use xmpp_events::{ToEvent, Message};
-    /// use xmpp_jid::Jid;
+    /// use jid::Jid;
     /// use std::str::FromStr;
     ///
     /// fn main() {
@@ -143,11 +143,11 @@ impl Event {
     ///
     /// # Examples
     /// ```
-    /// extern crate xmpp_jid;
+    /// extern crate jid;
     /// extern crate xmpp_events;
     ///
     /// use xmpp_events::{ToEvent, Message};
-    /// use xmpp_jid::Jid;
+    /// use jid::Jid;
     /// use std::str::FromStr;
     ///
     /// fn main() {
@@ -174,11 +174,11 @@ impl Event {
     ///
     /// # Examples
     /// ```
-    /// extern crate xmpp_jid;
+    /// extern crate jid;
     /// extern crate xmpp_events;
     ///
     /// use xmpp_events::{ToEvent, Message};
-    /// use xmpp_jid::Jid;
+    /// use jid::Jid;
     /// use std::str::FromStr;
     ///
     /// fn main() {
@@ -207,11 +207,11 @@ impl Event {
     ///
     /// # Examples
     /// ```
-    /// extern crate xmpp_jid;
+    /// extern crate jid;
     /// extern crate xmpp_events;
     ///
     /// use xmpp_events::{ToEvent, Message};
-    /// use xmpp_jid::Jid;
+    /// use jid::Jid;
     /// use std::str::FromStr;
     ///
     /// fn main() {

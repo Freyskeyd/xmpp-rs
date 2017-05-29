@@ -2,7 +2,7 @@ use super::{PresenceType, Event, ToEvent, StanzaEvent};
 use xmpp_xml::Element;
 use std::io;
 use std::str::FromStr;
-use xmpp_jid::Jid;
+use jid::Jid;
 use super::FromXmlElement;
 use super::ToXmlElement;
 
