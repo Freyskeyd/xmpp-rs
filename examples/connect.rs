@@ -2,7 +2,7 @@ extern crate xmpp_client;
 extern crate xmpp_config;
 extern crate xmpp_credentials;
 extern crate xmpp_events;
-extern crate xmpp_jid;
+extern crate jid;
 #[macro_use]
 extern crate xmpp_derive;
 extern crate tokio_core;
@@ -10,14 +10,14 @@ extern crate futures;
 extern crate env_logger;
 extern crate log;
 
+use std::str::FromStr;
 use std::io;
 use tokio_core::reactor::Core;
 use futures::Future;
 use futures::Stream;
 use xmpp_config::XMPPConfig;
 use xmpp_credentials::Credentials;
-use xmpp_jid::ToJid;
-use xmpp_jid::Jid;
+use jid::Jid;
 use tokio_core::net::TcpStream;
 use xmpp_events::GenericMessage;
 use xmpp_events::Event::Stanza;
@@ -60,7 +60,7 @@ fn main() {
     let config = XMPPConfig::new().set_domain("example.com");
 
     let credentials = Credentials {
-        jid: Jid::from_full_jid("alice@example.com"),
+        jid: Jid::from_str("alice@example.com").unwrap(),
         password: String::from("test"),
     };
     core.run(TcpStream::connect(&addr, &handle)
@@ -84,7 +84,7 @@ fn main() {
                             match *stanza {
                                 MessageEvent(_) => {
                                     println!("New message");
-                                    let e = MessageOk { generic: GenericMessage::new("user1@example.com/MacBook-Pro-de-Simon".to_jid().unwrap()) };
+                                    let e = MessageOk { generic: GenericMessage::new(Jid::from_str("user1@example.com/MacBook-Pro-de-Simon").unwrap()) };
 
                                     let x = e.to_event();
                                     println!("");

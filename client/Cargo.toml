@@ -26,7 +26,7 @@ xmpp-proto =  { path = "../proto" }
 xmpp-config = { path = "../config" }
 xmpp-events = { path = "../events" }
 xmpp-xml = { path = "../xml" }
-xmpp-jid = { path = "../jid" }
+jid = "0"
 xmpp-credentials = { path = "../credentials" }
 
 [dev-dependencies]

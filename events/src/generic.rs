@@ -5,7 +5,7 @@ use std::io;
 use xmpp_xml::Element;
 use std::string::ToString;
 use std::str::FromStr;
-use xmpp_jid::{Jid, ToJid};
+use jid::Jid;
 use super::IqType;
 use super::Event;
 use super::StanzaEvent;
@@ -264,7 +264,7 @@ impl GenericMessage {
     pub fn new(to: Jid) -> GenericMessage {
         GenericMessage {
             id: None,
-            to: to.to_jid().unwrap(),
+            to,
             from: None,
             message_type: Some(MessageType::Chat),
             element: None,

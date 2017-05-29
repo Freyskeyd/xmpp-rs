@@ -1,4 +1,5 @@
-use xmpp_jid::ToJid;
+use std::str::FromStr;
+use jid::Jid;
 use xmpp_events::Ping;
 use xmpp_events::IqType;
 use xmpp_events::FromXmlElement;
@@ -11,8 +12,8 @@ fn parse_ping() {
     if let Ok(ping) = Ping::from_element(p) {
         assert_eq!(ping.get_type(), IqType::Get);
         assert_eq!(ping.get_to().unwrap(),
-                   &"juliet@capulet.lit/balcony".to_jid().unwrap());
-        assert_eq!(ping.get_from().unwrap(), &"capulet.lit".to_jid().unwrap());
+                   &Jid::from_str("juliet@capulet.lit/balcony").unwrap());
+        assert_eq!(ping.get_from().unwrap(), &Jid::from_str("capulet.lit").unwrap());
     } else {
         assert!(false);
     }
@@ -34,9 +35,9 @@ fn parse_iq_result_ping() {
 
     if let Ok(ping) = Ping::from_element(p) {
         assert_eq!(ping.get_type(), IqType::Result);
-        assert_eq!(ping.get_to().unwrap(), &"capulet.lit".to_jid().unwrap());
+        assert_eq!(ping.get_to().unwrap(), &Jid::from_str("capulet.lit").unwrap());
         assert_eq!(ping.get_from().unwrap(),
-                   &"juliet@capulet.lit/balcony".to_jid().unwrap());
+                   &Jid::from_str("juliet@capulet.lit/balcony").unwrap());
     } else {
         assert!(false);
     }
@@ -66,9 +67,9 @@ fn parse_iq_error_ping() {
 
     if let Ok(ping) = Ping::from_element(p) {
         assert_eq!(ping.get_type(), IqType::Error);
-        assert_eq!(ping.get_to().unwrap(), &"capulet.lit".to_jid().unwrap());
+        assert_eq!(ping.get_to().unwrap(), &Jid::from_str("capulet.lit").unwrap());
         assert_eq!(ping.get_from().unwrap(),
-                   &"juliet@capulet.lit/balcony".to_jid().unwrap());
+                   &Jid::from_str("juliet@capulet.lit/balcony").unwrap());
     } else {
         assert!(false);
     }
@@ -90,8 +91,8 @@ fn parse_iq_error3_ping() {
 
     if let Ok(ping) = Ping::from_element(p) {
         assert_eq!(ping.get_type(), IqType::Error);
-        assert_eq!(ping.get_to().unwrap(), &"capulet.lit".to_jid().unwrap());
-        assert_eq!(ping.get_from().unwrap(), &"montague.lit".to_jid().unwrap());
+        assert_eq!(ping.get_to().unwrap(), &Jid::from_str("capulet.lit").unwrap());
+        assert_eq!(ping.get_from().unwrap(), &Jid::from_str("montague.lit").unwrap());
     } else {
         assert!(false);
     }

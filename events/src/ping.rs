@@ -2,7 +2,7 @@ use xmpp_xml::Element;
 use super::IqEvent::PingEvent;
 use super::*;
 use xmpp_config::ns;
-use xmpp_jid::Jid;
+use jid::Jid;
 use std::io;
 use std::str;
 
@@ -78,6 +78,7 @@ impl Default for Ping {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
     use super::*;
 
     #[test]
@@ -87,8 +88,8 @@ mod tests {
         assert!(test_str.is_ok());
         let e = test_str.unwrap();
         let e = Ping::from_element(e).unwrap();
-        assert!(e.get_from() == Some(&Jid::from_full_jid("capulet.lit")));
-        assert!(e.get_to() == Some(&Jid::from_full_jid("juliet@capulet.lit/balcony")));
+        assert!(e.get_from() == Some(&Jid::from_str("capulet.lit").unwrap()));
+        assert!(e.get_to() == Some(&Jid::from_str("juliet@capulet.lit/balcony").unwrap()));
         assert!(e.get_id() == "s2c1");
         assert!(e.get_type() == IqType::Get);
     }
@@ -101,8 +102,8 @@ mod tests {
         assert!(test_str.is_ok());
         let e = test_str.unwrap();
         let e = Ping::from_element(e).unwrap();
-        assert!(e.get_from() == Some(&Jid::from_full_jid("juliet@capulet.lit/balcony")));
-        assert!(e.get_to() == Some(&Jid::from_full_jid("capulet.lit")));
+        assert!(e.get_from() == Some(&Jid::from_str("juliet@capulet.lit/balcony").unwrap()));
+        assert!(e.get_to() == Some(&Jid::from_str("capulet.lit").unwrap()));
         assert!(e.get_id() == "s2c1");
         assert!(e.get_type() == IqType::Result);
     }
@@ -126,8 +127,8 @@ mod tests {
         let e = test_str.unwrap();
         let e = Ping::from_element(e).unwrap();
 
-        assert!(e.get_from() == Some(&Jid::from_full_jid("juliet@capulet.lit/balcony")));
-        assert!(e.get_to() == Some(&Jid::from_full_jid("capulet.lit")));
+        assert!(e.get_from() == Some(&Jid::from_str("juliet@capulet.lit/balcony").unwrap()));
+        assert!(e.get_to() == Some(&Jid::from_str("capulet.lit").unwrap()));
         assert!(e.get_id() == "s2c1");
         assert!(e.get_type() == IqType::Error);
     }

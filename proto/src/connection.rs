@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::io::Result;
-use xmpp_jid::Jid;
+use jid::Jid;
 use xmpp_config::XMPPConfig;
 use xmpp_credentials::Credentials;
 use xmpp_events::Event;
@@ -11,9 +11,9 @@ use xmpp_events::IqEvent::*;
 use xmpp_events::*;
 use xmpp_events::FromGeneric;
 use xmpp_events::Features;
-use xmpp_jid::ToJid;
 use xmpp_config::ns;
 use futures::sync::oneshot::Sender;
+use std::str::FromStr;
 
 /// Connection state information.
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
@@ -109,7 +109,7 @@ impl Connection {
 
     pub fn compile_ping(&mut self) -> Ping {
         if let Some(ref c) = self.credentials {
-            return Ping::new(c.jid.clone(), self.config.get_domain().to_jid().unwrap());
+            return Ping::new(c.jid.clone(), Jid::from_str(self.config.get_domain()).unwrap());
         }
         panic!("")
     }
@@ -226,7 +226,7 @@ impl Connection {
                                         if let Some(jid) = bind.find((ns::BIND, "jid")) {
                                             self.state = ConnectionState::Connected;
                                             if let Some(ref mut c) = self.credentials {
-                                                c.jid = Jid::from_full_jid(jid.text())
+                                                c.jid = Jid::from_str(jid.text()).unwrap()
                                             }
                                         }
                                     }

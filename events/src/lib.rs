@@ -1,6 +1,6 @@
 extern crate xmpp_xml;
 extern crate xmpp_config;
-extern crate xmpp_jid;
+extern crate jid;
 extern crate xmpp_credentials;
 extern crate sasl;
 extern crate base64;
