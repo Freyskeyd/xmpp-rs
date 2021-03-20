@@ -3,6 +3,7 @@ name = "xmpp-derive"
 version = "0.1.3"
 authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
 
+edition = "2018"
 description = """
 xmpp-rs is an implementation of the Extensible Messaging and Presence Protocol (XMPP).
 
@@ -22,5 +23,4 @@ proc-macro = true
 [dependencies]
 syn = {version = "0.11.10", features = ["full"]}
 quote = "0.3.15"
-xmpp-proto = "0"
 serde_codegen_internals = "0.14.2"

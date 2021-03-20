@@ -1,12 +1,12 @@
 use super::Event;
 use super::NonStanzaEvent;
 use super::ToEvent;
-use xmpp_xml::Element;
-use xmpp_xml::QName;
-use xmpp_config::ns;
-use xmpp_config::XMPPConfig;
 use super::ToXmlElement;
 use std::io;
+use xmpp_config::ns;
+use xmpp_config::XMPPConfig;
+use xmpp_xml::Element;
+use xmpp_xml::QName;
 
 #[derive(Debug, Clone, XmppEvent)]
 #[non_stanza(event = "NonStanzaEvent::OpenStreamEvent(_)")]
@@ -47,7 +47,6 @@ impl ToXmlElement for OpenStream {
 mod tests {
     use super::*;
     use xmpp_config::XMPPConfig;
-    // use su::interface::ToEvent;
 
     #[test]
     fn compile() {
@@ -61,14 +60,12 @@ mod tests {
 
         // assert!(e.is::)
         match o.to_event() {
-            Event::NonStanza(non_stanza) => {
-                match *non_stanza {
-                    NonStanzaEvent::OpenStreamEvent(_) => {
-                        assert!(true);
-                    }
-                    _ => panic!(""),
+            Event::NonStanza(non_stanza) => match *non_stanza {
+                NonStanzaEvent::OpenStreamEvent(_) => {
+                    assert!(true);
                 }
-            }
+                _ => panic!(""),
+            },
             _ => panic!(""),
         }
     }

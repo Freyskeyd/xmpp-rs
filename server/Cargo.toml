@@ -5,6 +5,7 @@ license = "MPL-2.0"
 documentation = "https://docs.rs/xmpp-server"
 authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
 
+edition = "2018"
 description = """
 xmpp-rs is an implementation of the Extensible Messaging and Presence Protocol (XMPP).
 
@@ -15,3 +16,33 @@ keywords = ["xmpp", "tokio", "jabber", "IM", "instant-messaging"]
 categories = ["network-programming"]
 
 [dependencies]
+
+actix = "0.11.0-beta.3"
+actix-tls = "*"
+actix-web = "4.0.0-beta.4"
+actix-web-actors = "4.0.0-beta.3"
+# actix-net = "*"
+# actix-server = "*"
+# actix-service = "*"
+# actix-codec = "*"
+byteorder = "*"
+futures = "*"
+futures-util = "*"
+log = "*"
+bytes = "1"
+# byteorder = "1.3"
+serde = "*"
+serde_json = "*"
+tokio = { version = "1", features = ["full"] }
+# # tokio = { version = "0.2" }
+tokio-util = { version = "0.6", features = ["codec"] }
+tokio-rustls = "*"
+uuid = { version = "0.4", features = ["v4"] }
+
+circular = "*"
+xml-rs = "*"
+xmpp-config = { path = "../config" }
+xmpp-xml = { path = "../xml" }
+# xmpp-events = { path = "../events" }
+xmpp-proto = { path = "../proto" }
+sasl = "*"

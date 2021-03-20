@@ -7,6 +7,7 @@ xmpp-rs is an implementation of the Extensible Messaging and Presence Protocol (
 Based on tokio-rs and futures-rs. It's goal is to be fully tested and usable.
 """
 
+edition = "2018"
 license = "MPL-2.0"
 documentation = "https://docs.rs/xmpp-rs"
 authors = ["Freyskeyd <simon.paitrault@gmail.com>"]
@@ -42,4 +43,5 @@ xmpp-derive = { path = "derive" }
 xmpp-xml = { path = "xml" }
 
 [workspace]
-members = ["client/", "credentials/", "config/", "events/", "proto/", "server/", "derive/"]
+# members = ["xmpp", "client/", "credentials/", "config/", "events/", "proto/", "server/", "derive/", "examples/server"]
+members = ["proto", "credentials/", "config/", "server/", "examples/server"]

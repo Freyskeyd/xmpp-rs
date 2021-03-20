@@ -1,6 +1,5 @@
-use syn::{self, Attribute, Ident, MetaItem, NestedMetaItem, Lit};
 use quote::Tokens;
-
+use syn::{self, Attribute, Ident, Lit, MetaItem, NestedMetaItem};
 
 pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, String> {
     let ident = &input.ident;
@@ -8,7 +7,7 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
     let (event, typology) = extract_to_event(&attrs);
     let to_event = match syn::parse_expr(&event) {
         Ok(e) => e,
-        Err(e) => panic!(e)
+        Err(e) => panic!(e),
     };
 
     let (_, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -25,7 +24,7 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
                 self
             }
         },
-        _ => quote!{}
+        _ => quote! {},
     };
 
     let impl_type = match typology.as_ref() {
@@ -39,7 +38,7 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
                 self.generic.get_type()
             }
         },
-        _ => quote!{}
+        _ => quote! {},
     };
 
     let impl_to = match typology.as_ref() {
@@ -63,22 +62,21 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
                 self.generic.get_to()
             }
         },
-        _ => quote!{}
+        _ => quote! {},
     };
 
     let impl_from = match typology.as_ref() {
-        "message"|
-            "iq" => quote! {
-                pub fn set_from<'a>(&'a mut self, jid: Option<Jid>) -> &'a mut Self {
-                    self.generic.set_from(jid);
-                    self
-                }
+        "message" | "iq" => quote! {
+            pub fn set_from<'a>(&'a mut self, jid: Option<Jid>) -> &'a mut Self {
+                self.generic.set_from(jid);
+                self
+            }
 
-                pub fn get_from(&self) -> Option<&Jid> {
-                    self.generic.get_from()
-                }
-            },
-        _ => quote!{}
+            pub fn get_from(&self) -> Option<&Jid> {
+                self.generic.get_from()
+            }
+        },
+        _ => quote! {},
     };
 
     let impl_to_generic = match typology.as_ref() {
@@ -97,7 +95,7 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
                 GenericIq::from_element(self.to_element().unwrap()).unwrap()
             }
         },
-        _ => quote!{}
+        _ => quote! {},
     };
     let impl_block = quote! {
         impl #ident {
@@ -116,16 +114,13 @@ pub fn expand_derive_xmpp_event(input: &syn::DeriveInput) -> Result<Tokens, Stri
         }
     };
 
-    Ok(
-        quote! {
-            // #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
-            const #dummy_const: () = {
-                // extern crate xmpp_proto as _xmpp_proto;
-                #impl_block_event_trait
-                #impl_block
-            };
-        },
-        )
+    Ok(quote! {
+        // #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+        const #dummy_const: () = {
+            #impl_block_event_trait
+            #impl_block
+        };
+    })
 }
 
 fn extract_to_event(attrs: &Vec<Attribute>) -> (String, String) {
@@ -134,17 +129,17 @@ fn extract_to_event(attrs: &Vec<Attribute>) -> (String, String) {
             match i.value {
                 MetaItem::List(_, ref meta_items) => {
                     let non_stanza_atts = parse_meta_items_non_stanza(&meta_items);
-                    return non_stanza_atts.format()
-                },
-                _ => panic!("nooo")
+                    return non_stanza_atts.format();
+                }
+                _ => panic!("nooo"),
             }
         } else if i.name() == "stanza" {
             match i.value {
                 MetaItem::List(_, ref meta_items) => {
                     let stanza_atts = parse_meta_items_stanza(&meta_items);
-                    return stanza_atts.format()
-                },
-                _ => panic!("nooo")
+                    return stanza_atts.format();
+                }
+                _ => panic!("nooo"),
             }
         }
     }
@@ -153,7 +148,7 @@ fn extract_to_event(attrs: &Vec<Attribute>) -> (String, String) {
 struct StanzaAttributes {
     event: String,
     transpile: bool,
-    is: String
+    is: String,
 }
 
 impl StanzaAttributes {
@@ -161,31 +156,37 @@ impl StanzaAttributes {
         StanzaAttributes {
             event: String::from("_"),
             transpile: true,
-            is: String::new()
+            is: String::new(),
         }
     }
 
     fn format(&self) -> (String, String) {
         match self.is.as_ref() {
-            "iq" => {
-                (format!("match self.generic.get_type() {{\
+            "iq" => (
+                format!(
+                    "match self.generic.get_type() {{\
                     IqType::Result =>  return Event::Stanza(Box::new(StanzaEvent::IqResponseEvent(Box::new({event})))),
                     _ =>  return Event::Stanza(Box::new(StanzaEvent::IqRequestEvent(Box::new({event}))))
-                }}", event=self.event), "iq".to_string())
-            },
-            "presence" => {
-                (format!("return Event::Stanza(Box::new(StanzaEvent::PresenceEvent({event})))", event=self.event), "presence".to_string())
-            },
-            "message" => {
-                (format!("return Event::Stanza(Box::new(StanzaEvent::MessageEvent(Box::new({event}))))", event=self.event), "message".to_string())
-            },
-            _ => (format!("return Event::Stanza(Box::new({}))", self.event), String::new())
+                }}",
+                    event = self.event
+                ),
+                "iq".to_string(),
+            ),
+            "presence" => (
+                format!("return Event::Stanza(Box::new(StanzaEvent::PresenceEvent({event})))", event = self.event),
+                "presence".to_string(),
+            ),
+            "message" => (
+                format!("return Event::Stanza(Box::new(StanzaEvent::MessageEvent(Box::new({event}))))", event = self.event),
+                "message".to_string(),
+            ),
+            _ => (format!("return Event::Stanza(Box::new({}))", self.event), String::new()),
         }
     }
 }
 struct NonStanzaAttributes {
     event: String,
-    value: String
+    value: String,
 }
 
 impl NonStanzaAttributes {
@@ -205,18 +206,18 @@ fn parse_meta_items_stanza(meta_items: &Vec<NestedMetaItem>) -> StanzaAttributes
     let mut attr = StanzaAttributes::new();
     for i in meta_items {
         match *i {
-            NestedMetaItem::MetaItem(MetaItem::NameValue(ref tag, Lit::Str(ref v,_))) => {
+            NestedMetaItem::MetaItem(MetaItem::NameValue(ref tag, Lit::Str(ref v, _))) => {
                 if tag == "event" {
                     attr.event = v.to_string();
                 } else if tag == "is" {
                     attr.is = v.to_lowercase();
                 }
-            },
+            }
             NestedMetaItem::MetaItem(MetaItem::Word(ref word)) => {
                 if word == "no_transpile" {
                     attr.transpile = false;
                 }
-            },
+            }
             _ => {}
         }
     }
@@ -225,7 +226,7 @@ fn parse_meta_items_stanza(meta_items: &Vec<NestedMetaItem>) -> StanzaAttributes
         "message" if attr.transpile => attr.event.replace("_", "self.to_message()"),
         "iq" if attr.transpile => attr.event.replace("_", "self.to_generic()"),
         "presence" if attr.transpile => attr.event.replace("_", "self.to_presence()"),
-        _ => attr.event.replace("_", "self.clone()")
+        _ => attr.event.replace("_", "self.clone()"),
     };
 
     attr
@@ -234,13 +235,13 @@ fn parse_meta_items_non_stanza(meta_items: &Vec<NestedMetaItem>) -> NonStanzaAtt
     let mut attr = NonStanzaAttributes::new();
     for i in meta_items {
         match *i {
-            NestedMetaItem::MetaItem(MetaItem::NameValue(ref tag, Lit::Str(ref v,_))) => {
+            NestedMetaItem::MetaItem(MetaItem::NameValue(ref tag, Lit::Str(ref v, _))) => {
                 if tag == "event" {
                     attr.event = v.to_string().replace("_", "Box::new(self.clone())");
                 } else if tag == "value" {
                     attr.value = v.to_string();
                 }
-            },
+            }
             _ => {}
         }
     }

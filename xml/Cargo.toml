@@ -3,6 +3,7 @@ name = "xmpp-xml"
 version = "0.1.3"
 license = "MPL-2.0"
 
+edition = "2018"
 description = """
 xmpp-rs is an implementation of the Extensible Messaging and Presence Protocol (XMPP).
 
@@ -13,5 +14,5 @@ keywords = ["xmpp", "tokio", "jabber", "IM", "instant-messaging"]
 categories = ["network-programming"]
 
 [dependencies]
-xml-rs = {git = "https://github.com/Freyskeyd/xml-rs"}
+xml-rs = "*"
 string_cache = "0"
