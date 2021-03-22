@@ -41,8 +41,6 @@ uuid = { version = "0.4", features = ["v4"] }
 
 circular = "*"
 xml-rs = "*"
-xmpp-config = { path = "../config" }
 xmpp-xml = { path = "../xml" }
-# xmpp-events = { path = "../events" }
 xmpp-proto = { path = "../proto" }
 sasl = "*"

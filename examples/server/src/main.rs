@@ -1,6 +1,6 @@
 use actix_web::{App, HttpServer};
 use std::env;
-use xmpp_server::Server;
+use xmpp::server::Server;
 
 #[actix::main]
 async fn main() {

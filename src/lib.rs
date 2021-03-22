@@ -7,7 +7,5 @@
 //!
 //! This implementation focus is to be usable and tested.
 //!
-/// Reexport of XMPPClient
-pub extern crate xmpp_client as client;
-/// Reexport of XMPPProto
-pub extern crate xmpp_proto as proto;
+/// Reexport of XMPPServer
+pub extern crate xmpp_server as server;

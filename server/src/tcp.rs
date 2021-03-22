@@ -1,5 +1,4 @@
 use actix::{io::FramedWrite, Actor, Addr, Context, StreamHandler};
-use sasl::{common::Identity, secret, server::Validator};
 use std::io;
 use tokio::io::WriteHalf;
 use tokio::net::TcpStream;
@@ -7,9 +6,6 @@ use tokio_rustls::server::TlsStream;
 
 use crate::{router::Router, XmppCodec};
 use xmpp_proto::{Features, NonStanza, OpenStream, Packet, ProceedTls, Stanza, StreamFeatures};
-
-const USERNAME: &'static str = "local";
-const PASSWORD: &'static str = "local";
 
 pub(crate) struct TcpSession {
     _id: usize,
@@ -94,20 +90,5 @@ impl StreamHandler<Result<Packet, io::Error>> for TcpSession {
 
             _ => (),
         };
-    }
-}
-
-struct MyValidator;
-
-impl Validator<secret::Plain> for MyValidator {
-    fn validate(&self, identity: &Identity, value: &secret::Plain) -> Result<(), String> {
-        let &secret::Plain(ref password) = value;
-        if identity != &Identity::Username(USERNAME.to_owned()) {
-            Err("authentication failed".to_owned())
-        } else if password != PASSWORD {
-            Err("authentication failed".to_owned())
-        } else {
-            Ok(())
-        }
     }
 }

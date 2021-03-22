@@ -33,15 +33,9 @@ tokio-core = "0.1"
 xml-rs = {git = "https://github.com/Freyskeyd/xml-rs"}
 
 [dependencies]
-xmpp-client = { path = "client" }
-xmpp-config = { path = "config" }
 xmpp-credentials = { path = "credentials" }
-xmpp-events = { path = "events" }
 xmpp-proto = { path = "proto" }
-jid = "0"
-xmpp-derive = { path = "derive" }
-xmpp-xml = { path = "xml" }
+xmpp-server = { path = "server" }
 
 [workspace]
-# members = ["xmpp", "client/", "credentials/", "config/", "events/", "proto/", "server/", "derive/", "examples/server"]
-members = ["proto", "credentials/", "config/", "server/", "examples/server"]
+members = ["proto", "credentials/", "server/", "examples/server"]

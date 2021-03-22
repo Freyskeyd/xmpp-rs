@@ -9,6 +9,6 @@ edition = "2018"
 [dependencies]
 actix = "0.11.0-beta.3"
 actix-web = "4.0.0-beta.4"
-xmpp-server = {path = "../../server"}
+xmpp-rs = {path = "../../"}
 
 env_logger = "*"

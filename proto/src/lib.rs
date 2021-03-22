@@ -6,55 +6,6 @@ use uuid::Uuid;
 pub use non_stanza::*;
 use xmpp_xml::{Element, WriteOptions};
 
-/// Define an Event between a client and a server (or a server and another server)
-///
-/// An Event has many types. First, it can be an a NonStanza or a Stanza.
-///
-/// - A NonStanza is an XML Stream, an XML stream is a container for the exchange of XML elements between any two entities over a network.
-/// - A Stanza is an XML Stanza, an XML stanza is a discrete semantic unit of structured information that is sent from one entity to another over an XML stream.
-///
-/// a ping Event is define like this:
-///
-/// `Event::Stanza(Box<StanzaEvent::IqEvent(Box<IqEvent::PingEvent(Ping)>)>)`
-///
-/// It complicated but every Event can be instanciate in a more clearer way:
-///
-/// ```rust
-/// extern crate jid;
-/// extern crate xmpp_proto;
-///
-/// use xmpp_protos::{ToEvent, Event, IqEvent, Message, Ping,  StanzaEvent};
-/// use jid::Jid;
-/// use std::str::FromStr;
-///
-/// fn main() {
-///     let from = Jid::from_str("from_jid").unwrap();
-///     let to = Jid::from_str("to_jid").unwrap();
-///
-///     // Create a Ping event (which is a struct with some Derive and implementing ToEvent)
-///     let ping = Ping::new(from, to);
-///
-///     // ToEvent will transform a simple struct into a full path Stanza/NonStanza
-///     let x = ping.to_event(); // produce the full event path
-///
-///
-///     // We can check that the produced event are exactly what we want,
-///     // A Stanza which is an IqEvent (can be both Error,Result,Get,Set)
-///     // Of the predefined type: PingEvent
-///     match x {
-///         Event::Stanza(stanza) => match *stanza {
-///             StanzaEvent::IqEvent(iq) => match *iq {
-///                 IqEvent::PingEvent(ref ping) => {
-///                     // Deal with ping
-///                 },
-///                 _ => {}
-///             },
-///             _ => {}
-///         },
-///         _ => {}
-///     }
-/// }
-/// ```
 #[derive(Debug, Clone)]
 pub enum Packet {
     /// Represent a packet which is an XML Stream

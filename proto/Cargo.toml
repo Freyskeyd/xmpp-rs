@@ -33,7 +33,6 @@ uuid = { version = "0.4", features = ["v4"] }
 
 xmpp-credentials = { path = "../credentials" }
 jid = "0"
-xmpp-config = { path = "../config" }
 xmpp-xml = { path = "../xml" }
 
 circular = "*"
