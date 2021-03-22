@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Event",""],["IqType",""],["NonStanzaEvent",""],["StanzaEvent",""]],"struct":[["Auth",""],["Bind",""],["Generic",""],["Message",""],["OpenStream",""],["Ping",""],["Presence",""],["ProceedTls",""],["StartTls",""],["StreamFeatures",""],["SuccessTls",""],["Unknown",""]],"trait":[["EventTrait",""]]});

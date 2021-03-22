@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Anonymous","A struct for the SASL ANONYMOUS mechanism."],["Plain","A struct for the SASL PLAIN mechanism."],["Scram","A struct for the SASL SCRAM-* and SCRAM-*-PLUS mechanisms."]]});

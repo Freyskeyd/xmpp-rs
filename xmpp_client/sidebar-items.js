@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Client","Client struct deal with connection and message sharing between server and client"],["Element","Represents an XML element."]]});

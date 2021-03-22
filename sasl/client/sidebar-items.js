@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["mechanisms","Provides a few SASL mechanisms."]],"trait":[["Mechanism","A trait which defines SASL mechanisms."]]});

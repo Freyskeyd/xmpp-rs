@@ -1,20 +1,6 @@
 (function() {var implementors = {};
-implementors["bytes"] = [];
-implementors["libc"] = [];
-implementors["mio"] = [];
-implementors["openssl"] = [];
-implementors["regex_syntax"] = [];
-implementors["serde"] = [];
-implementors["string_cache"] = [];
-implementors["syn"] = [];
-implementors["tokio_core"] = [];
-implementors["xmpp_client"] = [];
-implementors["xmpp_proto"] = [];
-
-            if (window.register_implementors) {
-                window.register_implementors(implementors);
-            } else {
-                window.pending_implementors = implementors;
-            }
-        
-})()
+implementors["xmpp_credentials"] = [{"text":"impl RefUnwindSafe for Credentials","synthetic":true,"types":[]}];
+implementors["xmpp_proto"] = [{"text":"impl RefUnwindSafe for OpenStream","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for OpenStreamBuilder","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for ProceedTls","synthetic":true,"types":[]},{"text":"impl !RefUnwindSafe for Packet","synthetic":true,"types":[]},{"text":"impl !RefUnwindSafe for Stanza","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for NonStanza","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for Features","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for StreamFeatures","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for StartTls","synthetic":true,"types":[]},{"text":"impl !RefUnwindSafe for GenericIq","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for IqType","synthetic":true,"types":[]}];
+implementors["xmpp_server"] = [{"text":"impl RefUnwindSafe for Server","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for ServerBuilder","synthetic":true,"types":[]}];
+implementors["xmpp_xml"] = [{"text":"impl&lt;'a&gt; !RefUnwindSafe for Children&lt;'a&gt;","synthetic":true,"types":[]},{"text":"impl&lt;'a&gt; !RefUnwindSafe for ChildrenMut&lt;'a&gt;","synthetic":true,"types":[]},{"text":"impl&lt;'a&gt; RefUnwindSafe for Attrs&lt;'a&gt;","synthetic":true,"types":[]},{"text":"impl&lt;'a&gt; !RefUnwindSafe for FindChildren&lt;'a&gt;","synthetic":true,"types":[]},{"text":"impl&lt;'a&gt; !RefUnwindSafe for FindChildrenMut&lt;'a&gt;","synthetic":true,"types":[]},{"text":"impl !RefUnwindSafe for Element","synthetic":true,"types":[]},{"text":"impl !RefUnwindSafe for Error","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for NamespaceMap","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for XmlProlog","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for WriteOptions","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for Position","synthetic":true,"types":[]},{"text":"impl&lt;'a&gt; RefUnwindSafe for QName&lt;'a&gt;","synthetic":true,"types":[]},{"text":"impl&lt;'a&gt; RefUnwindSafe for XmlAtom&lt;'a&gt;","synthetic":true,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

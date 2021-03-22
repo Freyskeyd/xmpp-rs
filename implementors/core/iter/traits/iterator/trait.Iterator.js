@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["xmpp_xml"] = [{"text":"impl&lt;'a&gt; Iterator for Children&lt;'a&gt;","synthetic":false,"types":[]},{"text":"impl&lt;'a&gt; Iterator for ChildrenMut&lt;'a&gt;","synthetic":false,"types":[]},{"text":"impl&lt;'a&gt; Iterator for FindChildren&lt;'a&gt;","synthetic":false,"types":[]},{"text":"impl&lt;'a&gt; Iterator for FindChildrenMut&lt;'a&gt;","synthetic":false,"types":[]},{"text":"impl&lt;'a&gt; Iterator for Attrs&lt;'a&gt;","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

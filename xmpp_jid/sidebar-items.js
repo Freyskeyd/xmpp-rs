@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Jid",""]],"trait":[["ToJid",""]]});

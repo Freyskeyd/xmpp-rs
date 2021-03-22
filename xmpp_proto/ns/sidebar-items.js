@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["BIND",""],["CLIENT",""],["SASL",""],["SERVER",""],["STANZAS",""],["STREAM",""],["TLS",""]]});
+initSidebarItems({"constant":[["BIND",""],["CLIENT",""],["PING",""],["SASL",""],["SERVER",""],["SESSION",""],["STANZAS",""],["STREAM",""],["TLS",""],["XML_URI",""]]});
