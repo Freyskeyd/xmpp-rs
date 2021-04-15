@@ -21,6 +21,7 @@ use tokio_rustls::{
     TlsAcceptor,
 };
 
+mod listeners;
 mod parser;
 mod router;
 mod tcp;
@@ -67,7 +68,7 @@ impl ServerBuilder {
         // Starting Router
         let router = Router::new().start();
         // Starting all listener (tcp, ws)
-        tcp_server("", router, Path::new(&self.cert.unwrap()), Path::new(&self.keys.unwrap()));
+        let _tcp_listener = crate::listeners::tcp::TcpListener::start("", router, Path::new(&self.cert.unwrap()), Path::new(&self.keys.unwrap()));
         // Starting pkix
         // Starting ACL
         // Starting Shaper
@@ -88,12 +89,11 @@ impl ServerBuilder {
         // Starting auth
         // Starting oauth
 
-        // std::thread::spawn(move || {
-        //     let mut sys = actix_web::rt::System::new();
-        //     // let srv = HttpServer::new(|| App::new().route("/ws/", web::get().to(index))).bind("127.0.0.1:8080").unwrap().run();
-        //     let srv = HttpServer::new(|| App::new()).bind("127.0.0.1:8080").unwrap().run();
-        //     let _ = sys.block_on(srv);
-        // });
+        std::thread::spawn(move || {
+            let mut sys = actix_web::rt::System::new();
+            // let srv = HttpServer::new(|| App::new().route("/ws/", web::get().to(index))).bind("127.0.0.1:8080").unwrap().run();
+            let _ = sys.block_on(async { HttpServer::new(|| App::new().route("/ws", web::get().to(index))).bind("127.0.0.1:8080").unwrap().run().await });
+        });
 
         // Start API
 
@@ -149,38 +149,4 @@ async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, E
     let resp = ws::start(MyWebSocket {}, &req, stream);
     println!("{:?}", resp);
     resp
-}
-fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
-    certs(&mut BufReader::new(File::open(path)?)).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
-}
-
-fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
-    let f = File::open(path)?;
-    pkcs8_private_keys(&mut BufReader::new(f)).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
-}
-
-/// Define tcp server that will accept incoming tcp connection and create
-/// chat actors.
-// pub fn tcp_server(_s: &str, server: Addr<ChatServer>) {
-fn tcp_server(_s: &str, router: Addr<Router>, cert: &Path, keys: &Path) {
-    // Create server listener
-    let addr = SocketAddr::from_str("127.0.0.1:5222").unwrap();
-
-    let certs = load_certs(cert).unwrap();
-    let mut keys = load_keys(keys).unwrap();
-
-    let mut config = ServerConfig::new(NoClientAuth::new());
-    config.set_single_cert(certs, keys.remove(0)).map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err)).unwrap();
-    let acceptor = TlsAcceptor::from(Arc::new(config));
-
-    let manager = TcpManager::create(|_ctx| TcpManager::new(acceptor));
-
-    spawn(async move {
-        // Openning TCP to prepare for STARTLS
-        let listener = TcpListener::bind(&addr).await.unwrap();
-
-        while let Ok((stream, socket_addr)) = listener.accept().await {
-            manager.do_send(NewSession(stream, socket_addr, router.clone()));
-        }
-    });
 }

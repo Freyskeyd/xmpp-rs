@@ -1,6 +1,6 @@
 use actix::{io::FramedWrite, Actor, Addr, Context, StreamHandler};
-use std::io;
-use tokio::io::WriteHalf;
+use std::{io, pin::Pin};
+use tokio::io::{AsyncWrite, WriteHalf};
 use tokio::net::TcpStream;
 use tokio_rustls::server::TlsStream;
 
@@ -10,7 +10,7 @@ use xmpp_proto::{Features, NonStanza, OpenStream, Packet, ProceedTls, Stanza, St
 pub(crate) struct TcpSession {
     _id: usize,
     _router: Addr<Router>,
-    sink: FramedWrite<Packet, WriteHalf<TlsStream<TcpStream>>, XmppCodec>,
+    sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>,
     state: SessionState,
 }
 
@@ -20,7 +20,7 @@ enum SessionState {
 }
 
 impl TcpSession {
-    pub(crate) fn new(id: usize, router: Addr<Router>, sink: FramedWrite<Packet, WriteHalf<TlsStream<TcpStream>>, XmppCodec>) -> Self {
+    pub(crate) fn new(id: usize, router: Addr<Router>, sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>) -> Self {
         Self {
             _id: id,
             _router: router,
