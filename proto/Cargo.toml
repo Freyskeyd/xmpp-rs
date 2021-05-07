@@ -35,6 +35,7 @@ xmpp-credentials = { path = "../credentials" }
 jid = "0"
 xmpp-xml = { path = "../xml" }
 
+actix = { version = "0.11.0", default_feature = false }
 circular = "*"
 derive_builder = "0.9.0"
 # xmpp-events = { path = "../events" }

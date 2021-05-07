@@ -1,31 +1,16 @@
-use actix::spawn;
-use actix::{Actor, Addr, StreamHandler};
+use actix::prelude::*;
+use actix::{Actor, StreamHandler};
+use actix_codec::AsyncWrite;
 use actix_web::{App, HttpServer};
 use parser::XmppCodec;
 use router::Router;
-use std::{
-    fs::File,
-    io::{self, BufReader},
-    net::SocketAddr,
-    path::Path,
-    str::FromStr,
-    sync::Arc,
-};
-use tcp_manager::{NewSession, TcpManager};
-use tokio::net::TcpListener;
-use tokio_rustls::{
-    rustls::{
-        internal::pemfile::{certs, pkcs8_private_keys},
-        Certificate, NoClientAuth, PrivateKey, ServerConfig,
-    },
-    TlsAcceptor,
-};
+use std::path::Path;
+use xmpp_proto::{ns, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, StreamFeatures};
+use xmpp_xml::Element;
 
 mod listeners;
 mod parser;
 mod router;
-mod tcp;
-mod tcp_manager;
 
 pub struct Server {}
 
@@ -79,6 +64,7 @@ impl ServerBuilder {
         // Starting router multicast
         // Starting local
         // Starting Session Manager
+        SessionManager::new().start();
         // Starting s2s_in
         // Starting s2s_out
         // Starting s2s
@@ -90,8 +76,7 @@ impl ServerBuilder {
         // Starting oauth
 
         std::thread::spawn(move || {
-            let mut sys = actix_web::rt::System::new();
-            // let srv = HttpServer::new(|| App::new().route("/ws/", web::get().to(index))).bind("127.0.0.1:8080").unwrap().run();
+            let sys = actix_web::rt::System::new();
             let _ = sys.block_on(async { HttpServer::new(|| App::new().route("/ws", web::get().to(index))).bind("127.0.0.1:8080").unwrap().run().await });
         });
 
@@ -150,3 +135,161 @@ async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, E
     println!("{:?}", resp);
     resp
 }
+
+// /// Hold a session on a node
+pub struct Session {
+    #[allow(dead_code)]
+    sink: Box<dyn AsyncWrite>,
+}
+
+impl Session {}
+// /// Manage sessions on a node
+#[derive(Default)]
+pub struct SessionManager {}
+impl SessionManager {
+    pub(crate) fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Supervised for SessionManager {}
+
+impl SystemService for SessionManager {}
+impl Actor for SessionManager {
+    type Context = Context<Self>;
+
+    fn started(&mut self, _ctx: &mut Self::Context) {
+        println!("SessionManager started");
+    }
+}
+
+#[derive(Debug, Message, Clone)]
+#[rtype(result = "Result<SessionManagementPacketResult, ()>")]
+struct SessionManagementPacket {
+    session_state: SessionState,
+    packet: Packet,
+}
+
+#[derive(derive_builder::Builder, Debug, Clone)]
+#[builder(setter(into))]
+struct SessionManagementPacketResult {
+    #[builder(default = "SessionState::Opening")]
+    session_state: SessionState,
+    #[builder(setter(each = "packet"))]
+    packets: Vec<Packet>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum SessionState {
+    Opening,
+    Negociating,
+    Negociated,
+    Authenticating,
+    Authenticated,
+    Binding,
+}
+
+impl Handler<SessionManagementPacket> for SessionManager {
+    type Result = Result<SessionManagementPacketResult, ()>;
+
+    fn handle(&mut self, packet: SessionManagementPacket, _ctx: &mut Self::Context) -> Self::Result {
+        let mut response = SessionManagementPacketResultBuilder::default();
+        match packet.packet {
+            Packet::NonStanza(non_stanza_packet) => match *non_stanza_packet {
+                NonStanza::OpenStream(OpenStream { to, xmlns, lang, version, from, id }) => {
+                    response.packet(Packet::NonStanza(Box::new(NonStanza::OpenStream(OpenStream {
+                        id,
+                        to: from,
+                        from: to,
+                        xmlns,
+                        lang,
+                        version,
+                    }))));
+
+                    match packet.session_state {
+                        SessionState::Opening => {
+                            response.packet(Packet::NonStanza(Box::new(NonStanza::StreamFeatures(StreamFeatures { features: Features::StartTlsInit }))));
+                        }
+
+                        SessionState::Negociated => {
+                            response
+                                .packet(Packet::NonStanza(Box::new(NonStanza::StreamFeatures(StreamFeatures {
+                                    features: Features::Mechanisms(vec!["PLAIN".to_string()]),
+                                }))))
+                                .session_state(SessionState::Authenticating);
+                        }
+                        SessionState::Authenticated => {
+                            response
+                                .packet(Packet::NonStanza(Box::new(NonStanza::StreamFeatures(StreamFeatures { features: Features::Bind }))))
+                                .session_state(SessionState::Binding);
+                        }
+                        SessionState::Negociating => return Err(()),
+                        SessionState::Authenticating => return Err(()),
+                        SessionState::Binding => return Err(()),
+                    }
+                }
+
+                NonStanza::StartTls(_) => {
+                    response
+                        .session_state(SessionState::Negociating)
+                        .packet(Packet::NonStanza(Box::new(NonStanza::ProceedTls(ProceedTls::default()))));
+                }
+
+                NonStanza::Auth(_) => {
+                    // Authentification Async?
+                    response.session_state(SessionState::Authenticated).packet(Packet::NonStanza(Box::new(NonStanza::SASLSuccess)));
+                }
+                _ => return Err(()),
+            },
+
+            Packet::Stanza(stanza) => match *stanza {
+                xmpp_proto::Stanza::IQ(generic_iq) if generic_iq.get_type() == IqType::Set => {
+                    match packet.session_state {
+                        SessionState::Binding => {
+                            // We expect a binding command here
+                            match generic_iq.get_element() {
+                                Some(element) => {
+                                    match element.find((ns::BIND, "bind")) {
+                                        Some(_) => {
+                                            let mut result_element = Element::new_with_namespaces((ns::STREAM, "iq"), element);
+
+                                            result_element
+                                                .set_attr("id", generic_iq.get_id())
+                                                .set_attr("type", "result")
+                                                .append_new_child((ns::BIND, "bind"))
+                                                .append_new_child((ns::BIND, "jid"))
+                                                .set_text("SOME@localhost");
+
+                                            let result = GenericIq::from_element(result_element).unwrap();
+                                            println!("Respond with : {:?}", result);
+                                            // its bind
+                                            response.packet(Packet::Stanza(Box::new(xmpp_proto::Stanza::IQ(result))));
+                                        }
+                                        None => return Err(()),
+                                    }
+                                }
+                                None => return Err(()),
+                            }
+                        }
+                        _ => return Err(()),
+                    }
+                }
+                _ => return Err(()),
+            },
+        }
+
+        response.build().map_err(|_| ())
+    }
+}
+
+// /// Manage listeners on a node
+// pub struct Listeners {}
+// /// Listen for TCP on a node
+// pub struct TcpListener {}
+// /// Listen for WS on a node
+// pub struct WsListener {}
+// /// Hold a TCP session on a node
+// pub struct TcpSession {}
+// /// Hold a WS session on a node
+// pub struct WsSession {}
+// pub trait PacketReceiver {}

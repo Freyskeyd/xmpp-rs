@@ -1,4 +1,4 @@
-use crate::{tcp::TcpSession, XmppCodec};
+use crate::{listeners::TcpSession, XmppCodec};
 use std::{
     fs::File,
     io::{self, BufReader},
@@ -9,12 +9,8 @@ use std::{
 };
 
 use actix::{prelude::*, spawn};
-use bytes::BytesMut;
 use log::info;
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
-};
+use tokio::net::TcpStream;
 use tokio_rustls::{
     rustls::{
         internal::pemfile::{certs, pkcs8_private_keys},
@@ -22,8 +18,7 @@ use tokio_rustls::{
     },
     TlsAcceptor,
 };
-use tokio_util::codec::{Decoder, Encoder, FramedRead};
-use xmpp_proto::{Features, NonStanza, OpenStream, Packet, ProceedTls, StreamFeatures};
+use tokio_util::codec::FramedRead;
 
 use crate::router::Router;
 
@@ -75,73 +70,13 @@ impl Handler<NewSession> for TcpListener {
     fn handle(&mut self, msg: NewSession, _ctx: &mut Self::Context) -> Self::Result {
         info!("New TCP Session asked");
 
-        let mut stream = msg.0;
         let router = msg.2.clone();
 
         let acceptor = self.acceptor.clone();
 
-        let fut = async move {
-            let mut buf = BytesMut::with_capacity(4096);
-            let mut codec = XmppCodec::new();
-            loop {
-                stream.readable().await.unwrap();
-
-                match stream.read_buf(&mut buf).await {
-                    Ok(0) => {}
-                    Ok(_) => {
-                        if let Ok(Some(packet)) = codec.decode(&mut buf) {
-                            println!("PACKET: {:?}", packet);
-                            match packet {
-                                Packet::NonStanza(NonStanza::OpenStream(OpenStream { to, xmlns, lang, version, from, id })) => {
-                                    let _ = codec.encode(
-                                        Packet::NonStanza(NonStanza::OpenStream(OpenStream {
-                                            id,
-                                            to: from,
-                                            from: to,
-                                            xmlns,
-                                            lang,
-                                            version,
-                                        })),
-                                        &mut buf,
-                                    );
-                                    let _ = codec.encode(Packet::NonStanza(NonStanza::StreamFeatures(StreamFeatures { features: Features::StartTlsInit })), &mut buf);
-                                    let _ = stream.write_buf(&mut buf).await;
-                                    continue;
-                                }
-                                Packet::NonStanza(NonStanza::StartTls(_)) => {
-                                    let _ = codec.encode(Packet::NonStanza(NonStanza::ProceedTls(ProceedTls::default())), &mut buf);
-                                    let _ = stream.write_buf(&mut buf).await;
-                                    let _ = stream.flush().await;
-                                    break;
-                                }
-                                Packet::NonStanza(e) => {
-                                    let _ = codec.encode(Packet::NonStanza(e), &mut buf);
-                                    let _ = stream.write_buf(&mut buf).await;
-                                    let _ = stream.flush().await;
-
-                                    break;
-                                }
-                                _ => continue,
-                            }
-                        }
-                    }
-                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                        continue;
-                    }
-                    Err(e) => {
-                        // return Err(e.into());
-                        println!("err: {:?}", e);
-                        break;
-                    }
-                }
-            }
-
-            acceptor.accept(stream).await.unwrap()
-        }
-        .into_actor(self)
-        .map(|stream, act, _ctx| {
+        let fut = async move { TcpSession::handle_stream(msg.0, acceptor).await }.into_actor(self).map(|stream, act, _ctx| {
             let session = TcpSession::create(|ctx| {
-                let (r, w) = tokio::io::split(stream);
+                let (r, w) = tokio::io::split(stream.inner);
 
                 TcpSession::add_stream(FramedRead::new(r, XmppCodec::new()), ctx);
                 TcpSession::new(0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx))
@@ -152,13 +87,6 @@ impl Handler<NewSession> for TcpListener {
 
         Box::pin(fut)
     }
-}
-
-struct TcpSocket {}
-impl Actor for TcpSocket {
-    type Context = Context<Self>;
-
-    fn started(&mut self, _ctx: &mut Self::Context) {}
 }
 
 // Move to utils?

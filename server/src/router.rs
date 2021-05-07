@@ -1,5 +1,6 @@
 use actix::{Actor, Context};
 
+/// Manage to route packet on a node
 #[derive(Debug)]
 pub struct Router {}
 
@@ -16,3 +17,8 @@ impl Actor for Router {
         println!("Router started");
     }
 }
+
+// /// Manage to route packet when server is the target
+// pub struct LocalRouter {}
+// /// Manage to route packet based on pattern
+// pub struct RegisteredRouteManager {}

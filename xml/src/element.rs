@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::mem;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use xml::attribute::{Attribute, OwnedAttribute};
 use xml::common::XmlVersion;
@@ -50,7 +50,7 @@ pub struct Element {
     tag: QName<'static>,
     attributes: BTreeMap<QName<'static>, String>,
     pub(crate) children: Vec<Element>,
-    nsmap: Option<Rc<NamespaceMap>>,
+    nsmap: Option<Arc<NamespaceMap>>,
     emit_nsmap: bool,
     text: Option<String>,
     tail: Option<String>,
@@ -77,7 +77,7 @@ impl Element {
         Element::new_with_nsmap(&tag.as_qname(), reference.nsmap.clone())
     }
 
-    fn new_with_nsmap<'a>(tag: &QName<'a>, nsmap: Option<Rc<NamespaceMap>>) -> Element {
+    fn new_with_nsmap<'a>(tag: &QName<'a>, nsmap: Option<Arc<NamespaceMap>>) -> Element {
         let mut rv = Element {
             tag: tag.share(),
             attributes: BTreeMap::new(),
@@ -237,7 +237,7 @@ impl Element {
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
         namespace: XmlNamespaceMap,
-        parent_nsmap: Option<Rc<NamespaceMap>>,
+        parent_nsmap: Option<Arc<NamespaceMap>>,
         reader: &mut EventReader<R>,
     ) -> Result<Element, Error> {
         let mut root = Element {
@@ -510,14 +510,14 @@ impl Element {
 
     fn get_nsmap_mut(&mut self) -> &mut NamespaceMap {
         let new_map = match self.nsmap {
-            Some(ref mut nsmap) if Rc::strong_count(nsmap) == 1 => None,
-            Some(ref mut nsmap) => Some(Rc::new((**nsmap).clone())),
-            None => Some(Rc::new(NamespaceMap::new())),
+            Some(ref mut nsmap) if Arc::strong_count(nsmap) == 1 => None,
+            Some(ref mut nsmap) => Some(Arc::new((**nsmap).clone())),
+            None => Some(Arc::new(NamespaceMap::new())),
         };
         if let Some(nsmap) = new_map {
             self.nsmap = Some(nsmap);
         }
-        Rc::get_mut(self.nsmap.as_mut().unwrap()).unwrap()
+        Arc::get_mut(self.nsmap.as_mut().unwrap()).unwrap()
     }
 
     /// Registers a namespace with the internal namespace map.

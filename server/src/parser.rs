@@ -9,16 +9,16 @@ use tokio_util::codec::Decoder;
 use tokio_util::codec::Encoder;
 use uuid::Uuid;
 use xml::{attribute::OwnedAttribute, name::OwnedName, namespace::Namespace, reader::ErrorKind as XmlErrorKind};
-use xml::{common::Position, reader::XmlEvent, EventReader, ParserConfig};
-use xmpp_proto::NonStanza;
+use xml::{reader::XmlEvent, EventReader, ParserConfig};
 use xmpp_proto::{ns, FromXmlElement, GenericIq, OpenStreamBuilder, ProceedTls};
+use xmpp_proto::{NonStanza, Stanza};
 use xmpp_proto::{Packet, StartTls};
 use xmpp_xml::Element;
 
 /// XmppCodec deals with incoming bytes. You can feed the parser with bytes and try to detect new
 /// event.
 pub struct XmppCodec {
-    sink: PacketSink,
+    pub sink: PacketSink,
 }
 
 impl XmppCodec {
@@ -41,12 +41,10 @@ impl Decoder for XmppCodec {
     type Error = io::Error;
 
     fn decode(&mut self, buf: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        trace!("");
-        trace!("==================================================");
         let _ = self.sink.parser.source_mut().write(&buf[..]);
-
-        trace!("Buffer contains: {}", String::from_utf8_lossy(self.sink.parser.source().data()));
-        trace!("");
+        if self.sink.parser.source().data().len() > 0 {
+            trace!("Buffer contains: {}", String::from_utf8_lossy(self.sink.parser.source().data()));
+        }
         let event = match self.sink.next_packet() {
             Some(e) => {
                 trace!("Decoded Packet: {:?}", e);
@@ -70,7 +68,7 @@ impl Encoder<Packet> for XmppCodec {
     }
 }
 
-struct PacketSink {
+pub struct PacketSink {
     pub parser: EventReader<Buffer>,
 }
 
@@ -80,50 +78,20 @@ impl PacketSink {
         cfg.ignore_end_of_stream = true;
         self.parser = {
             let mut source = Buffer::with_capacity(4096);
-            // println!("BEFORE RESET {:?}", String::from_utf8_lossy(self.parser.source().data()));
             let _ = source.write_all(saved_buffer);
-            // source.clone_from(saved_buffer);
             let parser = EventReader::new_with_config(source, cfg);
 
             parser
         };
-        println!("PARSER RESETED");
-
-        println!("     -> parse pos {:?}", self.parser.position());
-        println!("     -> available: {:?}", self.parser.source().available_data());
     }
 
     fn parse_start_element(&mut self, name: OwnedName, namespace: Namespace, attributes: Vec<OwnedAttribute>) -> Option<Packet> {
-        if name.local_name == "auth" && name.namespace_ref() == Some(ns::SASL) {
-            if let Ok(e) = Element::from_start_element(name, attributes, namespace, None, &mut self.parser) {
-                let e = ProceedTls::from_element(e).unwrap();
-                // TODO VALIDATE AUTH
-                return Some(Packet::NonStanza(NonStanza::ProceedTls(e)));
-            }
-        } else if name.local_name == "starttls" && name.namespace_ref() == Some(ns::TLS) {
-            if Element::from_start_element(name, attributes, namespace, None, &mut self.parser).is_ok() {
-                let e = StartTls {};
-                return Some(Packet::NonStanza(NonStanza::StartTls(e)));
-            }
-        } else if name.local_name == "iq" {
-            if let Ok(e) = Element::from_start_element(name, attributes, namespace, None, &mut self.parser) {
-                let iq = GenericIq::from_element(e).unwrap();
-                println!("DETECTE IQ {:?}", iq);
-                return None;
-                // return Some(Packet::Stanza(Stanza::IQ(iq)));
-            }
-        }
-        None
+        Packet::parse(&mut self.parser, name, namespace, attributes)
     }
 
     pub fn next_packet(&mut self) -> Option<Packet> {
         // Using loop for now but can be removed soon I think
         loop {
-            trace!("next_event");
-            trace!("     -> parse pos {:?}", self.parser.position());
-            trace!("     -> available: {:?}", self.parser.source().available_data());
-
-            trace!("Buffer contains: {}", String::from_utf8_lossy(self.parser.source().data()));
             let saved_buffer = self.parser.source().data().to_vec();
             // Stop loop if buffer is empty
             if self.parser.source().available_data() == 0 {
@@ -135,15 +103,12 @@ impl PacketSink {
             match self.parser.next() {
                 Ok(xml_event) => match xml_event {
                     XmlEvent::StartDocument { .. } => {
-                        trace!("     -> Start Document");
                         continue;
                     }
                     // Dealing with the openning stream processus
                     // This kind of XML isn't close until the end of the stream, we can't use
                     // default behaviour for this.
                     XmlEvent::StartElement { ref name, namespace, attributes } if name.local_name == "stream" && name.namespace_ref() == Some(ns::STREAM) => {
-                        trace!("     -> Start stream:stream");
-
                         let (to, lang, version) = attributes.iter().fold((String::from(""), String::from("en"), String::from("0.0")), |(to, lang, version), attribute| {
                             match attribute.name.local_name.as_ref() {
                                 "to" if attribute.name.namespace.is_none() => (attribute.value.to_string(), lang, version),
@@ -161,7 +126,7 @@ impl PacketSink {
                             .build()
                             .unwrap();
 
-                        return Some(Packet::NonStanza(NonStanza::OpenStream(e)));
+                        return Some(Packet::NonStanza(Box::new(NonStanza::OpenStream(e))));
                     }
 
                     XmlEvent::StartElement { name, namespace, attributes } => {
@@ -171,7 +136,6 @@ impl PacketSink {
                     }
 
                     e => {
-                        trace!("----------> Hit something");
                         trace!("{:?}", e);
                         continue;
                     }

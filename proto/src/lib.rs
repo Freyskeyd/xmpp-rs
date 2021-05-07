@@ -1,25 +1,45 @@
 mod non_stanza;
+use circular::Buffer;
 use jid::Jid;
 use std::io::Write;
 use uuid::Uuid;
 
+use actix::Message;
 pub use non_stanza::*;
-use xmpp_xml::{Element, WriteOptions};
+use xmpp_xml::{
+    xml::{attribute::OwnedAttribute, name::OwnedName, namespace::Namespace, EventReader},
+    Element, WriteOptions,
+};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Message, Clone)]
+#[rtype(result = "Result<Vec<Packet>, ()>")]
 pub enum Packet {
     /// Represent a packet which is an XML Stream
-    NonStanza(NonStanza),
+    NonStanza(Box<NonStanza>),
     /// Represent a packet which isn't an XML Stanza
-    Stanza(Stanza),
+    Stanza(Box<Stanza>),
 }
 
 impl Packet {
     pub fn write_to_stream<W: Write>(&self, stream: W) -> Result<(), std::io::Error> {
-        println!("WRTTING {:?}", self);
         match self {
             Packet::NonStanza(s) => Ok(s.to_element()?.to_writer_with_options(stream, WriteOptions::new().set_xml_prolog(None))?),
             Packet::Stanza(s) => Ok(s.to_element()?.to_writer_with_options(stream, WriteOptions::new().set_xml_prolog(None))?),
+        }
+    }
+
+    pub fn parse(buffer: &mut EventReader<Buffer>, name: OwnedName, namespace: Namespace, attributes: Vec<OwnedAttribute>) -> Option<Self> {
+        match name.local_name.as_ref() {
+            "auth" if name.namespace_ref() == Some(ns::SASL) => {
+                Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Packet::NonStanza(Box::new(NonStanza::Auth(Auth::from_element(e).unwrap())))))
+            }
+            "starttls" if name.namespace_ref() == Some(ns::TLS) => {
+                Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |_| Some(Packet::NonStanza(Box::new(NonStanza::StartTls(StartTls {})))))
+            }
+            "iq" => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Packet::Stanza(Box::new(Stanza::IQ(GenericIq::from_element(e).unwrap()))))),
+            "message" => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Packet::Stanza(Box::new(Stanza::Message(e))))),
+            "presence" => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Packet::Stanza(Box::new(Stanza::Presence(e))))),
+            _ => None,
         }
     }
 }
@@ -28,18 +48,28 @@ impl Packet {
 /// Presence, an IQ or a Message.
 #[derive(Debug, Clone)]
 pub enum Stanza {
-    IQ(Element), // PresenceEvent(super::Presence),
-                 // IqEvent(Box<IqEvent>),
-                 // IqRequestEvent(Box<IqEvent>),
-                 // IqResponseEvent(Box<IqEvent>),
-                 // MessageEvent(Box<super::GenericMessage>)
+    IQ(GenericIq),
+    Message(Element),
+    Presence(Element),
+}
+
+impl ToXmlElement for Element {
+    type Error = io::Error;
+
+    fn to_element(&self) -> Result<Element, Self::Error> {
+        Ok(self.clone())
+    }
 }
 
 impl ToXmlElement for Stanza {
     type Error = std::io::Error;
 
     fn to_element(&self) -> Result<Element, Self::Error> {
-        Err(std::io::Error::new(std::io::ErrorKind::Other, "Unimpl"))
+        match self {
+            Stanza::IQ(iq) => iq.to_element(),
+            Stanza::Message(s) => s.to_element(),
+            Stanza::Presence(s) => s.to_element(),
+        }
     }
 }
 
@@ -47,13 +77,12 @@ impl ToXmlElement for Stanza {
 /// It's used by the system to deal with the communication between entities over a network.
 #[derive(Debug, Clone)]
 pub enum NonStanza {
-    OpenStream(OpenStream), // CloseStreamEvent,
+    OpenStream(OpenStream),
     ProceedTls(ProceedTls),
-    // SuccessTlsEvent(Box<super::SuccessTls>),
     StartTls(StartTls),
     SASLSuccess,
     StreamFeatures(StreamFeatures),
-    // AuthEvent(Box<super::Auth>)
+    Auth(Auth),
 }
 
 impl ToXmlElement for NonStanza {
@@ -66,6 +95,7 @@ impl ToXmlElement for NonStanza {
             NonStanza::StartTls(_) => Err(std::io::Error::new(std::io::ErrorKind::Other, "shouldn't be sent back")),
             NonStanza::ProceedTls(s) => s.to_element(),
             NonStanza::SASLSuccess => Ok(Element::new((ns::SASL, "success"))),
+            NonStanza::Auth(_) => Err(std::io::Error::new(std::io::ErrorKind::Other, "shouldn't be sent back")),
         }
     }
 }
@@ -163,18 +193,6 @@ pub enum IqType {
     Error,
 }
 
-// impl FromStr for IqType {
-//     type Err = io::Error;
-//     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//         match s.to_lowercase().as_ref() {
-//             "get" => Ok(IqType::Get),
-//             "set" => Ok(IqType::Set),
-//             "result" => Ok(IqType::Result),
-//             "error" => Ok(IqType::Error),
-//             _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported IqType")),
-//         }
-//     }
-// }
 impl Into<String> for IqType {
     fn into(self) -> String {
         match self {
@@ -186,26 +204,6 @@ impl Into<String> for IqType {
     }
 }
 
-// impl fmt::Display for IqType {
-//     // This trait requires `fmt` with this exact signature.
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         // Write strictly the first element into the supplied output
-//         // stream: `f`. Returns `fmt::Result` which indicates whether the
-//         // operation succeeded or failed. Note that `write!` uses syntax which
-//         // is very similar to `println!`.
-//         write!(
-//             f,
-//             "{}",
-//             match *self {
-//                 IqType::Get => "get".to_string(),
-//                 IqType::Set => "set".to_string(),
-//                 IqType::Result => "result".to_string(),
-//                 IqType::Error => "error".to_string(),
-//             }
-//         )
-//     }
-// }
-
 impl GenericIq {
     pub fn new<T: ToString + ?Sized>(id: &T, iq_type: IqType) -> GenericIq {
         GenericIq {
@@ -214,7 +212,6 @@ impl GenericIq {
             to: None,
             from: None,
             element: None,
-            // error: None,
         }
     }
 
@@ -267,6 +264,16 @@ impl GenericIq {
 use std::fmt;
 use std::io;
 use std::str::FromStr;
+
+impl ToXmlElement for GenericIq {
+    type Error = io::Error;
+
+    fn to_element(&self) -> Result<Element, Self::Error> {
+        println!("Encoding Generic IQ");
+        Ok(self.element.clone().unwrap())
+    }
+}
+
 impl FromXmlElement for GenericIq {
     type Error = io::Error;
     fn from_element(e: Element) -> Result<Self, io::Error> {
