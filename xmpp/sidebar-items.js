@@ -1,1 +1,1 @@
-initSidebarItems({});
+initSidebarItems({"externcrate":[["server","Reexport of XMPPServer"]]});

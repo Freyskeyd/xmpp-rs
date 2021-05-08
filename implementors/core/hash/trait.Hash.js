@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["xmpp_xml"] = [{"text":"impl&lt;'a&gt; Hash for QName&lt;'a&gt;","synthetic":false,"types":[]}];
+implementors["xmpp_xml"] = [{"text":"impl&lt;'a&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html\" title=\"trait core::hash::Hash\">Hash</a> for <a class=\"struct\" href=\"xmpp_xml/struct.QName.html\" title=\"struct xmpp_xml::QName\">QName</a>&lt;'a&gt;","synthetic":false,"types":["xmpp_xml::qname::QName"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

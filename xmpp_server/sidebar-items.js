@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Server",""],["ServerBuilder",""]]});
+initSidebarItems({"struct":[["Server",""],["ServerBuilder",""],["Session",""],["SessionManager",""]]});

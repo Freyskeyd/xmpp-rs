@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["server","xmpp","xmpp_credentials","xmpp_proto","xmpp_server","xmpp_xml"];
