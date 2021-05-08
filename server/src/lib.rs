@@ -175,7 +175,7 @@ struct SessionManagementPacket {
 struct SessionManagementPacketResult {
     #[builder(default = "SessionState::Opening")]
     session_state: SessionState,
-    #[builder(setter(each = "packet"))]
+    #[builder(setter(each = "packet", into = "true"))]
     packets: Vec<Packet>,
 }
 
@@ -197,31 +197,35 @@ impl Handler<SessionManagementPacket> for SessionManager {
         match packet.packet {
             Packet::NonStanza(non_stanza_packet) => match *non_stanza_packet {
                 NonStanza::OpenStream(OpenStream { to, xmlns, lang, version, from, id }) => {
-                    response.packet(Packet::NonStanza(Box::new(NonStanza::OpenStream(OpenStream {
-                        id,
-                        to: from,
-                        from: to,
-                        xmlns,
-                        lang,
-                        version,
-                    }))));
+                    response.packet(
+                        OpenStream {
+                            id,
+                            to: from,
+                            from: to,
+                            xmlns,
+                            lang,
+                            version,
+                        }
+                        .into(),
+                    );
 
                     match packet.session_state {
                         SessionState::Opening => {
-                            response.packet(Packet::NonStanza(Box::new(NonStanza::StreamFeatures(StreamFeatures { features: Features::StartTlsInit }))));
+                            response.packet(StreamFeatures { features: Features::StartTlsInit }.into());
                         }
 
                         SessionState::Negociated => {
                             response
-                                .packet(Packet::NonStanza(Box::new(NonStanza::StreamFeatures(StreamFeatures {
-                                    features: Features::Mechanisms(vec!["PLAIN".to_string()]),
-                                }))))
+                                .packet(
+                                    StreamFeatures {
+                                        features: Features::Mechanisms(vec!["PLAIN".to_string()]),
+                                    }
+                                    .into(),
+                                )
                                 .session_state(SessionState::Authenticating);
                         }
                         SessionState::Authenticated => {
-                            response
-                                .packet(Packet::NonStanza(Box::new(NonStanza::StreamFeatures(StreamFeatures { features: Features::Bind }))))
-                                .session_state(SessionState::Binding);
+                            response.packet(StreamFeatures { features: Features::Bind }.into()).session_state(SessionState::Binding);
                         }
                         SessionState::Negociating => return Err(()),
                         SessionState::Authenticating => return Err(()),
@@ -230,9 +234,7 @@ impl Handler<SessionManagementPacket> for SessionManager {
                 }
 
                 NonStanza::StartTls(_) => {
-                    response
-                        .session_state(SessionState::Negociating)
-                        .packet(Packet::NonStanza(Box::new(NonStanza::ProceedTls(ProceedTls::default()))));
+                    response.session_state(SessionState::Negociating).packet(ProceedTls::default().into());
                 }
 
                 NonStanza::Auth(_) => {
@@ -263,7 +265,7 @@ impl Handler<SessionManagementPacket> for SessionManager {
                                             let result = GenericIq::from_element(result_element).unwrap();
                                             println!("Respond with : {:?}", result);
                                             // its bind
-                                            response.packet(Packet::Stanza(Box::new(xmpp_proto::Stanza::IQ(result))));
+                                            response.packet(result.into());
                                         }
                                         None => return Err(()),
                                     }

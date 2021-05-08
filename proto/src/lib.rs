@@ -20,6 +20,29 @@ pub enum Packet {
     Stanza(Box<Stanza>),
 }
 
+pub trait NonStanzaTrait {}
+
+impl<T> From<T> for Packet
+where
+    T: NonStanzaTrait,
+{
+    fn from(s: T) -> Self {
+        s.into()
+    }
+}
+
+impl From<NonStanza> for Packet {
+    fn from(s: NonStanza) -> Self {
+        Packet::NonStanza(Box::new(s))
+    }
+}
+
+impl From<Stanza> for Packet {
+    fn from(s: Stanza) -> Self {
+        Packet::Stanza(Box::new(s))
+    }
+}
+
 impl Packet {
     pub fn write_to_stream<W: Write>(&self, stream: W) -> Result<(), std::io::Error> {
         match self {
@@ -30,15 +53,11 @@ impl Packet {
 
     pub fn parse(buffer: &mut EventReader<Buffer>, name: OwnedName, namespace: Namespace, attributes: Vec<OwnedAttribute>) -> Option<Self> {
         match name.local_name.as_ref() {
-            "auth" if name.namespace_ref() == Some(ns::SASL) => {
-                Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Packet::NonStanza(Box::new(NonStanza::Auth(Auth::from_element(e).unwrap())))))
-            }
-            "starttls" if name.namespace_ref() == Some(ns::TLS) => {
-                Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |_| Some(Packet::NonStanza(Box::new(NonStanza::StartTls(StartTls {})))))
-            }
-            "iq" => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Packet::Stanza(Box::new(Stanza::IQ(GenericIq::from_element(e).unwrap()))))),
-            "message" => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Packet::Stanza(Box::new(Stanza::Message(e))))),
-            "presence" => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Packet::Stanza(Box::new(Stanza::Presence(e))))),
+            "auth" if name.namespace_ref() == Some(ns::SASL) => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Auth::from_element(e).unwrap().into())),
+            "starttls" if name.namespace_ref() == Some(ns::TLS) => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |_| Some(StartTls {}.into())),
+            "iq" => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(GenericIq::from_element(e).unwrap().into())),
+            "message" => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Stanza::Message(e).into())),
+            "presence" => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Stanza::Presence(e).into())),
             _ => None,
         }
     }
@@ -140,6 +159,12 @@ pub struct StreamFeatures {
     pub features: Features,
 }
 
+impl From<StreamFeatures> for Packet {
+    fn from(s: StreamFeatures) -> Self {
+        NonStanza::StreamFeatures(s).into()
+    }
+}
+
 impl ToXmlElement for StreamFeatures {
     type Error = std::io::Error;
     fn to_element(&self) -> Result<Element, std::io::Error> {
@@ -169,6 +194,12 @@ impl ToXmlElement for StreamFeatures {
 #[derive(Debug, Clone)]
 pub struct StartTls {}
 
+impl From<StartTls> for Packet {
+    fn from(s: StartTls) -> Self {
+        NonStanza::StartTls(s).into()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct GenericIq {
     id: String,
@@ -179,6 +210,11 @@ pub struct GenericIq {
     // error: Option<StanzaError>,
 }
 
+impl From<GenericIq> for Packet {
+    fn from(s: GenericIq) -> Self {
+        Stanza::IQ(s).into()
+    }
+}
 impl Default for GenericIq {
     fn default() -> Self {
         Self::new("", IqType::Get)

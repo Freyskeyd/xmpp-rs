@@ -1,11 +1,17 @@
 use xmpp_xml::Element;
 
-use crate::{ns, FromXmlElement, ToXmlElement};
+use crate::{ns, FromXmlElement, NonStanza, Packet, ToXmlElement};
 
 #[derive(Default, Debug, Clone)]
 pub struct ProceedTls {
     mechanism: Option<String>,
     challenge: Option<String>,
+}
+
+impl From<ProceedTls> for Packet {
+    fn from(s: ProceedTls) -> Self {
+        NonStanza::ProceedTls(s).into()
+    }
 }
 
 impl ToXmlElement for ProceedTls {

@@ -1,7 +1,7 @@
 use uuid::Uuid;
 use xmpp_xml::{Element, QName};
 
-use crate::{ns, ToXmlElement};
+use crate::{ns, NonStanza, Packet, ToXmlElement};
 
 #[derive(derive_builder::Builder, Debug, Clone)]
 #[builder(setter(into))]
@@ -14,6 +14,12 @@ pub struct OpenStream {
     #[builder(setter(into, strip_option), default)]
     pub from: Option<String>,
     pub xmlns: String,
+}
+
+impl From<OpenStream> for Packet {
+    fn from(s: OpenStream) -> Self {
+        NonStanza::OpenStream(s).into()
+    }
 }
 
 impl ToXmlElement for OpenStream {

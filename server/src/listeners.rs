@@ -11,11 +11,12 @@ use tokio::io::{AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio_util::codec::{Decoder, Encoder};
 
 use crate::{router::Router, SessionManagementPacket, SessionManagementPacketResult, SessionManager, SessionState, XmppCodec};
-use xmpp_proto::{Features, NonStanza, OpenStream, Packet, ProceedTls, Stanza, StreamFeatures};
+use xmpp_proto::Packet;
 
 pub(crate) struct TcpSession {
     _id: usize,
     _router: Addr<Router>,
+    #[allow(dead_code)]
     sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>,
 }
 
@@ -152,7 +153,7 @@ impl TcpSession {
 impl actix::io::WriteHandler<io::Error> for TcpSession {}
 
 impl StreamHandler<Result<Packet, io::Error>> for TcpSession {
-    fn handle(&mut self, msg: Result<Packet, io::Error>, _ctx: &mut Context<Self>) {
+    fn handle(&mut self, _msg: Result<Packet, io::Error>, _ctx: &mut Context<Self>) {
         // match msg {
         //     Ok(Packet::NonStanza(NonStanza::OpenStream(OpenStream { to, xmlns, lang, version, from, id }))) => match self.state {
         // SessionState::Initialized => {

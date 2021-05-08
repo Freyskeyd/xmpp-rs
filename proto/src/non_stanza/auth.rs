@@ -1,11 +1,17 @@
 use xmpp_xml::Element;
 
-use crate::FromXmlElement;
+use crate::{FromXmlElement, NonStanza, Packet};
 
 #[derive(Default, Debug, Clone)]
 pub struct Auth {
     mechanism: Option<String>,
     challenge: Option<String>,
+}
+
+impl From<Auth> for Packet {
+    fn from(s: Auth) -> Self {
+        NonStanza::Auth(s).into()
+    }
 }
 
 impl FromXmlElement for Auth {

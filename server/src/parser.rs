@@ -10,10 +10,9 @@ use tokio_util::codec::Encoder;
 use uuid::Uuid;
 use xml::{attribute::OwnedAttribute, name::OwnedName, namespace::Namespace, reader::ErrorKind as XmlErrorKind};
 use xml::{reader::XmlEvent, EventReader, ParserConfig};
-use xmpp_proto::{ns, FromXmlElement, GenericIq, OpenStreamBuilder, ProceedTls};
-use xmpp_proto::{NonStanza, Stanza};
-use xmpp_proto::{Packet, StartTls};
-use xmpp_xml::Element;
+use xmpp_proto::NonStanza;
+use xmpp_proto::Packet;
+use xmpp_proto::{ns, OpenStreamBuilder};
 
 /// XmppCodec deals with incoming bytes. You can feed the parser with bytes and try to detect new
 /// event.
