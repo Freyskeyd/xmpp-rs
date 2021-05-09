@@ -82,21 +82,3 @@ jobs:
           cargo install cargo-cache --no-default-features --features ci-autoclean
           cargo-cache
 
-  publish:
-    name: Publish
-    needs: [build_and_test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Download doc
-        uses: actions/download-artifact@v1
-        with:
-          name: doc
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./doc
-
