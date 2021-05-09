@@ -104,30 +104,6 @@ impl PacketSink {
                     XmlEvent::StartDocument { .. } => {
                         continue;
                     }
-                    // Dealing with the openning stream processus
-                    // This kind of XML isn't close until the end of the stream, we can't use
-                    // default behaviour for this.
-                    XmlEvent::StartElement { ref name, namespace, attributes } if name.local_name == "stream" && name.namespace_ref() == Some(ns::STREAM) => {
-                        let (to, lang, version) = attributes.iter().fold((String::from(""), String::from("en"), String::from("0.0")), |(to, lang, version), attribute| {
-                            match attribute.name.local_name.as_ref() {
-                                "to" if attribute.name.namespace.is_none() => (attribute.value.to_string(), lang, version),
-                                "lang" if attribute.name.namespace == Some(ns::XML_URI.to_string()) => (to, attribute.value.to_string(), version),
-                                "version" if attribute.name.namespace.is_none() => (to, lang, attribute.value.to_string()),
-                                _ => (to, lang, version),
-                            }
-                        });
-                        let e = OpenStreamBuilder::default()
-                            .id(Uuid::new_v4())
-                            .to(to)
-                            .lang(lang)
-                            .version(version)
-                            .xmlns(namespace.get("").unwrap_or(ns::CLIENT))
-                            .build()
-                            .unwrap();
-
-                        return Some(Packet::NonStanza(Box::new(NonStanza::OpenStream(e))));
-                    }
-
                     XmlEvent::StartElement { name, namespace, attributes } => {
                         if let Some(e) = self.parse_start_element(name, namespace, attributes) {
                             return Some(e);

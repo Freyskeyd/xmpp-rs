@@ -30,7 +30,9 @@ env_logger = "0"
 futures = "0.1"
 log = "0"
 tokio-core = "0.1"
-xml-rs = {git = "https://github.com/Freyskeyd/xml-rs"}
+
+xml-rs = "*"
+circular = "*"
 
 [dependencies]
 xmpp-credentials = { path = "credentials" }

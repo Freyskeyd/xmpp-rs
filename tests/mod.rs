@@ -6,5 +6,5 @@
 // extern crate xmpp_xml;
 // extern crate xml;
 
-// mod event;
+mod event;
 // mod rfc;

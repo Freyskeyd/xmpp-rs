@@ -196,13 +196,12 @@ impl Handler<SessionManagementPacket> for SessionManager {
         let mut response = SessionManagementPacketResultBuilder::default();
         match packet.packet {
             Packet::NonStanza(non_stanza_packet) => match *non_stanza_packet {
-                NonStanza::OpenStream(OpenStream { to, xmlns, lang, version, from, id }) => {
+                NonStanza::OpenStream(OpenStream { to, lang, version, from, id }) => {
                     response.packet(
                         OpenStream {
                             id,
                             to: from,
                             from: to,
-                            xmlns,
                             lang,
                             version,
                         }
