@@ -3,69 +3,88 @@ on: [push, pull_request]
 name: CI
 
 jobs:
-  check:
-    name: Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
+  build_and_test:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - { name: Linux, os: ubuntu-latest, triple: x86_64-unknown-linux-gnu }
+          - { name: macOS, os: macos-latest, triple: x86_64-apple-darwin }
+          - { name: Windows, os: windows-latest, triple: x86_64-pc-windows-msvc }
+        version:
+          - 1.46.0 # MSRV
+          - stable
+          - nightly
 
-      - name: Install stable toolchain
+    name: ${{ matrix.target.name }} / ${{ matrix.version }}
+    runs-on: ${{ matrix.target.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install ${{ matrix.version }}
         uses: actions-rs/toolchain@v1
         with:
+          toolchain: ${{ matrix.version }}-${{ matrix.target.triple }}
           profile: minimal
-          toolchain: stable
           override: true
 
-      - name: Run cargo check
+      - name: Generate Cargo.lock
+        uses: actions-rs/cargo@v1
+        with:
+          command: generate-lockfile
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1.2.0
+
+      - name: Install cargo-hack
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-hack
+
+      - name: check minimal
+        uses: actions-rs/cargo@v1
+        with:
+          command: hack
+          args: --clean-per-run check --workspace --no-default-features --tests
+
+      - name: check full
         uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --all
+          args: --workspace --bins --examples --tests
 
-  test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Run cargo test
+      - name: tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all
+          args: -v --workspace --all-features --no-fail-fast -- --nocapture
 
-  doc:
-    name: Doc - build the documentation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Generate coverage file
+        if: >
+          matrix.target.os == 'ubuntu-latest'
+          && matrix.version == 'stable'
+          && github.ref == 'refs/heads/master'
+        run: |
+          cargo install cargo-tarpaulin --vers "^0.13"
+          cargo tarpaulin --out Xml --verbose
+      - name: Upload to Codecov
+        if: >
+          matrix.target.os == 'ubuntu-latest'
+          && matrix.version == 'stable'
+          && github.ref == 'refs/heads/master'
+        uses: codecov/codecov-action@v1
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
+          file: cobertura.xml
 
-      - run: cargo doc --no-deps --all --exclude bank
-      - uses: actions/upload-artifact@v1
-        with:
-          name: doc
-          path: target/doc
+      - name: Clear the cargo caches
+        run: |
+          cargo install cargo-cache --no-default-features --features ci-autoclean
+          cargo-cache
 
   publish:
     name: Publish
-    needs: [doc, check]
+    needs: [build_and_test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -80,3 +99,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./doc
+
