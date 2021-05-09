@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `proto/src/non_stanza/open_stream.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>open_stream.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../xmpp_proto/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+<link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../xmpp_proto/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" height="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
@@ -128,29 +128,31 @@
 <span id="125">125</span>
 <span id="126">126</span>
 <span id="127">127</span>
+<span id="128">128</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ns</span>, <span class="ident">NonStanza</span>, <span class="ident">Packet</span>, <span class="ident">ToXmlElement</span>};
-<span class="kw">use</span> <span class="ident">uuid</span>::<span class="ident">Uuid</span>;
+<span class="kw">use</span> <span class="ident">uuid::Uuid</span>;
 <span class="kw">use</span> <span class="ident">xmpp_xml</span>::{<span class="ident">Element</span>, <span class="ident">QName</span>};
 
 <span class="doccomment">/// Define an OpenStream NonStanza packet.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Mostly used when negociating connection between parties.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">derive_builder</span>::<span class="ident">Builder</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">derive_builder::Builder</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">builder</span>(<span class="ident">setter</span>(<span class="ident">into</span>))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OpenStream</span> {
     <span class="doccomment">/// An Id generated by the server.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// The &#39;id&#39; attribute specifies a unique identifier for the stream, called a &quot;stream ID&quot;. The stream ID MUST be generated by the receiving entity when it sends a response stream header and MUST BE unique within the receiving application (normally a server).</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// See https://xmpp.org/rfcs/rfc6120.html#streams-attr-id</span>
+    <span class="doccomment">/// See [RFC-6120]( https://xmpp.org/rfcs/rfc6120.html#streams-attr-id )</span>
     <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">Uuid</span>,
     <span class="doccomment">/// The &#39;xml:lang&#39; attribute specifies an entity&#39;s preferred or default language for any human-readable XML character data to be sent over the stream</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// See https://xmpp.org/rfcs/rfc6120.html#streams-attr-xmllang</span>
+    <span class="doccomment">/// See [RFC-6120]( https://xmpp.org/rfcs/rfc6120.html#streams-attr-xmllang )</span>
     <span class="kw">pub</span> <span class="ident">lang</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The inclusion of the version attribute set to a value of at least &quot;1.0&quot; signals support for the stream-related protocols defined in this specification, including TLS negotiation, SASL negotiation, stream features, and stream errors.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// See https://xmpp.org/rfcs/rfc6120.html#streams-attr-version</span>
+    <span class="doccomment">/// See [RFC-6120]( https://xmpp.org/rfcs/rfc6120.html#streams-attr-version )</span>
     <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">String</span>,
     <span class="attribute">#[<span class="ident">builder</span>(<span class="ident">setter</span>(<span class="ident">into</span>, <span class="ident">strip_option</span>), <span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">to</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -160,21 +162,21 @@
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">OpenStream</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Packet</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">s</span>: <span class="ident">OpenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">NonStanza</span>::<span class="ident">OpenStream</span>(<span class="ident">s</span>).<span class="ident">into</span>()
+        <span class="ident">NonStanza::OpenStream</span>(<span class="ident">s</span>).<span class="ident">into</span>()
     }
 }
 
 <span class="kw">impl</span> <span class="ident">ToXmlElement</span> <span class="kw">for</span> <span class="ident">OpenStream</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Error</span>;
-    <span class="kw">fn</span> <span class="ident">to_element</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Element</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">element</span> <span class="op">=</span> <span class="ident">Element</span>::<span class="ident">new</span>((<span class="ident">ns</span>::<span class="ident">CLIENT</span>, <span class="string">&quot;stream&quot;</span>)).<span class="ident">write_end_tag</span>(<span class="bool-val">false</span>);
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">std::io::Error</span>;
+    <span class="kw">fn</span> <span class="ident">to_element</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Element</span>, <span class="self">Self</span><span class="ident">::Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">element</span> <span class="op">=</span> <span class="ident">Element::new</span>((<span class="ident">ns::CLIENT</span>, <span class="string">&quot;stream&quot;</span>)).<span class="ident">write_end_tag</span>(<span class="bool-val">false</span>);
 
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">element</span>.<span class="ident">set_namespace_prefix</span>(<span class="ident">ns</span>::<span class="ident">STREAM</span>, <span class="string">&quot;stream&quot;</span>);
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">element</span>.<span class="ident">set_namespace_prefix</span>(<span class="ident">ns::STREAM</span>, <span class="string">&quot;stream&quot;</span>);
 
-        <span class="kw">let</span> <span class="ident">qname_stream</span> <span class="op">=</span> <span class="ident">QName</span>::<span class="ident">from_ns_name</span>(<span class="prelude-val">Some</span>(<span class="ident">ns</span>::<span class="ident">STREAM</span>), <span class="string">&quot;stream&quot;</span>);
+        <span class="kw">let</span> <span class="ident">qname_stream</span> <span class="op">=</span> <span class="ident">QName::from_ns_name</span>(<span class="prelude-val">Some</span>(<span class="ident">ns::STREAM</span>), <span class="string">&quot;stream&quot;</span>);
         <span class="ident">element</span>.<span class="ident">set_tag</span>(<span class="kw-2">&amp;</span><span class="ident">qname_stream</span>);
         <span class="ident">element</span>.<span class="ident">set_attr</span>(<span class="string">&quot;version&quot;</span>, <span class="self">self</span>.<span class="ident">version</span>.<span class="ident">to_string</span>());
-        <span class="ident">element</span>.<span class="ident">set_attr</span>((<span class="ident">ns</span>::<span class="ident">XML_URI</span>, <span class="string">&quot;lang&quot;</span>), <span class="self">self</span>.<span class="ident">lang</span>.<span class="ident">to_string</span>());
+        <span class="ident">element</span>.<span class="ident">set_attr</span>((<span class="ident">ns::XML_URI</span>, <span class="string">&quot;lang&quot;</span>), <span class="self">self</span>.<span class="ident">lang</span>.<span class="ident">to_string</span>());
         <span class="ident">element</span>.<span class="ident">set_attr</span>(<span class="string">&quot;id&quot;</span>, <span class="self">self</span>.<span class="ident">id</span>.<span class="ident">to_string</span>());
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">from</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">from</span> {
@@ -193,11 +195,11 @@
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">use</span> <span class="ident">circular</span>::<span class="ident">Buffer</span>;
-    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Write</span>;
+    <span class="kw">use</span> <span class="ident">circular::Buffer</span>;
+    <span class="kw">use</span> <span class="ident">std::io::Write</span>;
 
     <span class="kw">use</span> <span class="ident">xmpp_xml</span>::{
-        <span class="ident">xml</span>::{<span class="ident">reader</span>::<span class="ident">XmlEvent</span>, <span class="ident">ParserConfig</span>},
+        <span class="ident">xml</span>::{<span class="ident">reader::XmlEvent</span>, <span class="ident">ParserConfig</span>},
         <span class="ident">WriteOptions</span>,
     };
 
@@ -205,35 +207,35 @@
     <span class="kw">fn</span> <span class="ident">from</span>() {
         <span class="kw">let</span> <span class="ident">initial_stream</span> <span class="op">=</span> <span class="string">&quot;&lt;stream:stream version=&#39;1.0&#39; xmlns:stream=&#39;http://etherx.jabber.org/streams&#39; to=&#39;example.com&#39; xmlns=&#39;jabber:client&#39;&gt;&quot;</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cfg</span> <span class="op">=</span> <span class="ident">ParserConfig</span>::<span class="ident">new</span>().<span class="ident">whitespace_to_characters</span>(<span class="bool-val">true</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cfg</span> <span class="op">=</span> <span class="ident">ParserConfig::new</span>().<span class="ident">whitespace_to_characters</span>(<span class="bool-val">true</span>);
         <span class="ident">cfg</span>.<span class="ident">ignore_end_of_stream</span> <span class="op">=</span> <span class="bool-val">true</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">cfg</span>.<span class="ident">create_reader</span>(<span class="ident">Buffer</span>::<span class="ident">with_capacity</span>(<span class="number">4096</span>));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">cfg</span>.<span class="ident">create_reader</span>(<span class="ident">Buffer::with_capacity</span>(<span class="number">4096</span>));
 
         <span class="ident">reader</span>.<span class="ident">source_mut</span>().<span class="ident">write</span>(<span class="ident">initial_stream</span>.<span class="ident">as_bytes</span>()).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
 
         <span class="kw">match</span> <span class="ident">x</span> {
-            <span class="ident">XmlEvent</span>::<span class="ident">StartElement</span> { <span class="ident">name</span>, <span class="ident">attributes</span>, <span class="ident">namespace</span> } <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet</span>::<span class="ident">parse</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">reader</span>, <span class="ident">name</span>, <span class="ident">namespace</span>, <span class="ident">attributes</span>);
-                <span class="macro">assert</span><span class="macro">!</span>(
-                    <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">packet</span>, <span class="prelude-val">Some</span>(<span class="ident">Packet</span>::<span class="ident">NonStanza</span>(<span class="kw-2">ref</span> <span class="ident">stanza</span>)) <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>, <span class="ident">NonStanza</span>::<span class="ident">OpenStream</span>(<span class="kw">_</span>))),
+            <span class="ident">XmlEvent::StartElement</span> { <span class="ident">name</span>, <span class="ident">attributes</span>, <span class="ident">namespace</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::parse</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">reader</span>, <span class="ident">name</span>, <span class="ident">namespace</span>, <span class="ident">attributes</span>);
+                <span class="macro">assert!</span>(
+                    <span class="macro">matches!</span>(<span class="ident">packet</span>, <span class="prelude-val">Some</span>(<span class="ident">Packet::NonStanza</span>(<span class="kw-2">ref</span> <span class="ident">stanza</span>)) <span class="kw">if</span> <span class="macro">matches!</span>(<span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>, <span class="ident">NonStanza::OpenStream</span>(<span class="kw">_</span>))),
                     <span class="string">&quot;Packet wasn&#39;t an OpenStream, it was: {:?}&quot;</span>,
                     <span class="ident">packet</span>
                 );
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">assert</span><span class="macro">!</span>(<span class="bool-val">false</span>),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">assert!</span>(<span class="bool-val">false</span>),
         }
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">to_element</span>() {
-        <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">Uuid</span>::<span class="ident">new_v4</span>();
+        <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">Uuid::new_v4</span>();
         <span class="kw">let</span> <span class="ident">lang</span>: <span class="ident">String</span> <span class="op">=</span> <span class="string">&quot;en&quot;</span>.<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">version</span>: <span class="ident">String</span> <span class="op">=</span> <span class="string">&quot;1.0&quot;</span>.<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">to</span>: <span class="ident">String</span> <span class="op">=</span> <span class="string">&quot;jid@localhost&quot;</span>.<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">from</span>: <span class="ident">String</span> <span class="op">=</span> <span class="string">&quot;localhost&quot;</span>.<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+        <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">format!</span>(
             <span class="string">r#&quot;&lt;stream:stream xmlns=&quot;jabber:client&quot; xmlns:stream=&quot;http://etherx.jabber.org/streams&quot; from=&quot;{from}&quot; id=&quot;{id}&quot; xml:lang=&quot;{lang}&quot; to=&quot;{to}&quot; version=&quot;{version}&quot;&gt;&quot;#</span>,
             <span class="ident">id</span> <span class="op">=</span> <span class="ident">id</span>,
             <span class="ident">lang</span> <span class="op">=</span> <span class="ident">lang</span>,
@@ -242,20 +244,20 @@
             <span class="ident">version</span> <span class="op">=</span> <span class="ident">version</span>
         );
 
-        <span class="kw">let</span> <span class="ident">open_stream</span> <span class="op">=</span> <span class="ident">OpenStreamBuilder</span>::<span class="ident">default</span>().<span class="ident">id</span>(<span class="ident">id</span>).<span class="ident">lang</span>(<span class="ident">lang</span>).<span class="ident">version</span>(<span class="ident">version</span>).<span class="ident">to</span>(<span class="ident">to</span>).<span class="ident">from</span>(<span class="ident">from</span>).<span class="ident">build</span>();
+        <span class="kw">let</span> <span class="ident">open_stream</span> <span class="op">=</span> <span class="ident">OpenStreamBuilder::default</span>().<span class="ident">id</span>(<span class="ident">id</span>).<span class="ident">lang</span>(<span class="ident">lang</span>).<span class="ident">version</span>(<span class="ident">version</span>).<span class="ident">to</span>(<span class="ident">to</span>).<span class="ident">from</span>(<span class="ident">from</span>).<span class="ident">build</span>();
 
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">open_stream</span>.<span class="ident">is_ok</span>());
+        <span class="macro">assert!</span>(<span class="ident">open_stream</span>.<span class="ident">is_ok</span>());
 
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="macro">matches</span><span class="macro">!</span>(<span class="ident">open_stream</span>, <span class="prelude-val">Ok</span>(<span class="ident">OpenStream</span> { .. })));
+        <span class="macro">assert!</span>(<span class="macro">matches!</span>(<span class="ident">open_stream</span>, <span class="prelude-val">Ok</span>(<span class="ident">OpenStream</span> { .. })));
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">open_stream</span>.<span class="ident">unwrap</span>().<span class="ident">to_element</span>().<span class="ident">unwrap</span>().<span class="ident">to_writer_with_options</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">output</span>, <span class="ident">WriteOptions</span>::<span class="ident">new</span>().<span class="ident">set_xml_prolog</span>(<span class="prelude-val">None</span>));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">open_stream</span>.<span class="ident">unwrap</span>().<span class="ident">to_element</span>().<span class="ident">unwrap</span>().<span class="ident">to_writer_with_options</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">output</span>, <span class="ident">WriteOptions::new</span>().<span class="ident">set_xml_prolog</span>(<span class="prelude-val">None</span>));
 
-        <span class="kw">let</span> <span class="ident">generated</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">output</span>).<span class="ident">unwrap</span>();
-        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">generated</span>);
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">expected</span> <span class="op">=</span><span class="op">=</span> <span class="ident">generated</span>);
+        <span class="kw">let</span> <span class="ident">generated</span> <span class="op">=</span> <span class="ident">String::from_utf8</span>(<span class="ident">output</span>).<span class="ident">unwrap</span>();
+        <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">generated</span>);
+        <span class="macro">assert!</span>(<span class="ident">expected</span> <span class="op">=</span><span class="op">=</span> <span class="ident">generated</span>);
     }
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="xmpp_proto" data-search-js="../../../search-index.js"></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="xmpp_proto" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
     <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script></body></html>
