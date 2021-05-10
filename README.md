@@ -2,7 +2,8 @@
 
 `xmpp-rs` is an XMPP Server.
 
-[![Build Status](https://travis-ci.org/Freyskeyd/xmpp-rs.svg?branch=master)](https://travis-ci.org/Freyskeyd/xmpp-rs)
+[![CI](https://github.com/Freyskeyd/xmpp-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/Freyskeyd/xmpp-rs/actions/workflows/ci.yml)
+[![Upload Documentation](https://github.com/Freyskeyd/xmpp-rs/actions/workflows/update-doc.yml/badge.svg)](https://github.com/Freyskeyd/xmpp-rs/actions/workflows/update-doc.yml)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2FFreyskeyd%2Fxmpp-rs.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2FFreyskeyd%2Fxmpp-rs?ref=badge_shield)
 ## Install
 
