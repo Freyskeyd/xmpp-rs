@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["xmpp_proto"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/str/traits/trait.FromStr.html\" title=\"trait core::str::traits::FromStr\">FromStr</a> for <a class=\"enum\" href=\"xmpp_proto/enum.IqType.html\" title=\"enum xmpp_proto::IqType\">IqType</a>","synthetic":false,"types":["xmpp_proto::IqType"]}];
+implementors["xmpp_proto"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/str/traits/trait.FromStr.html\" title=\"trait core::str::traits::FromStr\">FromStr</a> for <a class=\"enum\" href=\"xmpp_proto/enum.IqType.html\" title=\"enum xmpp_proto::IqType\">IqType</a>","synthetic":false,"types":["xmpp_proto::stanza::generic_iq::IqType"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
