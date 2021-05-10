@@ -1,0 +1,10 @@
+pub const XML_URI: &str = "http://www.w3.org/XML/1998/namespace";
+pub const CLIENT: &str = "jabber:client";
+pub const SERVER: &str = "jabber:server";
+pub const STREAM: &str = "http://etherx.jabber.org/streams";
+pub const TLS: &str = "urn:ietf:params:xml:ns:xmpp-tls";
+pub const SASL: &str = "urn:ietf:params:xml:ns:xmpp-sasl";
+pub const BIND: &str = "urn:ietf:params:xml:ns:xmpp-bind";
+pub const SESSION: &str = "urn:ietf:params:xml:ns:xmpp-session";
+pub const STANZAS: &str = "urn:ietf:params:xml:ns:xmpp-stanzas";
+pub const PING: &str = "urn:xmpp:ping";

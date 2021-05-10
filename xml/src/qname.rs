@@ -61,7 +61,7 @@ impl<'a> QName<'a> {
 
         QName {
             ns,
-            name: name.unwrap_or_else(|| XmlAtom::Borrowed(s)),
+            name: name.unwrap_or(XmlAtom::Borrowed(s)),
         }
     }
 
@@ -111,7 +111,7 @@ impl<'a> QName<'a> {
             name: XmlAtom::Shared(Atom::from(name.local_name)),
             ns: match name.namespace {
                 Some(ns) => {
-                    if ns.len() > 0 {
+                    if !ns.is_empty() {
                         Some(XmlAtom::Shared(Atom::from(ns)))
                     } else {
                         None

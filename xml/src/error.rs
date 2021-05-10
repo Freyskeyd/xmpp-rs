@@ -24,9 +24,9 @@ pub enum Error {
 impl Error {
     /// Returns the position of the error if known
     pub fn position(&self) -> Option<Position> {
-        match self {
-            &Error::MalformedXml { pos, .. } => Some(pos),
-            &Error::UnexpectedEvent { pos, .. } => Some(pos),
+        match *self {
+            Error::MalformedXml { pos, .. } => Some(pos),
+            Error::UnexpectedEvent { pos, .. } => Some(pos),
             _ => None,
         }
     }
@@ -44,31 +44,31 @@ impl Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Error::MalformedXml { ref pos, ref msg } => write!(f, "Malformed XML: {} ({})", msg, pos),
-            &Error::Io(ref e) => write!(f, "{}", e),
-            &Error::Utf8(ref e) => write!(f, "{}", e),
-            &Error::UnexpectedEvent { ref msg, .. } => write!(f, "Unexpected XML event: {}", msg),
-            &Error::DuplicateNamespacePrefix => write!(f, "Encountered duplicated namespace prefix"),
+        match *self {
+            Error::MalformedXml { ref pos, ref msg } => write!(f, "Malformed XML: {} ({})", msg, pos),
+            Error::Io(ref e) => write!(f, "{}", e),
+            Error::Utf8(ref e) => write!(f, "{}", e),
+            Error::UnexpectedEvent { ref msg, .. } => write!(f, "Unexpected XML event: {}", msg),
+            Error::DuplicateNamespacePrefix => write!(f, "Encountered duplicated namespace prefix"),
         }
     }
 }
 
 impl std::error::Error for Error {
     fn description(&self) -> &str {
-        match self {
-            &Error::MalformedXml { .. } => "Malformed XML",
-            &Error::Io(..) => "IO error",
-            &Error::Utf8(..) => "utf-8 error",
-            &Error::UnexpectedEvent { .. } => "Unexpected XML element",
-            &Error::DuplicateNamespacePrefix => "Duplicated namespace prefix",
+        match *self {
+            Error::MalformedXml { .. } => "Malformed XML",
+            Error::Io(..) => "IO error",
+            Error::Utf8(..) => "utf-8 error",
+            Error::UnexpectedEvent { .. } => "Unexpected XML element",
+            Error::DuplicateNamespacePrefix => "Duplicated namespace prefix",
         }
     }
 
     fn cause(&self) -> Option<&dyn std::error::Error> {
-        match self {
-            &Error::Io(ref e) => Some(e),
-            &Error::Utf8(ref e) => Some(e),
+        match *self {
+            Error::Io(ref e) => Some(e),
+            Error::Utf8(ref e) => Some(e),
             _ => None,
         }
     }
@@ -76,11 +76,11 @@ impl std::error::Error for Error {
 
 impl From<XmlReadError> for Error {
     fn from(err: XmlReadError) -> Error {
-        match err.kind() {
-            &XmlReadErrorKind::Io(ref err) => Error::Io(io::Error::new(err.kind(), err.to_string())),
-            &XmlReadErrorKind::Utf8(ref err) => Error::Utf8(err.clone()),
-            &XmlReadErrorKind::UnexpectedEof => Error::Io(io::Error::new(io::ErrorKind::UnexpectedEof, "Encountered unexpected eof")),
-            &XmlReadErrorKind::Syntax(ref msg) => Error::MalformedXml {
+        match *err.kind() {
+            XmlReadErrorKind::Io(ref err) => Error::Io(io::Error::new(err.kind(), err.to_string())),
+            XmlReadErrorKind::Utf8(ref err) => Error::Utf8(*err),
+            XmlReadErrorKind::UnexpectedEof => Error::Io(io::Error::new(io::ErrorKind::UnexpectedEof, "Encountered unexpected eof")),
+            XmlReadErrorKind::Syntax(ref msg) => Error::MalformedXml {
                 msg: msg.clone(),
                 pos: Position::from_xml_position(&err),
             },
@@ -92,9 +92,7 @@ impl From<XmlWriteError> for Error {
     fn from(err: XmlWriteError) -> Error {
         match err {
             XmlWriteError::Io(err) => Error::Io(err),
-            err => {
-                return Err(err).unwrap();
-            }
+            err => Err(err).unwrap(),
         }
     }
 }

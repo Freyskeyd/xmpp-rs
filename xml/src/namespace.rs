@@ -4,7 +4,7 @@ use string_cache::Atom;
 
 use crate::{Error, XmlAtom};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct NamespaceMap {
     pub(crate) prefix_to_ns: BTreeMap<XmlAtom<'static>, XmlAtom<'static>>,
     ns_to_prefix: BTreeMap<XmlAtom<'static>, XmlAtom<'static>>,

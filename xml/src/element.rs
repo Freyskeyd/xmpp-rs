@@ -77,7 +77,7 @@ impl Element {
         Element::new_with_nsmap(&tag.as_qname(), reference.nsmap.clone())
     }
 
-    fn new_with_nsmap<'a>(tag: &QName<'a>, nsmap: Option<Arc<NamespaceMap>>) -> Element {
+    fn new_with_nsmap(tag: &QName<'_>, nsmap: Option<Arc<NamespaceMap>>) -> Element {
         let mut rv = Element {
             tag: tag.share(),
             attributes: BTreeMap::new(),
@@ -268,7 +268,7 @@ impl Element {
         loop {
             match reader.next() {
                 Ok(XmlEvent::EndElement { ref name }) => {
-                    if &name.local_name == self.tag.name() && name.namespace.as_ref().map(|x| x.as_str()) == self.tag.ns() {
+                    if name.local_name == self.tag.name() && name.namespace.as_deref() == self.tag.ns() {
                         return Ok(());
                     } else {
                         return Err(Error::UnexpectedEvent {
@@ -312,7 +312,7 @@ impl Element {
     /// Note that this does not trim or modify whitespace so the return
     /// value might contain structural information from the XML file.
     pub fn text(&self) -> &str {
-        self.text.as_ref().map(|x| x.as_str()).unwrap_or("")
+        self.text.as_deref().unwrap_or("")
     }
 
     /// Sets a new text value for the tag.
@@ -336,7 +336,7 @@ impl Element {
     ///
     /// The tail is the text following an element.
     pub fn tail(&self) -> &str {
-        self.tail.as_ref().map(|x| x.as_str()).unwrap_or("")
+        self.tail.as_deref().unwrap_or("")
     }
 
     /// Sets a new tail text value for the tag.
@@ -423,12 +423,12 @@ impl Element {
     }
 
     /// Returns an iterator over all children.
-    pub fn children<'a>(&'a self) -> Children<'a> {
+    pub fn children(&self) -> Children<'_> {
         Children { idx: 0, element: self }
     }
 
     /// Returns a mutable iterator over all children.
-    pub fn children_mut<'a>(&'a mut self) -> ChildrenMut<'a> {
+    pub fn children_mut(&mut self) -> ChildrenMut<'_> {
         ChildrenMut { iter: self.children.iter_mut() }
     }
 
@@ -499,7 +499,7 @@ impl Element {
     }
 
     /// Returns an iterator over all attributes
-    pub fn attrs<'a>(&'a self) -> Attrs<'a> {
+    pub fn attrs(&self) -> Attrs<'_> {
         Attrs { iter: self.attributes.iter() }
     }
 
@@ -528,10 +528,8 @@ impl Element {
     /// This optionally also registers a specific prefix however if that prefix
     /// is already used a random one is used instead.
     pub fn register_namespace(&mut self, url: &str, prefix: Option<&str>) {
-        if self.get_namespace_prefix(url).is_none() {
-            if self.get_nsmap_mut().register_if_missing(url, prefix) {
-                self.emit_nsmap = true;
-            }
+        if self.get_namespace_prefix(url).is_none() && self.get_nsmap_mut().register_if_missing(url, prefix) {
+            self.emit_nsmap = true;
         }
     }
 
