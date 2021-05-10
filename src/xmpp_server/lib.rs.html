@@ -510,7 +510,7 @@
 
                     <span class="kw">match</span> <span class="ident">packet</span>.<span class="ident">session_state</span> {
                         <span class="ident">SessionState::Opening</span> <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="ident">response</span>.<span class="ident">packet</span>(<span class="ident">StreamFeatures</span> { <span class="ident">features</span>: <span class="ident">Features::StartTlsInit</span> }.<span class="ident">into</span>());
+                            <span class="ident">response</span>.<span class="ident">packet</span>(<span class="ident">StreamFeatures</span> { <span class="ident">features</span>: <span class="ident">Features::StartTls</span> }.<span class="ident">into</span>());
                         }
 
                         <span class="ident">SessionState::Negociated</span> <span class="op">=</span><span class="op">&gt;</span> {

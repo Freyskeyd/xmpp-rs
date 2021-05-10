@@ -128,7 +128,6 @@
 <span id="125">125</span>
 <span id="126">126</span>
 <span id="127">127</span>
-<span id="128">128</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ns</span>, <span class="ident">NonStanza</span>, <span class="ident">Packet</span>, <span class="ident">ToXmlElement</span>};
 <span class="kw">use</span> <span class="ident">uuid::Uuid</span>;
@@ -215,16 +214,15 @@
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
 
-        <span class="kw">match</span> <span class="ident">x</span> {
-            <span class="ident">XmlEvent::StartElement</span> { <span class="ident">name</span>, <span class="ident">attributes</span>, <span class="ident">namespace</span> } <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::parse</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">reader</span>, <span class="ident">name</span>, <span class="ident">namespace</span>, <span class="ident">attributes</span>);
-                <span class="macro">assert!</span>(
-                    <span class="macro">matches!</span>(<span class="ident">packet</span>, <span class="prelude-val">Some</span>(<span class="ident">Packet::NonStanza</span>(<span class="kw-2">ref</span> <span class="ident">stanza</span>)) <span class="kw">if</span> <span class="macro">matches!</span>(<span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>, <span class="ident">NonStanza::OpenStream</span>(<span class="kw">_</span>))),
-                    <span class="string">&quot;Packet wasn&#39;t an OpenStream, it was: {:?}&quot;</span>,
-                    <span class="ident">packet</span>
-                );
-            }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">assert!</span>(<span class="bool-val">false</span>),
+        <span class="macro">assert!</span>(<span class="macro">matches!</span>(<span class="ident">x</span>, <span class="ident">XmlEvent::StartElement</span> { .. }));
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">XmlEvent::StartElement</span> { <span class="ident">name</span>, <span class="ident">attributes</span>, <span class="ident">namespace</span> } <span class="op">=</span> <span class="ident">x</span> {
+            <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet::parse</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">reader</span>, <span class="ident">name</span>, <span class="ident">namespace</span>, <span class="ident">attributes</span>);
+            <span class="macro">assert!</span>(
+                <span class="macro">matches!</span>(<span class="ident">packet</span>, <span class="prelude-val">Some</span>(<span class="ident">Packet::NonStanza</span>(<span class="kw-2">ref</span> <span class="ident">stanza</span>)) <span class="kw">if</span> <span class="macro">matches!</span>(<span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>, <span class="ident">NonStanza::OpenStream</span>(<span class="kw">_</span>))),
+                <span class="string">&quot;Packet wasn&#39;t an OpenStream, it was: {:?}&quot;</span>,
+                <span class="ident">packet</span>
+            );
         }
     }
 
@@ -254,7 +252,7 @@
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">open_stream</span>.<span class="ident">unwrap</span>().<span class="ident">to_element</span>().<span class="ident">unwrap</span>().<span class="ident">to_writer_with_options</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">output</span>, <span class="ident">WriteOptions::new</span>().<span class="ident">set_xml_prolog</span>(<span class="prelude-val">None</span>));
 
         <span class="kw">let</span> <span class="ident">generated</span> <span class="op">=</span> <span class="ident">String::from_utf8</span>(<span class="ident">output</span>).<span class="ident">unwrap</span>();
-        <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">generated</span>);
+
         <span class="macro">assert!</span>(<span class="ident">expected</span> <span class="op">=</span><span class="op">=</span> <span class="ident">generated</span>);
     }
 }
