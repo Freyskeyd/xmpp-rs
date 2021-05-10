@@ -83,16 +83,15 @@ mod tests {
         let _ = reader.next().unwrap();
         let x = reader.next().unwrap();
 
-        match x {
-            XmlEvent::StartElement { name, attributes, namespace } => {
-                let packet = Packet::parse(&mut reader, name, namespace, attributes);
-                assert!(
-                    matches!(packet, Some(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::OpenStream(_))),
-                    "Packet wasn't an OpenStream, it was: {:?}",
-                    packet
-                );
-            }
-            _ => assert!(false),
+        assert!(matches!(x, XmlEvent::StartElement { .. }));
+
+        if let XmlEvent::StartElement { name, attributes, namespace } = x {
+            let packet = Packet::parse(&mut reader, name, namespace, attributes);
+            assert!(
+                matches!(packet, Some(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::OpenStream(_))),
+                "Packet wasn't an OpenStream, it was: {:?}",
+                packet
+            );
         }
     }
 
@@ -122,7 +121,7 @@ mod tests {
         let _ = open_stream.unwrap().to_element().unwrap().to_writer_with_options(&mut output, WriteOptions::new().set_xml_prolog(None));
 
         let generated = String::from_utf8(output).unwrap();
-        println!("{:?}", generated);
+
         assert!(expected == generated);
     }
 }

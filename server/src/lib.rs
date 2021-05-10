@@ -210,7 +210,7 @@ impl Handler<SessionManagementPacket> for SessionManager {
 
                     match packet.session_state {
                         SessionState::Opening => {
-                            response.packet(StreamFeatures { features: Features::StartTlsInit }.into());
+                            response.packet(StreamFeatures { features: Features::StartTls }.into());
                         }
 
                         SessionState::Negociated => {

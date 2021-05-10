@@ -1,4 +1,4 @@
-use crate::{non_stanza::StartTls, ns, stanza::GenericIq, Auth, ToXmlElement};
+use crate::{non_stanza::StartTls, ns, stanza::GenericIq, Auth, StreamFeatures, ToXmlElement};
 use crate::{FromXmlElement, OpenStreamBuilder};
 use crate::{NonStanza, NonStanzaTrait, Stanza};
 
@@ -64,6 +64,9 @@ impl Packet {
                 let e = OpenStreamBuilder::default().id(Uuid::new_v4()).to(to).lang(lang).version(version).build().unwrap();
 
                 Some(e.into())
+            }
+            "features" if name.namespace_ref() == Some(ns::STREAM) => {
+                Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| StreamFeatures::from_element(e).ok().map(|f| f.into()))
             }
             "auth" if name.namespace_ref() == Some(ns::SASL) => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |e| Some(Auth::from_element(e).unwrap().into())),
             "starttls" if name.namespace_ref() == Some(ns::TLS) => Element::from_start_element(name, attributes, namespace, None, buffer).map_or(None, |_| Some(StartTls {}.into())),

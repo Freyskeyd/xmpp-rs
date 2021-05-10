@@ -7,12 +7,9 @@ use std::{
 };
 use tokio_util::codec::Decoder;
 use tokio_util::codec::Encoder;
-use uuid::Uuid;
 use xml::{attribute::OwnedAttribute, name::OwnedName, namespace::Namespace, reader::ErrorKind as XmlErrorKind};
 use xml::{reader::XmlEvent, EventReader, ParserConfig};
-use xmpp_proto::NonStanza;
 use xmpp_proto::Packet;
-use xmpp_proto::{ns, OpenStreamBuilder};
 
 /// XmppCodec deals with incoming bytes. You can feed the parser with bytes and try to detect new
 /// event.
@@ -41,7 +38,7 @@ impl Decoder for XmppCodec {
 
     fn decode(&mut self, buf: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         let _ = self.sink.parser.source_mut().write(&buf[..]);
-        if self.sink.parser.source().data().len() > 0 {
+        if !self.sink.parser.source().data().is_empty() {
             trace!("Buffer contains: {}", String::from_utf8_lossy(self.sink.parser.source().data()));
         }
         let event = match self.sink.next_packet() {
@@ -78,9 +75,7 @@ impl PacketSink {
         self.parser = {
             let mut source = Buffer::with_capacity(4096);
             let _ = source.write_all(saved_buffer);
-            let parser = EventReader::new_with_config(source, cfg);
-
-            parser
+            EventReader::new_with_config(source, cfg)
         };
     }
 
