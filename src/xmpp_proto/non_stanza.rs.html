@@ -42,19 +42,25 @@
 <span id="39">39</span>
 <span id="40">40</span>
 <span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
 </pre><pre class="rust">
+<span class="kw">use</span> <span class="ident">xmpp_xml::Element</span>;
+
 <span class="kw">mod</span> <span class="ident">auth</span>;
 <span class="kw">mod</span> <span class="ident">open_stream</span>;
 <span class="kw">mod</span> <span class="ident">proceed_tls</span>;
+<span class="kw">mod</span> <span class="ident">sasl_success</span>;
 <span class="kw">mod</span> <span class="ident">start_tls</span>;
 <span class="kw">mod</span> <span class="ident">stream_features</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">auth</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">open_stream</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">proceed_tls</span>::<span class="kw-2">*</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sasl_success</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">start_tls</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">stream_features</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">xmpp_xml::Element</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ns</span>, <span class="ident">ToXmlElement</span>};
 
@@ -65,7 +71,7 @@
     <span class="ident">OpenStream</span>(<span class="ident">OpenStream</span>),
     <span class="ident">ProceedTls</span>(<span class="ident">ProceedTls</span>),
     <span class="ident">StartTls</span>(<span class="ident">StartTls</span>),
-    <span class="ident">SASLSuccess</span>,
+    <span class="ident">SASLSuccess</span>(<span class="ident">SASLSuccess</span>),
     <span class="ident">StreamFeatures</span>(<span class="ident">StreamFeatures</span>),
     <span class="ident">Auth</span>(<span class="ident">Auth</span>),
 }
@@ -79,7 +85,7 @@
             <span class="ident">NonStanza::StreamFeatures</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>.<span class="ident">to_element</span>(),
             <span class="ident">NonStanza::StartTls</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">std::io::Error::new</span>(<span class="ident">std::io::ErrorKind::Other</span>, <span class="string">&quot;shouldn&#39;t be sent back&quot;</span>)),
             <span class="ident">NonStanza::ProceedTls</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>.<span class="ident">to_element</span>(),
-            <span class="ident">NonStanza::SASLSuccess</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Element::new</span>((<span class="ident">ns::SASL</span>, <span class="string">&quot;success&quot;</span>))),
+            <span class="ident">NonStanza::SASLSuccess</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>.<span class="ident">to_element</span>(),
             <span class="ident">NonStanza::Auth</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">std::io::Error::new</span>(<span class="ident">std::io::ErrorKind::Other</span>, <span class="string">&quot;shouldn&#39;t be sent back&quot;</span>)),
         }
     }

@@ -305,7 +305,7 @@
 <span class="kw">use</span> <span class="ident">parser::XmppCodec</span>;
 <span class="kw">use</span> <span class="ident">router::Router</span>;
 <span class="kw">use</span> <span class="ident">std::path::Path</span>;
-<span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">ns</span>, <span class="ident">Features</span>, <span class="ident">FromXmlElement</span>, <span class="ident">GenericIq</span>, <span class="ident">IqType</span>, <span class="ident">NonStanza</span>, <span class="ident">OpenStream</span>, <span class="ident">Packet</span>, <span class="ident">ProceedTls</span>, <span class="ident">StreamFeatures</span>};
+<span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">ns</span>, <span class="ident">Features</span>, <span class="ident">FromXmlElement</span>, <span class="ident">GenericIq</span>, <span class="ident">IqType</span>, <span class="ident">NonStanza</span>, <span class="ident">OpenStream</span>, <span class="ident">Packet</span>, <span class="ident">ProceedTls</span>, <span class="ident">SASLSuccess</span>, <span class="ident">StreamFeatures</span>};
 <span class="kw">use</span> <span class="ident">xmpp_xml::Element</span>;
 
 <span class="kw">mod</span> <span class="ident">listeners</span>;
@@ -538,7 +538,7 @@
 
                 <span class="ident">NonStanza::Auth</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="comment">// Authentification Async?</span>
-                    <span class="ident">response</span>.<span class="ident">session_state</span>(<span class="ident">SessionState::Authenticated</span>).<span class="ident">packet</span>(<span class="ident">Packet::NonStanza</span>(<span class="ident">Box::new</span>(<span class="ident">NonStanza::SASLSuccess</span>)));
+                    <span class="ident">response</span>.<span class="ident">session_state</span>(<span class="ident">SessionState::Authenticated</span>).<span class="ident">packet</span>(<span class="ident">SASLSuccess::default</span>().<span class="ident">into</span>());
                 }
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(()),
             },
