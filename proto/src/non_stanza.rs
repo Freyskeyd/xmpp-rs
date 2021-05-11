@@ -1,15 +1,18 @@
+use xmpp_xml::Element;
+
 mod auth;
 mod open_stream;
 mod proceed_tls;
+mod sasl_success;
 mod start_tls;
 mod stream_features;
 
 pub use auth::*;
 pub use open_stream::*;
 pub use proceed_tls::*;
+pub use sasl_success::*;
 pub use start_tls::*;
 pub use stream_features::*;
-use xmpp_xml::Element;
 
 use crate::{ns, ToXmlElement};
 
@@ -20,7 +23,7 @@ pub enum NonStanza {
     OpenStream(OpenStream),
     ProceedTls(ProceedTls),
     StartTls(StartTls),
-    SASLSuccess,
+    SASLSuccess(SASLSuccess),
     StreamFeatures(StreamFeatures),
     Auth(Auth),
 }
@@ -34,8 +37,23 @@ impl ToXmlElement for NonStanza {
             NonStanza::StreamFeatures(s) => s.to_element(),
             NonStanza::StartTls(_) => Err(std::io::Error::new(std::io::ErrorKind::Other, "shouldn't be sent back")),
             NonStanza::ProceedTls(s) => s.to_element(),
-            NonStanza::SASLSuccess => Ok(Element::new((ns::SASL, "success"))),
+            NonStanza::SASLSuccess(s) => s.to_element(),
             NonStanza::Auth(_) => Err(std::io::Error::new(std::io::ErrorKind::Other, "shouldn't be sent back")),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn to_element() {
+        assert!(matches!(NonStanza::OpenStream(OpenStream::default()).to_element(), Ok(_)));
+        assert!(matches!(NonStanza::StreamFeatures(StreamFeatures::default()).to_element(), Ok(_)));
+        assert!(matches!(NonStanza::StartTls(StartTls::default()).to_element(), Err(_)));
+        assert!(matches!(NonStanza::ProceedTls(ProceedTls::default()).to_element(), Ok(_)));
+        assert!(matches!(NonStanza::SASLSuccess(SASLSuccess::default()).to_element(), Ok(_)));
+        assert!(matches!(NonStanza::Auth(Auth::default()).to_element(), Err(_)));
     }
 }

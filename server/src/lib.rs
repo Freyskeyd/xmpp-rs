@@ -5,7 +5,7 @@ use actix_web::{App, HttpServer};
 use parser::XmppCodec;
 use router::Router;
 use std::path::Path;
-use xmpp_proto::{ns, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, StreamFeatures};
+use xmpp_proto::{ns, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, SASLSuccess, StreamFeatures};
 use xmpp_xml::Element;
 
 mod listeners;
@@ -238,7 +238,7 @@ impl Handler<SessionManagementPacket> for SessionManager {
 
                 NonStanza::Auth(_) => {
                     // Authentification Async?
-                    response.session_state(SessionState::Authenticated).packet(Packet::NonStanza(Box::new(NonStanza::SASLSuccess)));
+                    response.session_state(SessionState::Authenticated).packet(SASLSuccess::default().into());
                 }
                 _ => return Err(()),
             },

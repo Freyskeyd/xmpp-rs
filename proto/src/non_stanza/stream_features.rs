@@ -2,7 +2,7 @@ use xmpp_xml::Element;
 
 use crate::{ns, FromXmlElement, NonStanza, Packet, ToXmlElement};
 
-#[derive(derive_builder::Builder, Debug, Clone)]
+#[derive(derive_builder::Builder, Default, Debug, Clone)]
 #[builder(setter(into))]
 pub struct StreamFeatures {
     pub features: Features,
@@ -68,6 +68,12 @@ pub enum Features {
     Bind,
     Mechanisms(Vec<String>),
     Unknown,
+}
+
+impl Default for Features {
+    fn default() -> Self {
+        Self::Unknown
+    }
 }
 
 impl From<&str> for Features {

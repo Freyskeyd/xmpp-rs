@@ -37,14 +37,49 @@ impl FromXmlElement for ProceedTls {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
+
+    use circular::Buffer;
+    use xmpp_xml::{
+        xml::{reader::XmlEvent, ParserConfig},
+        WriteOptions,
+    };
+
     use super::*;
 
-    #[test]
-    fn parse_proceed_plain() {
-        let element = Element::from_reader("<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>AGp1bGlldAByMG0zMG15cjBtMzA=</auth>".as_bytes()).unwrap();
-        let proceed = ProceedTls::from_element(element).unwrap();
+    const EXPECTED_PROCEEDTLS: &'static str = r#"<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls" />"#;
 
-        assert_eq!(proceed.mechanism.unwrap(), "PLAIN");
-        assert_eq!(proceed.challenge.unwrap(), "AGp1bGlldAByMG0zMG15cjBtMzA=");
+    #[test]
+    fn to_element() {
+        let proceed = ProceedTls::default();
+
+        let mut output: Vec<u8> = Vec::new();
+        let _ = proceed.to_element().unwrap().to_writer_with_options(&mut output, WriteOptions::new().set_xml_prolog(None));
+
+        let generated = String::from_utf8(output).unwrap();
+
+        assert!(EXPECTED_PROCEEDTLS == generated);
+    }
+
+    #[test]
+    fn from() {
+        let mut cfg = ParserConfig::new().whitespace_to_characters(true);
+        cfg.ignore_end_of_stream = true;
+        let mut reader = cfg.create_reader(Buffer::with_capacity(4096));
+
+        reader.source_mut().write(EXPECTED_PROCEEDTLS.as_bytes()).unwrap();
+        let _ = reader.next().unwrap();
+        let x = reader.next().unwrap();
+
+        assert!(matches!(x, XmlEvent::StartElement { .. }));
+
+        if let XmlEvent::StartElement { name, attributes, namespace } = x {
+            let packet = Packet::parse(&mut reader, name, namespace, attributes);
+            assert!(
+                matches!(packet, Ok(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::ProceedTls(_))),
+                "Packet wasn't an ProceedTls, it was: {:?}",
+                packet
+            );
+        }
     }
 }

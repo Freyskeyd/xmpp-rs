@@ -2,7 +2,7 @@ use xmpp_xml::Element;
 
 use crate::{FromXmlElement, NonStanza, Packet, PacketParsingError};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct StartTls {}
 
 impl From<StartTls> for Packet {

@@ -1,5 +1,5 @@
-use crate::FromXmlElement;
 use crate::{non_stanza::StartTls, ns, stanza::GenericIq, Auth, OpenStream, StreamFeatures, ToXmlElement};
+use crate::{FromXmlElement, ProceedTls};
 use crate::{NonStanza, NonStanzaTrait, Stanza};
 
 use actix::Message;
@@ -69,10 +69,10 @@ impl TryFrom<Element> for Packet {
 
     fn try_from(element: Element) -> Result<Self, Self::Error> {
         match (element.tag().ns(), element.tag().name()) {
-            (Some(ns::STREAM), "stream") => Ok(OpenStream::from_element(element)?.into()),
             (Some(ns::STREAM), "features") => Ok(StreamFeatures::from_element(element)?.into()),
             (Some(ns::SASL), "auth") => Ok(Auth::from_element(element)?.into()),
             (Some(ns::TLS), "starttls") => Ok(StartTls::from_element(element)?.into()),
+            (Some(ns::TLS), "proceed") => Ok(ProceedTls::from_element(element)?.into()),
             (None, "iq") => Ok(GenericIq::from_element(element)?.into()),
             (None, "message") => Ok(Stanza::Message(element).into()),
             (None, "presence") => Ok(Stanza::Presence(element).into()),
