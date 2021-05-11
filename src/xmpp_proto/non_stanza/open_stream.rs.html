@@ -149,29 +149,8 @@
 <span id="146">146</span>
 <span id="147">147</span>
 <span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
 </pre><pre class="rust">
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ns</span>, <span class="ident">FromXmlElement</span>, <span class="ident">NonStanza</span>, <span class="ident">Packet</span>, <span class="ident">PacketParsingError</span>, <span class="ident">ToXmlElement</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ns</span>, <span class="ident">NonStanza</span>, <span class="ident">Packet</span>, <span class="ident">PacketParsingError</span>, <span class="ident">ToXmlElement</span>};
 <span class="kw">use</span> <span class="ident">uuid::Uuid</span>;
 <span class="kw">use</span> <span class="ident">xmpp_xml</span>::{<span class="ident">xml::attribute::OwnedAttribute</span>, <span class="ident">Element</span>, <span class="ident">QName</span>};
 
@@ -225,27 +204,6 @@
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">OpenStream</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Packet</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">s</span>: <span class="ident">OpenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">NonStanza::OpenStream</span>(<span class="ident">s</span>).<span class="ident">into</span>()
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">FromXmlElement</span> <span class="kw">for</span> <span class="ident">OpenStream</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">PacketParsingError</span>;
-
-    <span class="kw">fn</span> <span class="ident">from_element</span>(<span class="ident">e</span>: <span class="ident">Element</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="self">Self</span><span class="ident">::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="self">Self</span>: <span class="ident">Sized</span>,
-    {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">id</span>: <span class="ident">e</span>
-                .<span class="ident">get_attr</span>(<span class="string">&quot;id&quot;</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">id</span><span class="op">|</span> <span class="ident">Uuid::from_bytes</span>(<span class="ident">id</span>.<span class="ident">as_bytes</span>()))
-                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">Uuid::new_v4</span>()))
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">PacketParsingError::Final</span>)<span class="question-mark">?</span>,
-            <span class="ident">lang</span>: <span class="ident">e</span>.<span class="ident">get_attr</span>((<span class="ident">ns::XML_URI</span>, <span class="string">&quot;lang&quot;</span>)).<span class="ident">map</span>(<span class="ident">Into::into</span>).<span class="ident">unwrap_or_default</span>(),
-            <span class="ident">version</span>: <span class="ident">e</span>.<span class="ident">get_attr</span>(<span class="string">&quot;version&quot;</span>).<span class="ident">map</span>(<span class="ident">Into::into</span>).<span class="ident">unwrap_or_default</span>(),
-            <span class="ident">to</span>: <span class="ident">e</span>.<span class="ident">get_attr</span>(<span class="string">&quot;to&quot;</span>).<span class="ident">map</span>(<span class="ident">Into::into</span>),
-            <span class="ident">from</span>: <span class="ident">e</span>.<span class="ident">get_attr</span>(<span class="string">&quot;from&quot;</span>).<span class="ident">map</span>(<span class="ident">Into::into</span>),
-        })
     }
 }
 
