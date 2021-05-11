@@ -6,7 +6,7 @@ mod stanza;
 use jid::Jid;
 
 pub use non_stanza::*;
-pub use packet::Packet;
+pub use packet::*;
 pub use stanza::*;
 
 use xmpp_xml::Element;

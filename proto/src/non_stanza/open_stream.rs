@@ -1,6 +1,6 @@
-use crate::{ns, NonStanza, Packet, ToXmlElement};
+use crate::{ns, FromXmlElement, NonStanza, Packet, PacketParsingError, ToXmlElement};
 use uuid::Uuid;
-use xmpp_xml::{Element, QName};
+use xmpp_xml::{xml::attribute::OwnedAttribute, Element, QName};
 
 /// Define an OpenStream NonStanza packet.
 ///
@@ -28,9 +28,51 @@ pub struct OpenStream {
     pub from: Option<String>,
 }
 
+impl OpenStream {
+    pub fn from_start_element(attributes: Vec<OwnedAttribute>) -> Result<Self, PacketParsingError> {
+        let (to, lang, version) = attributes.iter().fold((String::from(""), String::from("en"), String::from("0.0")), |(to, lang, version), attribute| {
+            match attribute.name.local_name.as_ref() {
+                "to" if attribute.name.namespace.is_none() => (attribute.value.to_string(), lang, version),
+                "lang" if attribute.name.namespace == Some(ns::XML_URI.to_string()) => (to, attribute.value.to_string(), version),
+                "version" if attribute.name.namespace.is_none() => (to, lang, attribute.value.to_string()),
+                _ => (to, lang, version),
+            }
+        });
+
+        OpenStreamBuilder::default()
+            .id(Uuid::new_v4())
+            .to(to)
+            .lang(lang)
+            .version(version)
+            .build()
+            .or(Err(PacketParsingError::Unknown))
+    }
+}
+
 impl From<OpenStream> for Packet {
     fn from(s: OpenStream) -> Self {
         NonStanza::OpenStream(s).into()
+    }
+}
+
+impl FromXmlElement for OpenStream {
+    type Error = PacketParsingError;
+
+    fn from_element(e: Element) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Self {
+            id: e
+                .get_attr("id")
+                .map(|id| Uuid::from_bytes(id.as_bytes()))
+                .unwrap_or_else(|| Ok(Uuid::new_v4()))
+                .map_err(|_| PacketParsingError::Final)?,
+            lang: e.get_attr((ns::XML_URI, "lang")).map(Into::into).unwrap_or_default(),
+            version: e.get_attr("version").map(Into::into).unwrap_or_default(),
+            to: e.get_attr("to").map(Into::into),
+            from: e.get_attr("from").map(Into::into),
+        })
     }
 }
 
@@ -88,7 +130,7 @@ mod tests {
         if let XmlEvent::StartElement { name, attributes, namespace } = x {
             let packet = Packet::parse(&mut reader, name, namespace, attributes);
             assert!(
-                matches!(packet, Some(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::OpenStream(_))),
+                matches!(packet, Ok(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::OpenStream(_))),
                 "Packet wasn't an OpenStream, it was: {:?}",
                 packet
             );

@@ -9,7 +9,7 @@ use tokio_util::codec::Decoder;
 use tokio_util::codec::Encoder;
 use xml::{attribute::OwnedAttribute, name::OwnedName, namespace::Namespace, reader::ErrorKind as XmlErrorKind};
 use xml::{reader::XmlEvent, EventReader, ParserConfig};
-use xmpp_proto::Packet;
+use xmpp_proto::{Packet, PacketParsingError};
 
 /// XmppCodec deals with incoming bytes. You can feed the parser with bytes and try to detect new
 /// event.
@@ -79,7 +79,7 @@ impl PacketSink {
         };
     }
 
-    fn parse_start_element(&mut self, name: OwnedName, namespace: Namespace, attributes: Vec<OwnedAttribute>) -> Option<Packet> {
+    fn parse_start_element(&mut self, name: OwnedName, namespace: Namespace, attributes: Vec<OwnedAttribute>) -> Result<Packet, PacketParsingError> {
         Packet::parse(&mut self.parser, name, namespace, attributes)
     }
 
@@ -100,7 +100,7 @@ impl PacketSink {
                         continue;
                     }
                     XmlEvent::StartElement { name, namespace, attributes } => {
-                        if let Some(e) = self.parse_start_element(name, namespace, attributes) {
+                        if let Ok(e) = self.parse_start_element(name, namespace, attributes) {
                             return Some(e);
                         }
                     }

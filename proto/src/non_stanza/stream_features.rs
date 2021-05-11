@@ -29,6 +29,7 @@ impl FromXmlElement for StreamFeatures {
         })
     }
 }
+
 impl From<StreamFeatures> for Packet {
     fn from(s: StreamFeatures) -> Self {
         NonStanza::StreamFeatures(s).into()
@@ -128,7 +129,7 @@ mod tests {
         if let XmlEvent::StartElement { name, attributes, namespace } = x {
             let packet = Packet::parse(&mut reader, name, namespace, attributes);
             assert!(
-                matches!(packet, Some(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::StreamFeatures(StreamFeatures { features: Features::StartTls }))),
+                matches!(packet, Ok(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::StreamFeatures(StreamFeatures { features: Features::StartTls }))),
                 "Packet wasn't an StreamFeatures::StartTls, it was: {:?}",
                 packet
             );
@@ -166,7 +167,7 @@ mod tests {
         if let XmlEvent::StartElement { name, attributes, namespace } = x {
             let packet = Packet::parse(&mut reader, name, namespace, attributes);
             assert!(
-                matches!(packet, Some(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::StreamFeatures(StreamFeatures { features: Features::Bind }))),
+                matches!(packet, Ok(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::StreamFeatures(StreamFeatures { features: Features::Bind }))),
                 "Packet wasn't an StreamFeatures::Bind, it was: {:?}",
                 packet
             );
@@ -205,7 +206,7 @@ mod tests {
         if let XmlEvent::StartElement { name, attributes, namespace } = x {
             let packet = Packet::parse(&mut reader, name, namespace, attributes);
             assert!(
-                matches!(packet, Some(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::StreamFeatures(StreamFeatures { features: Features::Mechanisms(ref m) }) if m == &mechs)),
+                matches!(packet, Ok(Packet::NonStanza(ref stanza)) if matches!(**stanza, NonStanza::StreamFeatures(StreamFeatures { features: Features::Mechanisms(ref m) }) if m == &mechs)),
                 "Packet wasn't an StreamFeatures::Mechanisms, it was: {:?}",
                 packet
             );
