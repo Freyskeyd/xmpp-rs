@@ -108,7 +108,6 @@ impl ToXmlElement for GenericIq {
     type Error = io::Error;
 
     fn to_element(&self) -> Result<Element, Self::Error> {
-        println!("Encoding Generic IQ");
         Ok(self.element.clone().unwrap())
     }
 }

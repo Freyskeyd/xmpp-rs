@@ -26,3 +26,24 @@ impl ToXmlElement for Stanza {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use crate::FromXmlElement;
+
+    use super::*;
+
+    #[test]
+    fn to_element() {
+        let mut element = Element::new("iq");
+        element.set_attr("id", GenericIq::unique_id()).set_attr("type", "get");
+        element.append_child(Element::new("test"));
+        let iq = GenericIq::from_element(element).unwrap();
+
+        assert!(matches!(Stanza::IQ(iq).to_element(), Ok(_)));
+        assert!(matches!(Stanza::Message(Element::new("message")).to_element(), Ok(_)));
+        assert!(matches!(Stanza::Presence(Element::new("presence")).to_element(), Ok(_)));
+    }
+}
