@@ -216,12 +216,18 @@
 <span id="213">213</span>
 <span id="214">214</span>
 <span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">xmpp_xml::Element</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ns</span>, <span class="ident">FromXmlElement</span>, <span class="ident">NonStanza</span>, <span class="ident">Packet</span>, <span class="ident">ToXmlElement</span>};
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">derive_builder::Builder</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">derive_builder::Builder</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">builder</span>(<span class="ident">setter</span>(<span class="ident">into</span>))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StreamFeatures</span> {
     <span class="kw">pub</span> <span class="ident">features</span>: <span class="ident">Features</span>,
@@ -287,6 +293,12 @@
     <span class="ident">Bind</span>,
     <span class="ident">Mechanisms</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>),
     <span class="ident">Unknown</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Features</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span><span class="ident">::Unknown</span>
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Features</span> {
