@@ -106,13 +106,11 @@ impl SessionManager {
             },
         }
 
-        match response.build() {
-            Ok(res) => {
-                println!("Sending response to referer");
-                res.send(packet.referer);
-            }
-            Err(_) => (),
+        if let Ok(res) = response.build() {
+            println!("Sending response to referer");
+            res.send(packet.referer);
         }
+
         Ok(())
     }
 }

@@ -17,7 +17,6 @@ impl Handler<SessionManagementPacketResult> for UnauthenticatedSession {
 
     fn handle(&mut self, packet: SessionManagementPacketResult, _ctx: &mut Self::Context) -> Self::Result {
         self.packets.push(packet);
-        ()
     }
 }
 

@@ -78,7 +78,7 @@ impl TryFrom<Element> for Packet {
             (None, "presence") => Ok(Stanza::Presence(element).into()),
             e => {
                 println!("{:?}", e);
-                return Err(PacketParsingError::Unknown);
+                Err(PacketParsingError::Unknown)
             }
         }
     }

@@ -30,7 +30,7 @@ impl ToXmlElement for Bind {
     fn to_element(&self) -> Result<Element, std::io::Error> {
         let mut bind = Element::new((ns::BIND, "bind"));
         bind.append_new_child((ns::BIND, "jid"))
-            .set_text(format!("SOME@localhost/{}", self.resource.clone().unwrap_or(Uuid::new_v4().to_string())));
+            .set_text(format!("SOME@localhost/{}", self.resource.clone().unwrap_or_else(|| Uuid::new_v4().to_string())));
 
         Ok(bind)
     }
