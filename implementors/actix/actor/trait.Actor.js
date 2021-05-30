@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["xmpp_server"] = [{"text":"impl Actor for <a class=\"struct\" href=\"xmpp_server/struct.SessionManager.html\" title=\"struct xmpp_server::SessionManager\">SessionManager</a>","synthetic":false,"types":["xmpp_server::SessionManager"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
