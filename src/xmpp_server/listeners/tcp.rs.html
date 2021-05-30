@@ -155,8 +155,8 @@
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::router::Router</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">listeners::XmppStream</span>,
+    <span class="ident">parser::codec::XmppCodec</span>,
     <span class="ident">sessions</span>::{<span class="ident">manager::SessionManager</span>, <span class="ident">state::SessionState</span>, <span class="ident">unauthenticated::UnauthenticatedSession</span>, <span class="ident">SessionManagementPacket</span>, <span class="ident">SessionManagementPacketResult</span>},
-    <span class="ident">XmppCodec</span>,
 };
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">Message</span>};
 <span class="kw">use</span> <span class="ident">actix_codec</span>::{<span class="ident">Decoder</span>, <span class="ident">Encoder</span>};
