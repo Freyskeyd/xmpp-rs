@@ -81,20 +81,16 @@
 <span id="78">78</span>
 <span id="79">79</span>
 <span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
 </pre><pre class="rust">
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">jid</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">sasl</span>;
 
 <span class="kw">use</span> <span class="ident">jid::Jid</span>;
-<span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
 <span class="kw">use</span> <span class="ident">sasl::common::Credentials</span> <span class="kw">as</span> <span class="ident">SaslCredentials</span>;
+<span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
 
 <span class="doccomment">/// Define Credentials used to authenticate a user</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>,<span class="ident">Debug</span>,<span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Credentials</span> {
     <span class="kw">pub</span> <span class="ident">jid</span>: <span class="ident">Jid</span>,
     <span class="kw">pub</span> <span class="ident">password</span>: <span class="ident">String</span>,
@@ -102,9 +98,7 @@
 
 <span class="kw">impl</span> <span class="ident">Credentials</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">format</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SaslCredentials</span> {
-        <span class="ident">SaslCredentials::default</span>()
-            .<span class="ident">with_username</span>(<span class="self">self</span>.<span class="ident">jid</span>.<span class="ident">to_string</span>())
-            .<span class="ident">with_password</span>(<span class="self">self</span>.<span class="ident">password</span>.<span class="ident">to_string</span>())
+        <span class="ident">SaslCredentials::default</span>().<span class="ident">with_username</span>(<span class="self">self</span>.<span class="ident">jid</span>.<span class="ident">to_string</span>()).<span class="ident">with_password</span>(<span class="self">self</span>.<span class="ident">password</span>.<span class="ident">to_string</span>())
     }
 }
 
@@ -162,9 +156,7 @@
             <span class="ident">password</span>: <span class="string">&quot;guest&quot;</span>.<span class="ident">into</span>(),
         };
 
-        <span class="kw">let</span> <span class="ident">check</span> <span class="op">=</span> <span class="ident">SaslCredentials::default</span>()
-            .<span class="ident">with_username</span>(<span class="string">&quot;guest&quot;</span>)
-            .<span class="ident">with_password</span>(<span class="string">&quot;guest&quot;</span>);
+        <span class="kw">let</span> <span class="ident">check</span> <span class="op">=</span> <span class="ident">SaslCredentials::default</span>().<span class="ident">with_username</span>(<span class="string">&quot;guest&quot;</span>).<span class="ident">with_password</span>(<span class="string">&quot;guest&quot;</span>);
 
         <span class="macro">assert!</span>(<span class="ident">c</span>.<span class="ident">format</span>().<span class="ident">identity</span> <span class="op">=</span><span class="op">=</span> <span class="ident">check</span>.<span class="ident">identity</span>);
         <span class="macro">assert!</span>(<span class="ident">c</span>.<span class="ident">format</span>().<span class="ident">secret</span> <span class="op">=</span><span class="op">=</span> <span class="ident">check</span>.<span class="ident">secret</span>);
