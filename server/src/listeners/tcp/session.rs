@@ -1,5 +1,5 @@
+use crate::parser::codec::XmppCodec;
 use crate::router::Router;
-use crate::XmppCodec;
 use actix::{io::FramedWrite, prelude::*};
 use std::{io, pin::Pin};
 use tokio::io::AsyncWrite;

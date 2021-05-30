@@ -1,8 +1,8 @@
 use crate::router::Router;
 use crate::{
     listeners::XmppStream,
+    parser::codec::XmppCodec,
     sessions::{manager::SessionManager, state::SessionState, unauthenticated::UnauthenticatedSession, SessionManagementPacket, SessionManagementPacketResult},
-    XmppCodec,
 };
 use actix::{prelude::*, Message};
 use actix_codec::{Decoder, Encoder};

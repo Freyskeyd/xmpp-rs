@@ -1,5 +1,4 @@
 use actix::Actor;
-use parser::XmppCodec;
 use router::Router;
 use std::path::Path;
 

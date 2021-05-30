@@ -2,7 +2,7 @@ use super::session::TcpSession;
 use crate::listeners::tcp::NewSession;
 use crate::listeners::tcp::TcpOpenStream;
 use crate::router::Router;
-use crate::{listeners::XmppStream, sessions::unauthenticated::UnauthenticatedSession, XmppCodec};
+use crate::{listeners::XmppStream, parser::codec::XmppCodec, sessions::unauthenticated::UnauthenticatedSession};
 use actix::{prelude::*, spawn};
 use log::info;
 use std::{
