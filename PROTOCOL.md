@@ -1,11 +1,12 @@
 # PROTOCOL
 
-## [ ] [RFC-6120](https://datatracker.ietf.org/doc/rfc6120/)
+- [ ] [RFC-6120](https://datatracker.ietf.org/doc/rfc6120/)
 <details>
 <summary>
 Implementation details
 </summary>
 
+```
 C: = a client
 E: = any XMPP entity
 I: = an initiating entity
@@ -14,6 +15,7 @@ R: = a receiving entity
 S: = a server
 S1: = server1
 S2: = server2
+```
 
 - [x] TCP Binding
 - [ ] XML Streams
