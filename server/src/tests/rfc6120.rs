@@ -1,13 +1,17 @@
-use crate::sessions::{manager::SessionManager, state::SessionState, SessionManagementPacket, SessionManagementPacketResult};
-use tokio::sync::mpsc::{self, Receiver, Sender};
+use std::{error::Error, io, path::PathBuf};
+
+use crate::{
+    sessions::{manager::SessionManager, state::SessionState, SessionManagementPacket, SessionManagementPacketResult},
+    Server,
+};
+use bytes::BytesMut;
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    sync::mpsc::{self, Receiver, Sender},
+};
 use uuid::Uuid;
-use xmpp_proto::OpenStreamBuilder;
 use xmpp_proto::{NonStanza, Packet};
-
-// The 'to' attribute SHOULD be used only in the XML stream header from the initiating entity to the receiving
-// entity, and MUST be set to a hostname serviced by the receiving entity.
-
-// There SHOULD NOT be a 'to' attribute set in the XML stream header by which the receiving entity replies to the initiating entity; however, if a 'to' attribute is included, it SHOULD be silently ignored by the initiating entity.
+use xmpp_proto::{OpenStream, OpenStreamBuilder};
 
 #[tokio::test]
 async fn should_return_an_open_stream() {
@@ -31,4 +35,42 @@ async fn should_return_an_open_stream() {
     } else {
         panic!("Should have respond something");
     }
+}
+
+#[actix::test]
+async fn should_return_an_open_stream_2() -> Result<(), Box<dyn Error>> {
+    actix_rt::spawn(async move {
+        let _ = Server::build().cert("./src/tests/fixtures/server.crt").keys("./src/tests/fixtures/server.key").launch().await;
+    });
+
+    std::thread::sleep_ms(100);
+    let mut expected = String::new();
+
+    let mut stream = tokio::net::TcpStream::connect("localhost:5222").await?;
+
+    stream.write_all(b"hello world!").await?;
+    expected.push_str("SENT:\nhello world!");
+
+    let mut buf = BytesMut::with_capacity(4096);
+
+    loop {
+        stream.readable().await.unwrap();
+
+        match stream.read_buf(&mut buf).await {
+            Ok(0) => break,
+            Ok(size) => {
+                let readed = buf.split_to(size);
+                println!("{:?}", readed);
+            }
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                continue;
+            }
+            Err(e) => {
+                println!("err: {:?}", e);
+                break;
+            }
+        }
+    }
+
+    Ok(())
 }

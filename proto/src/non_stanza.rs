@@ -22,6 +22,7 @@ use crate::ToXmlElement;
 /// It's used by the system to deal with the communication between entities over a network.
 #[derive(Debug, Clone)]
 pub enum NonStanza {
+    // TODO: Rename to Initial stream header?
     OpenStream(OpenStream),
     ProceedTls(ProceedTls),
     StartTls(StartTls),

@@ -19,11 +19,8 @@ S2: = server2
 
 - [x] TCP Binding
 - [ ] XML Streams
-    - [ ] Stream Fundamentals
-    - [ ] Opening a Stream . . . . . . . . . . . . . . . . . . . .  23
-    - [ ] Stream Negotiation . . . . . . . . . . . . . . . . . . .  24
-        - [ ] Basic Concepts
-        - [ ] Stream Features Format
+    - [x] Opening a Stream
+    - [ ] Stream Negotiation
         - [ ] Restarts
         - [ ] Resending Features
         - [ ] Completion of Stream Negotiation
