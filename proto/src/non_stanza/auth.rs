@@ -52,7 +52,7 @@ mod tests {
     #[test]
     fn parse_proceed_plain() {
         let element = Element::from_reader(EXPECTED_AUTH.as_bytes()).unwrap();
-        let proceed = Auth::from_element(element).unwrap();
+        let proceed = Auth::from_element(&element).unwrap();
 
         assert_eq!(proceed.mechanism.unwrap(), "PLAIN");
         assert_eq!(proceed.challenge.unwrap(), "AGp1bGlldAByMG0zMG15cjBtMzA=");

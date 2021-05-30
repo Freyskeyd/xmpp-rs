@@ -1,5 +1,5 @@
-use crate::sessions::SessionState;
-use crate::sessions::{SessionManagementPacket, SessionManager};
+use crate::sessions::{manager::SessionManager, state::SessionState, SessionManagementPacket, SessionManagementPacketResult};
+use tokio::sync::mpsc::{self, Receiver, Sender};
 use uuid::Uuid;
 use xmpp_proto::OpenStreamBuilder;
 use xmpp_proto::{NonStanza, Packet};
@@ -9,21 +9,26 @@ use xmpp_proto::{NonStanza, Packet};
 
 // There SHOULD NOT be a 'to' attribute set in the XML stream header by which the receiving entity replies to the initiating entity; however, if a 'to' attribute is included, it SHOULD be silently ignored by the initiating entity.
 
-#[test]
-fn should_return_an_open_stream() {
+#[tokio::test]
+async fn should_return_an_open_stream() {
     let handler = SessionManager::default();
 
+    let (referer, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
     let response = handler.handle_packet(SessionManagementPacket {
         session_state: SessionState::Opening,
         packet: OpenStreamBuilder::default().lang("en").version("1.0").id(Uuid::new_v4()).build().unwrap().into(),
+        referer,
     });
 
     assert!(response.is_ok());
 
-    let result = response.unwrap();
-    assert_eq!(result.session_state, SessionState::Opening);
-    assert!(
-        matches!(result.packets.as_slice(), [Packet::NonStanza(open_stream), Packet::NonStanza(features)] if matches!(**open_stream, NonStanza::OpenStream(_))
+    if let Some(result) = rx.recv().await {
+        assert_eq!(result.session_state, SessionState::Opening);
+        assert!(
+            matches!(result.packets.as_slice(), [Packet::NonStanza(open_stream), Packet::NonStanza(features)] if matches!(**open_stream, NonStanza::OpenStream(_))
                 && matches!(**features, NonStanza::StreamFeatures(_)))
-    );
+        );
+    } else {
+        panic!("Should have respond something");
+    }
 }
