@@ -2,11 +2,11 @@ extern crate jid;
 extern crate sasl;
 
 use jid::Jid;
-use std::str::FromStr;
 use sasl::common::Credentials as SaslCredentials;
+use std::str::FromStr;
 
 /// Define Credentials used to authenticate a user
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Credentials {
     pub jid: Jid,
     pub password: String,
@@ -14,9 +14,7 @@ pub struct Credentials {
 
 impl Credentials {
     pub fn format(&self) -> SaslCredentials {
-        SaslCredentials::default()
-            .with_username(self.jid.to_string())
-            .with_password(self.password.to_string())
+        SaslCredentials::default().with_username(self.jid.to_string()).with_password(self.password.to_string())
     }
 }
 
@@ -74,9 +72,7 @@ mod tests {
             password: "guest".into(),
         };
 
-        let check = SaslCredentials::default()
-            .with_username("guest")
-            .with_password("guest");
+        let check = SaslCredentials::default().with_username("guest").with_password("guest");
 
         assert!(c.format().identity == check.identity);
         assert!(c.format().secret == check.secret);

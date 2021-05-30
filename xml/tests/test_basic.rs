@@ -371,4 +371,3 @@ fn test_mut_finding() {
     let v: Vec<_> = root.find("list").unwrap().find_all("item").map(|x| x.text()).collect();
     assert_eq!(&v, &["wat", "wat", "wat"]);
 }
-
