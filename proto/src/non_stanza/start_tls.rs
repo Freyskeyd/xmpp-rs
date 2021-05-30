@@ -14,7 +14,7 @@ impl From<StartTls> for Packet {
 impl FromXmlElement for StartTls {
     type Error = PacketParsingError;
 
-    fn from_element(_: Element) -> Result<Self, Self::Error>
+    fn from_element(_: &Element) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {

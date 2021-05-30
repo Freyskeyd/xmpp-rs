@@ -8,6 +8,18 @@ pub struct Auth {
     challenge: Option<String>,
 }
 
+impl Auth {
+    /// Get a reference to the auth's challenge.
+    pub fn challenge(&self) -> &Option<String> {
+        &self.challenge
+    }
+
+    /// Get a reference to the auth's mechanism.
+    pub fn mechanism(&self) -> Option<&str> {
+        self.mechanism.as_ref().map(|v| v.as_ref())
+    }
+}
+
 impl From<Auth> for Packet {
     fn from(s: Auth) -> Self {
         NonStanza::Auth(s).into()
@@ -16,7 +28,7 @@ impl From<Auth> for Packet {
 
 impl FromXmlElement for Auth {
     type Error = std::io::Error;
-    fn from_element(e: Element) -> Result<Self, Self::Error> {
+    fn from_element(e: &Element) -> Result<Self, Self::Error> {
         let p = Self {
             mechanism: e.get_attr("mechanism").map(|mechanism| mechanism.to_string()),
             challenge: Some(e.text().to_string()),

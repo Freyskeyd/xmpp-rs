@@ -24,7 +24,7 @@ impl ToXmlElement for Element {
 /// FromXmlElement is used to transform an Element to an object
 pub trait FromXmlElement {
     type Error;
-    fn from_element(e: Element) -> Result<Self, Self::Error>
+    fn from_element(e: &Element) -> Result<Self, Self::Error>
     where
         Self: Sized;
 }

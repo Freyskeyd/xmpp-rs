@@ -1,104 +1,150 @@
-use crate::{listeners::TcpSession, XmppCodec};
-use std::{
-    fs::File,
-    io::{self, BufReader},
-    net::SocketAddr,
-    path::Path,
-    str::FromStr,
-    sync::Arc,
-};
-
-use actix::{prelude::*, spawn};
-use log::info;
-use tokio::net::TcpStream;
-use tokio_rustls::{
-    rustls::{
-        internal::pemfile::{certs, pkcs8_private_keys},
-        Certificate, NoClientAuth, PrivateKey, ServerConfig,
-    },
-    TlsAcceptor,
-};
-use tokio_util::codec::FramedRead;
-
 use crate::router::Router;
+use crate::{
+    listeners::XmppStream,
+    sessions::{manager::SessionManager, state::SessionState, unauthenticated::UnauthenticatedSession, SessionManagementPacket, SessionManagementPacketResult},
+    XmppCodec,
+};
+use actix::{prelude::*, Message};
+use actix_codec::{Decoder, Encoder};
+use bytes::BytesMut;
+use std::io;
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpStream,
+    sync::mpsc::{self, Receiver, Sender},
+};
 
-pub(crate) struct TcpListener {
-    acceptor: TlsAcceptor,
-    sessions: Vec<Addr<TcpSession>>,
-}
-
-impl TcpListener {
-    pub(crate) fn new(acceptor: TlsAcceptor) -> Self {
-        Self { acceptor, sessions: Vec::new() }
-    }
-
-    pub(crate) fn start(_s: &str, router: Addr<Router>, cert: &Path, keys: &Path) -> Result<Addr<Self>, ()> {
-        // Create server listener
-        let socket_addr = SocketAddr::from_str("127.0.0.1:5222").unwrap();
-
-        let certs = load_certs(cert).unwrap();
-        let mut keys = load_keys(keys).unwrap();
-
-        let mut config = ServerConfig::new(NoClientAuth::new());
-        config.set_single_cert(certs, keys.remove(0)).map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err)).unwrap();
-        let acceptor = TlsAcceptor::from(Arc::new(config));
-
-        let addr = Self::create(|_ctx| Self::new(acceptor));
-        let tcp_listener = addr.clone();
-
-        spawn(async move {
-            // Openning TCP to prepare for STARTLS
-            let listener = tokio::net::TcpListener::bind(&socket_addr).await.unwrap();
-
-            while let Ok((stream, socket_addr)) = listener.accept().await {
-                tcp_listener.do_send(NewSession(stream, socket_addr, router.clone()));
-            }
-        });
-
-        Ok(addr)
-    }
-}
-
-impl Actor for TcpListener {
-    type Context = Context<Self>;
-
-    fn started(&mut self, _ctx: &mut Self::Context) {}
-}
-
-impl Handler<NewSession> for TcpListener {
-    type Result = ResponseActFuture<Self, ()>;
-    fn handle(&mut self, msg: NewSession, _ctx: &mut Self::Context) -> Self::Result {
-        info!("New TCP Session asked");
-
-        let router = msg.2.clone();
-
-        let acceptor = self.acceptor.clone();
-
-        let fut = async move { TcpSession::handle_stream(msg.0, acceptor).await }.into_actor(self).map(|stream, act, _ctx| {
-            let session = TcpSession::create(|ctx| {
-                let (r, w) = tokio::io::split(stream.inner);
-
-                TcpSession::add_stream(FramedRead::new(r, XmppCodec::new()), ctx);
-                TcpSession::new(0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx))
-            });
-
-            act.sessions.push(session)
-        });
-
-        Box::pin(fut)
-    }
-}
-
-// Move to utils?
-fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
-    certs(&mut BufReader::new(File::open(path)?)).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
-}
-
-fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
-    let f = File::open(path)?;
-    pkcs8_private_keys(&mut BufReader::new(f)).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
-}
+pub(crate) mod listener;
+pub(crate) mod session;
 
 #[derive(Message)]
 #[rtype("()")]
 pub struct NewSession(pub TcpStream, pub std::net::SocketAddr, pub Addr<Router>);
+
+#[derive(Message)]
+#[rtype("Result<XmppStream, ()>")]
+pub struct TcpOpenStream {
+    stream: TcpStream,
+    acceptor: tokio_rustls::TlsAcceptor,
+}
+
+impl Handler<TcpOpenStream> for UnauthenticatedSession {
+    type Result = ResponseFuture<Result<XmppStream, ()>>;
+
+    fn handle(&mut self, msg: TcpOpenStream, _ctx: &mut Self::Context) -> Self::Result {
+        println!("Opening TCP");
+        let mut stream = msg.stream;
+        let acceptor = msg.acceptor;
+        let mut state = self.state;
+        let mut buf = BytesMut::with_capacity(4096);
+        let mut codec = XmppCodec::new();
+
+        let fut = async move {
+            let (tx, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
+            loop {
+                stream.readable().await.unwrap();
+
+                match stream.read_buf(&mut buf).await {
+                    Ok(0) => {}
+                    Ok(_) => {
+                        if let Ok(Some(packet)) = codec.decode(&mut buf) {
+                            println!("Sending packet to manager");
+                            SessionManager::from_registry().do_send(SessionManagementPacket {
+                                session_state: state,
+                                packet,
+                                referer: tx.clone(),
+                            });
+                        }
+                    }
+                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                        continue;
+                    }
+                    Err(e) => {
+                        println!("err: {:?}", e);
+                        break;
+                    }
+                }
+
+                if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
+                    state = session_state;
+
+                    println!("SessionState is {:?}", session_state);
+
+                    packets.into_iter().for_each(|packet| {
+                        if let Err(e) = codec.encode(packet, &mut buf) {
+                            println!("Error: {:?}", e);
+                        }
+                    });
+
+                    if let Err(e) = stream.write_buf(&mut buf).await {
+                        println!("{:?}", e);
+                    }
+
+                    if let Err(e) = stream.flush().await {
+                        println!("{:?}", e);
+                    }
+                    match session_state {
+                        SessionState::Negociating => break,
+                        _ => continue,
+                    }
+                }
+            }
+
+            println!("Session switching to TLS");
+            let mut tls_stream = acceptor.accept(stream).await.unwrap();
+            state = SessionState::Negociated;
+            let mut buf = BytesMut::with_capacity(4096);
+
+            loop {
+                match tls_stream.read_buf(&mut buf).await {
+                    Ok(0) => {}
+                    Ok(_) => {
+                        if let Ok(Some(packet)) = codec.decode(&mut buf) {
+                            println!("Sending packet to manager");
+                            SessionManager::from_registry().do_send(SessionManagementPacket {
+                                session_state: state,
+                                packet,
+                                referer: tx.clone(),
+                            });
+                        }
+                    }
+                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                        continue;
+                    }
+                    Err(e) => {
+                        // return Err(e.into());
+                        println!("err: {:?}", e);
+                        break;
+                    }
+                }
+
+                if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
+                    state = session_state;
+
+                    println!("SessionState is {:?}", session_state);
+
+                    packets.into_iter().for_each(|packet| {
+                        if let Err(e) = codec.encode(packet, &mut buf) {
+                            println!("Error: {:?}", e);
+                        }
+                    });
+
+                    if let Err(e) = tls_stream.write_buf(&mut buf).await {
+                        println!("{:?}", e);
+                    }
+
+                    if let Err(e) = tls_stream.flush().await {
+                        println!("{:?}", e);
+                    }
+                    match session_state {
+                        SessionState::Negociating => break,
+                        _ => continue,
+                    }
+                }
+            }
+
+            Ok(XmppStream { inner: Box::new(tls_stream) })
+        };
+        Box::pin(fut)
+    }
+}

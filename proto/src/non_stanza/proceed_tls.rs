@@ -25,7 +25,7 @@ impl ToXmlElement for ProceedTls {
 
 impl FromXmlElement for ProceedTls {
     type Error = std::io::Error;
-    fn from_element(e: Element) -> Result<Self, Self::Error> {
+    fn from_element(e: &Element) -> Result<Self, Self::Error> {
         let p = Self {
             mechanism: e.get_attr("mechanism").map(|mechanism| mechanism.to_string()),
             challenge: Some(e.text().to_string()),

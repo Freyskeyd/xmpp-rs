@@ -1,6 +1,7 @@
 use xmpp_xml::Element;
 
 mod auth;
+mod bind;
 mod open_stream;
 mod proceed_tls;
 mod sasl_success;
@@ -8,13 +9,14 @@ mod start_tls;
 mod stream_features;
 
 pub use auth::*;
+pub use bind::*;
 pub use open_stream::*;
 pub use proceed_tls::*;
 pub use sasl_success::*;
 pub use start_tls::*;
 pub use stream_features::*;
 
-use crate::{ns, ToXmlElement};
+use crate::ToXmlElement;
 
 /// Define a sub part of a Packet, a NonStanza is the representation of an XML Stream event.
 /// It's used by the system to deal with the communication between entities over a network.
@@ -26,6 +28,7 @@ pub enum NonStanza {
     SASLSuccess(SASLSuccess),
     StreamFeatures(StreamFeatures),
     Auth(Auth),
+    Bind(Bind),
 }
 
 impl ToXmlElement for NonStanza {
@@ -33,12 +36,13 @@ impl ToXmlElement for NonStanza {
 
     fn to_element(&self) -> Result<Element, Self::Error> {
         match self {
+            NonStanza::Auth(_) => Err(std::io::Error::new(std::io::ErrorKind::Other, "shouldn't be sent back")),
+            NonStanza::Bind(s) => s.to_element(),
             NonStanza::OpenStream(s) => s.to_element(),
-            NonStanza::StreamFeatures(s) => s.to_element(),
-            NonStanza::StartTls(_) => Err(std::io::Error::new(std::io::ErrorKind::Other, "shouldn't be sent back")),
             NonStanza::ProceedTls(s) => s.to_element(),
             NonStanza::SASLSuccess(s) => s.to_element(),
-            NonStanza::Auth(_) => Err(std::io::Error::new(std::io::ErrorKind::Other, "shouldn't be sent back")),
+            NonStanza::StartTls(_) => Err(std::io::Error::new(std::io::ErrorKind::Other, "shouldn't be sent back")),
+            NonStanza::StreamFeatures(s) => s.to_element(),
         }
     }
 }

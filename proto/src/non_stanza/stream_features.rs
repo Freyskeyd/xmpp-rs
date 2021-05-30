@@ -11,7 +11,7 @@ pub struct StreamFeatures {
 impl FromXmlElement for StreamFeatures {
     type Error = std::io::Error;
 
-    fn from_element(e: Element) -> Result<Self, Self::Error>
+    fn from_element(e: &Element) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {

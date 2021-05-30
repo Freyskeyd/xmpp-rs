@@ -114,7 +114,7 @@ impl ToXmlElement for GenericIq {
 
 impl FromXmlElement for GenericIq {
     type Error = io::Error;
-    fn from_element(e: Element) -> Result<Self, io::Error> {
+    fn from_element(e: &Element) -> Result<Self, io::Error> {
         let id = match e.get_attr("id") {
             Some(id) => id.to_string(),
             None => return Err(io::Error::new(io::ErrorKind::InvalidInput, "ID is required")),
@@ -204,7 +204,7 @@ impl FromXmlElement for GenericIq {
             iq_type,
             to,
             from,
-            element: Some(e),
+            element: Some(e.clone()),
             // error,
         })
     }

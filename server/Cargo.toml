@@ -53,3 +53,4 @@ xmpp-proto = { path = "../proto" }
 sasl = "*"
 
 derive_builder = "0.10.0"
+
