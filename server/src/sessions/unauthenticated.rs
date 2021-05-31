@@ -1,6 +1,6 @@
 use crate::{
     parser::codec::XmppCodec,
-    sessions::{manager::SessionManager, state::SessionState, GetPacket, SessionManagementPacket, SessionManagementPacketResult},
+    sessions::{manager::SessionManager, state::SessionState, SessionManagementPacket, SessionManagementPacketResult},
 };
 use actix::{Actor, Context, Handler, SystemService};
 use actix_codec::Encoder;

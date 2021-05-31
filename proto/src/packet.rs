@@ -89,7 +89,7 @@ impl Packet {
     pub fn write_to_stream<W: Write>(&self, mut stream: W) -> Result<(), std::io::Error> {
         match self {
             Packet::NonStanza(s) if matches!(**s, NonStanza::CloseStream(_)) => {
-                stream.write(b"</stream:stream>")?;
+                stream.write_all(b"</stream:stream>")?;
                 Ok(())
             }
             Packet::NonStanza(s) if matches!(**s, NonStanza::OpenStream(_)) => Ok(s.to_element()?.to_writer(stream)?),

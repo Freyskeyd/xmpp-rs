@@ -1,9 +1,9 @@
 use circular::Buffer;
 use log::{error, trace};
-use std::{borrow::Cow, io::Write, str::FromStr};
+use std::{borrow::Cow, io::Write};
 use xml::{attribute::OwnedAttribute, name::OwnedName, namespace::Namespace, reader::ErrorKind as XmlErrorKind};
 use xml::{reader::XmlEvent, EventReader, ParserConfig};
-use xmpp_proto::{ns, CloseStream, NonStanza, Packet, PacketParsingError};
+use xmpp_proto::{ns, CloseStream, Packet, PacketParsingError};
 
 pub struct PacketSink {
     pub parser: EventReader<Buffer>,

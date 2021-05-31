@@ -23,16 +23,13 @@ impl Handler<AuthenticationRequest> for AuthenticationManager {
     type Result = ();
 
     fn handle(&mut self, msg: AuthenticationRequest, _ctx: &mut Self::Context) -> Self::Result {
-        match msg.packet.mechanism() {
-            Some("PLAIN") => {
-                let mut response = SessionManagementPacketResultBuilder::default();
-                response.session_state(SessionState::Authenticated).packet(SASLSuccess::default().into());
+        if let Some("PLAIN") = msg.packet.mechanism() {
+            let mut response = SessionManagementPacketResultBuilder::default();
+            response.session_state(SessionState::Authenticated).packet(SASLSuccess::default().into());
 
-                if let Ok(res) = response.build() {
-                    res.send(msg.referer)
-                }
+            if let Ok(res) = response.build() {
+                res.send(msg.referer)
             }
-            _ => (),
         }
     }
 }

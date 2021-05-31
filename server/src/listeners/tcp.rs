@@ -2,15 +2,15 @@ use crate::router::Router;
 use crate::{
     listeners::XmppStream,
     parser::codec::XmppCodec,
-    sessions::{manager::SessionManager, state::SessionState, unauthenticated::UnauthenticatedSession, SessionManagementPacket, SessionManagementPacketResult},
+    sessions::{state::SessionState, unauthenticated::UnauthenticatedSession, SessionManagementPacketResult},
 };
 use actix::{prelude::*, Message};
-use actix_codec::{Decoder, Encoder};
+use actix_codec::Decoder;
 use bytes::BytesMut;
 use log::{error, trace};
 use std::io;
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::AsyncReadExt,
     net::TcpStream,
     sync::mpsc::{self, Receiver, Sender},
 };
@@ -90,14 +90,11 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                                 Err(_) => break,
                             }
                         }
-                        match state {
-                            SessionState::Closing => {
-                                // TODO: remove unwrap
-                                let (inner_stream, _) = tls_stream.into_inner();
-                                let _ = inner_stream.into_std().unwrap().shutdown(std::net::Shutdown::Both);
-                                return Err(());
-                            }
-                            _ => {}
+                        if state == SessionState::Closing {
+                            // TODO: remove unwrap
+                            let (inner_stream, _) = tls_stream.into_inner();
+                            let _ = inner_stream.into_std().unwrap().shutdown(std::net::Shutdown::Both);
+                            return Err(());
                         }
                     }
                     Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
