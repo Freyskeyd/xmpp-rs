@@ -116,23 +116,20 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::router::Router</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">listeners::XmppStream</span>,
     <span class="ident">parser::codec::XmppCodec</span>,
-    <span class="ident">sessions</span>::{<span class="ident">manager::SessionManager</span>, <span class="ident">state::SessionState</span>, <span class="ident">unauthenticated::UnauthenticatedSession</span>, <span class="ident">SessionManagementPacket</span>, <span class="ident">SessionManagementPacketResult</span>},
+    <span class="ident">sessions</span>::{<span class="ident">state::SessionState</span>, <span class="ident">unauthenticated::UnauthenticatedSession</span>, <span class="ident">SessionManagementPacketResult</span>},
 };
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">Message</span>};
-<span class="kw">use</span> <span class="ident">actix_codec</span>::{<span class="ident">Decoder</span>, <span class="ident">Encoder</span>};
+<span class="kw">use</span> <span class="ident">actix_codec::Decoder</span>;
 <span class="kw">use</span> <span class="ident">bytes::BytesMut</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">trace</span>};
 <span class="kw">use</span> <span class="ident">std::io</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::{
-    <span class="ident">io</span>::{<span class="ident">AsyncReadExt</span>, <span class="ident">AsyncWriteExt</span>},
+    <span class="ident">io::AsyncReadExt</span>,
     <span class="ident">net::TcpStream</span>,
     <span class="ident">sync::mpsc</span>::{<span class="self">self</span>, <span class="ident">Receiver</span>, <span class="ident">Sender</span>},
 };
@@ -212,14 +209,11 @@
                                 <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
                             }
                         }
-                        <span class="kw">match</span> <span class="ident">state</span> {
-                            <span class="ident">SessionState::Closing</span> <span class="op">=</span><span class="op">&gt;</span> {
-                                <span class="comment">// TODO: remove unwrap</span>
-                                <span class="kw">let</span> (<span class="ident">inner_stream</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">tls_stream</span>.<span class="ident">into_inner</span>();
-                                <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">inner_stream</span>.<span class="ident">into_std</span>().<span class="ident">unwrap</span>().<span class="ident">shutdown</span>(<span class="ident">std::net::Shutdown::Both</span>);
-                                <span class="kw">return</span> <span class="prelude-val">Err</span>(());
-                            }
-                            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
+                        <span class="kw">if</span> <span class="ident">state</span> <span class="op">=</span><span class="op">=</span> <span class="ident">SessionState::Closing</span> {
+                            <span class="comment">// TODO: remove unwrap</span>
+                            <span class="kw">let</span> (<span class="ident">inner_stream</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">tls_stream</span>.<span class="ident">into_inner</span>();
+                            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">inner_stream</span>.<span class="ident">into_std</span>().<span class="ident">unwrap</span>().<span class="ident">shutdown</span>(<span class="ident">std::net::Shutdown::Both</span>);
+                            <span class="kw">return</span> <span class="prelude-val">Err</span>(());
                         }
                     }
                     <span class="prelude-val">Err</span>(<span class="kw-2">ref</span> <span class="ident">e</span>) <span class="kw">if</span> <span class="ident">e</span>.<span class="ident">kind</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">io::ErrorKind::WouldBlock</span> <span class="op">=</span><span class="op">&gt;</span> {

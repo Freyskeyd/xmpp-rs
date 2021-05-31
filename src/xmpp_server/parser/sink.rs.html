@@ -86,10 +86,10 @@
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">circular::Buffer</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">trace</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">borrow::Cow</span>, <span class="ident">io::Write</span>, <span class="ident">str::FromStr</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">borrow::Cow</span>, <span class="ident">io::Write</span>};
 <span class="kw">use</span> <span class="ident">xml</span>::{<span class="ident">attribute::OwnedAttribute</span>, <span class="ident">name::OwnedName</span>, <span class="ident">namespace::Namespace</span>, <span class="ident">reader::ErrorKind</span> <span class="kw">as</span> <span class="ident">XmlErrorKind</span>};
 <span class="kw">use</span> <span class="ident">xml</span>::{<span class="ident">reader::XmlEvent</span>, <span class="ident">EventReader</span>, <span class="ident">ParserConfig</span>};
-<span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">ns</span>, <span class="ident">CloseStream</span>, <span class="ident">NonStanza</span>, <span class="ident">Packet</span>, <span class="ident">PacketParsingError</span>};
+<span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">ns</span>, <span class="ident">CloseStream</span>, <span class="ident">Packet</span>, <span class="ident">PacketParsingError</span>};
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PacketSink</span> {
     <span class="kw">pub</span> <span class="ident">parser</span>: <span class="ident">EventReader</span><span class="op">&lt;</span><span class="ident">Buffer</span><span class="op">&gt;</span>,
