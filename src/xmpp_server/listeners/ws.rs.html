@@ -40,7 +40,6 @@
 <span id="37">37</span>
 <span id="38">38</span>
 <span id="39">39</span>
-<span id="40">40</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">Actor</span>, <span class="ident">ActorContext</span>, <span class="ident">StreamHandler</span>};
 <span class="kw">use</span> <span class="ident">actix_web_actors::ws</span>;
@@ -63,7 +62,6 @@
 <span class="kw">impl</span> <span class="ident">StreamHandler</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ws::Message</span>, <span class="ident">ws::ProtocolError</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyWebSocket</span> {
     <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ws::Message</span>, <span class="ident">ws::ProtocolError</span><span class="op">&gt;</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) {
         <span class="comment">// process websocket messages</span>
-        <span class="macro">println!</span>(<span class="string">&quot;WS: {:?}&quot;</span>, <span class="ident">msg</span>);
         <span class="kw">match</span> <span class="ident">msg</span> {
             <span class="comment">// Ok(ws::Message::Ping(msg)) =&gt; {</span>
             <span class="comment">//     self.hb = Instant::now();</span>

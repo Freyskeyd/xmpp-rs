@@ -34,6 +34,8 @@
 <span id="31">31</span>
 <span id="32">32</span>
 <span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::Packet</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::ToXmlElement</span>;
@@ -48,6 +50,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StreamErrorKind</span> {
     <span class="ident">HostUnknown</span>,
+    <span class="ident">NotAuthorized</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">StreamError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Packet</span> {
@@ -63,6 +66,7 @@
 
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">kind</span> {
             <span class="ident">StreamErrorKind::HostUnknown</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">root</span>.<span class="ident">append_new_child</span>((<span class="string">&quot;urn:ietf:params:xml:ns:xmpp-streams&quot;</span>, <span class="string">&quot;host-unknown&quot;</span>)),
+            <span class="ident">StreamErrorKind::NotAuthorized</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">root</span>.<span class="ident">append_new_child</span>((<span class="string">&quot;urn:ietf:params:xml:ns:xmpp-streams&quot;</span>, <span class="string">&quot;not-authorized&quot;</span>)),
         };
 
         <span class="prelude-val">Ok</span>(<span class="ident">root</span>)

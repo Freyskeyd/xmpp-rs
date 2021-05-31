@@ -114,6 +114,12 @@
 <span id="111">111</span>
 <span id="112">112</span>
 <span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">super</span><span class="ident">::session::TcpSession</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::listeners::tcp::NewSession</span>;
@@ -121,7 +127,7 @@
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::router::Router</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">listeners::XmppStream</span>, <span class="ident">parser::codec::XmppCodec</span>, <span class="ident">sessions::unauthenticated::UnauthenticatedSession</span>};
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">spawn</span>};
-<span class="kw">use</span> <span class="ident">log::info</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fs::File</span>,
     <span class="ident">io</span>::{<span class="self">self</span>, <span class="ident">BufReader</span>},
@@ -202,6 +208,7 @@
         .<span class="ident">into_actor</span>(<span class="self">self</span>)
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">res</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">XmppStream</span>, ()<span class="op">&gt;</span>, <span class="ident">act</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TcpListener</span>, <span class="ident">_ctx</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">res</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">stream</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">trace!</span>(<span class="string">&quot;Session succeed&quot;</span>);
                 <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">TcpSession::create</span>(<span class="op">|</span><span class="ident">ctx</span><span class="op">|</span> {
                     <span class="kw">let</span> (<span class="ident">r</span>, <span class="ident">w</span>) <span class="op">=</span> <span class="ident">tokio::io::split</span>(<span class="ident">stream</span>.<span class="ident">inner</span>);
 
@@ -212,7 +219,12 @@
                 <span class="ident">act</span>.<span class="ident">sessions</span>.<span class="ident">push</span>(<span class="ident">session</span>)
             }
 
-            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {}
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">error!</span>(<span class="string">&quot;Session failed&quot;</span>);
+            }
+        })
+        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {
+            <span class="macro">trace!</span>(<span class="string">&quot;Session killed&quot;</span>);
         });
 
         <span class="ident">Box::pin</span>(<span class="ident">fut</span>)

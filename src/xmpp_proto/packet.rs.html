@@ -107,6 +107,8 @@
 <span id="104">104</span>
 <span id="105">105</span>
 <span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">non_stanza::StartTls</span>, <span class="ident">ns</span>, <span class="ident">stanza::GenericIq</span>, <span class="ident">Auth</span>, <span class="ident">OpenStream</span>, <span class="ident">StreamFeatures</span>, <span class="ident">ToXmlElement</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">FromXmlElement</span>, <span class="ident">ProceedTls</span>};
@@ -114,6 +116,7 @@
 
 <span class="kw">use</span> <span class="ident">actix::Message</span>;
 <span class="kw">use</span> <span class="ident">circular::Buffer</span>;
+<span class="kw">use</span> <span class="ident">log::error</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">convert</span>::{<span class="ident">TryFrom</span>, <span class="ident">TryInto</span>},
     <span class="ident">io::Write</span>,
@@ -187,7 +190,7 @@
             (<span class="prelude-val">None</span>, <span class="string">&quot;message&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Stanza::Message</span>(<span class="ident">element</span>).<span class="ident">into</span>()),
             (<span class="prelude-val">None</span>, <span class="string">&quot;presence&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Stanza::Presence</span>(<span class="ident">element</span>).<span class="ident">into</span>()),
             <span class="ident">e</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
+                <span class="macro">error!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
                 <span class="prelude-val">Err</span>(<span class="ident">PacketParsingError::Unknown</span>)
             }
         }
@@ -201,6 +204,7 @@
                 <span class="ident">stream</span>.<span class="ident">write</span>(<span class="string">b&quot;&lt;/stream:stream&gt;&quot;</span>)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(())
             }
+            <span class="ident">Packet::NonStanza</span>(<span class="ident">s</span>) <span class="kw">if</span> <span class="macro">matches!</span>(<span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">s</span>, <span class="ident">NonStanza::OpenStream</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">s</span>.<span class="ident">to_element</span>()<span class="question-mark">?</span>.<span class="ident">to_writer</span>(<span class="ident">stream</span>)<span class="question-mark">?</span>),
             <span class="ident">Packet::NonStanza</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">s</span>.<span class="ident">to_element</span>()<span class="question-mark">?</span>.<span class="ident">to_writer_with_options</span>(<span class="ident">stream</span>, <span class="ident">WriteOptions::new</span>().<span class="ident">set_xml_prolog</span>(<span class="prelude-val">None</span>))<span class="question-mark">?</span>),
             <span class="ident">Packet::Stanza</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">s</span>.<span class="ident">to_element</span>()<span class="question-mark">?</span>.<span class="ident">to_writer_with_options</span>(<span class="ident">stream</span>, <span class="ident">WriteOptions::new</span>().<span class="ident">set_xml_prolog</span>(<span class="prelude-val">None</span>))<span class="question-mark">?</span>),
         }

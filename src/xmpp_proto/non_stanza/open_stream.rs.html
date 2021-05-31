@@ -146,9 +146,6 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ns</span>, <span class="ident">NonStanza</span>, <span class="ident">Packet</span>, <span class="ident">PacketParsingError</span>, <span class="ident">ToXmlElement</span>};
 <span class="kw">use</span> <span class="ident">uuid::Uuid</span>;
@@ -239,10 +236,7 @@
     <span class="kw">use</span> <span class="ident">circular::Buffer</span>;
     <span class="kw">use</span> <span class="ident">std::io::Write</span>;
 
-    <span class="kw">use</span> <span class="ident">xmpp_xml</span>::{
-        <span class="ident">xml</span>::{<span class="ident">reader::XmlEvent</span>, <span class="ident">ParserConfig</span>},
-        <span class="ident">WriteOptions</span>,
-    };
+    <span class="kw">use</span> <span class="ident">xmpp_xml::xml</span>::{<span class="ident">reader::XmlEvent</span>, <span class="ident">ParserConfig</span>};
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">from</span>() {
@@ -276,7 +270,7 @@
         <span class="kw">let</span> <span class="ident">to</span>: <span class="ident">String</span> <span class="op">=</span> <span class="string">&quot;jid@localhost&quot;</span>.<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">from</span>: <span class="ident">String</span> <span class="op">=</span> <span class="string">&quot;localhost&quot;</span>.<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">format!</span>(
-            <span class="string">r#&quot;&lt;stream:stream xmlns=&quot;jabber:client&quot; xmlns:stream=&quot;http://etherx.jabber.org/streams&quot; from=&quot;{from}&quot; id=&quot;{id}&quot; xml:lang=&quot;{lang}&quot; to=&quot;{to}&quot; version=&quot;{version}&quot;&gt;&quot;#</span>,
+            <span class="string">r#&quot;&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;&lt;stream:stream xmlns=&quot;jabber:client&quot; xmlns:stream=&quot;http://etherx.jabber.org/streams&quot; from=&quot;{from}&quot; id=&quot;{id}&quot; xml:lang=&quot;{lang}&quot; to=&quot;{to}&quot; version=&quot;{version}&quot;&gt;&quot;#</span>,
             <span class="ident">id</span> <span class="op">=</span> <span class="ident">id</span>,
             <span class="ident">lang</span> <span class="op">=</span> <span class="ident">lang</span>,
             <span class="ident">from</span> <span class="op">=</span> <span class="ident">from</span>,
@@ -291,11 +285,11 @@
         <span class="macro">assert!</span>(<span class="macro">matches!</span>(<span class="ident">open_stream</span>, <span class="prelude-val">Ok</span>(<span class="ident">OpenStream</span> { .. })));
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">open_stream</span>.<span class="ident">unwrap</span>().<span class="ident">to_element</span>().<span class="ident">unwrap</span>().<span class="ident">to_writer_with_options</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">output</span>, <span class="ident">WriteOptions::new</span>().<span class="ident">set_xml_prolog</span>(<span class="prelude-val">None</span>));
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">open_stream</span>.<span class="ident">unwrap</span>().<span class="ident">to_element</span>().<span class="ident">unwrap</span>().<span class="ident">to_writer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">output</span>);
 
         <span class="kw">let</span> <span class="ident">generated</span> <span class="op">=</span> <span class="ident">String::from_utf8</span>(<span class="ident">output</span>).<span class="ident">unwrap</span>();
 
-        <span class="macro">assert!</span>(<span class="ident">expected</span> <span class="op">=</span><span class="op">=</span> <span class="ident">generated</span>);
+        <span class="macro">assert!</span>(<span class="ident">expected</span> <span class="op">=</span><span class="op">=</span> <span class="ident">generated</span>, <span class="string">&quot;{} != {}&quot;</span>, <span class="ident">expected</span>, <span class="ident">generated</span>);
     }
 }
 </pre></div>
