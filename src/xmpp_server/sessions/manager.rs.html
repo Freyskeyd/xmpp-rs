@@ -136,13 +136,54 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">sessions</span>::{<span class="ident">state::SessionState</span>, <span class="ident">AuthenticationRequest</span>, <span class="ident">SessionManagementPacket</span>, <span class="ident">SessionManagementPacketResultBuilder</span>},
     <span class="ident">AuthenticationManager</span>,
 };
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">Actor</span>, <span class="ident">Context</span>, <span class="ident">Handler</span>, <span class="ident">Supervised</span>, <span class="ident">SystemService</span>};
-<span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">ns</span>, <span class="ident">Bind</span>, <span class="ident">Features</span>, <span class="ident">FromXmlElement</span>, <span class="ident">GenericIq</span>, <span class="ident">IqType</span>, <span class="ident">NonStanza</span>, <span class="ident">OpenStream</span>, <span class="ident">Packet</span>, <span class="ident">ProceedTls</span>, <span class="ident">StreamFeatures</span>};
+<span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">ns</span>, <span class="ident">Bind</span>, <span class="ident">CloseStream</span>, <span class="ident">Features</span>, <span class="ident">FromXmlElement</span>, <span class="ident">GenericIq</span>, <span class="ident">IqType</span>, <span class="ident">NonStanza</span>, <span class="ident">OpenStream</span>, <span class="ident">Packet</span>, <span class="ident">ProceedTls</span>, <span class="ident">StreamError</span>, <span class="ident">StreamErrorKind</span>, <span class="ident">StreamFeatures</span>};
 <span class="kw">use</span> <span class="ident">xmpp_xml::Element</span>;
 
 <span class="doccomment">/// Manage sessions on a node</span>
@@ -165,12 +206,24 @@
                         <span class="ident">OpenStream</span> {
                             <span class="ident">id</span>,
                             <span class="ident">to</span>: <span class="ident">from</span>,
-                            <span class="ident">from</span>: <span class="ident">to</span>,
+                            <span class="ident">from</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;localhost&quot;</span>.<span class="ident">into</span>()),
                             <span class="ident">lang</span>,
                             <span class="ident">version</span>,
                         }
                         .<span class="ident">into</span>(),
                     );
+
+                    <span class="kw">if</span> <span class="ident">to</span> <span class="op">!</span><span class="op">=</span> <span class="prelude-val">Some</span>(<span class="string">&quot;localhost&quot;</span>.<span class="ident">into</span>()) {
+                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">res</span>) <span class="op">=</span> <span class="ident">response</span>
+                            .<span class="ident">packet</span>(<span class="ident">StreamError</span> { <span class="ident">kind</span>: <span class="ident">StreamErrorKind::HostUnknown</span> }.<span class="ident">into</span>())
+                            .<span class="ident">packet</span>(<span class="ident">CloseStream</span> {}.<span class="ident">into</span>())
+                            .<span class="ident">session_state</span>(<span class="ident">SessionState::Closing</span>)
+                            .<span class="ident">build</span>()
+                        {
+                            <span class="ident">res</span>.<span class="ident">send</span>(<span class="ident">packet</span>.<span class="ident">referer</span>);
+                        }
+                        <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+                    }
 
                     <span class="kw">match</span> <span class="ident">packet</span>.<span class="ident">session_state</span> {
                         <span class="ident">SessionState::Opening</span> <span class="op">=</span><span class="op">&gt;</span> {
@@ -190,9 +243,22 @@
                         <span class="ident">SessionState::Authenticated</span> <span class="op">=</span><span class="op">&gt;</span> {
                             <span class="ident">response</span>.<span class="ident">packet</span>(<span class="ident">StreamFeatures</span> { <span class="ident">features</span>: <span class="ident">Features::Bind</span> }.<span class="ident">into</span>()).<span class="ident">session_state</span>(<span class="ident">SessionState::Binding</span>);
                         }
-                        <span class="ident">SessionState::Negociating</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(()),
-                        <span class="ident">SessionState::Authenticating</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(()),
-                        <span class="ident">SessionState::Binding</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(()),
+                        <span class="ident">SessionState::Negociating</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="macro">println!</span>(<span class="string">&quot;Something failed in manager&quot;</span>);
+                            <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                        }
+                        <span class="ident">SessionState::Authenticating</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="macro">println!</span>(<span class="string">&quot;Something failed in manager&quot;</span>);
+                            <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                        }
+                        <span class="ident">SessionState::Binding</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="macro">println!</span>(<span class="string">&quot;Something failed in manager&quot;</span>);
+                            <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                        }
+                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="macro">println!</span>(<span class="string">&quot;Something failed in manager&quot;</span>);
+                            <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                        }
                     }
                 }
 
@@ -205,7 +271,11 @@
                     <span class="ident">AuthenticationManager::from_registry</span>().<span class="ident">do_send</span>(<span class="ident">AuthenticationRequest::new</span>(<span class="ident">e</span>, <span class="ident">packet</span>.<span class="ident">referer</span>));
                     <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
                 }
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(()),
+
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">println!</span>(<span class="string">&quot;Something failed in manager&quot;</span>);
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                }
             },
 
             <span class="ident">Packet::Stanza</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="kw-2">*</span><span class="ident">stanza</span> {
@@ -230,18 +300,30 @@
                                             <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">GenericIq::from_element</span>(<span class="kw-2">&amp;</span><span class="ident">result_element</span>).<span class="ident">unwrap</span>();
                                             <span class="macro">println!</span>(<span class="string">&quot;Respond with : {:?}&quot;</span>, <span class="ident">result</span>);
                                             <span class="comment">// its bind</span>
-                                            <span class="ident">response</span>.<span class="ident">packet</span>(<span class="ident">result</span>.<span class="ident">into</span>());
+                                            <span class="ident">response</span>.<span class="ident">packet</span>(<span class="ident">result</span>.<span class="ident">into</span>()).<span class="ident">session_state</span>(<span class="ident">SessionState::Binded</span>);
                                         }
-                                        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(()),
+                                        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                                            <span class="macro">println!</span>(<span class="string">&quot;Something failed in manager&quot;</span>);
+                                            <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                                        }
                                     }
                                 }
-                                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(()),
+                                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                                    <span class="macro">println!</span>(<span class="string">&quot;Something failed in manager&quot;</span>);
+                                    <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                                }
                             }
                         }
-                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(()),
+                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="macro">println!</span>(<span class="string">&quot;Something failed in manager&quot;</span>);
+                            <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                        }
                     }
                 }
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(()),
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">println!</span>(<span class="string">&quot;1. Something failed in manager&quot;</span>);
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                }
             },
         }
 

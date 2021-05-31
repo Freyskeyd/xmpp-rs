@@ -30,6 +30,11 @@
 <span id="27">27</span>
 <span id="28">28</span>
 <span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions</span>::{<span class="ident">state::SessionState</span>, <span class="ident">GetPacket</span>, <span class="ident">SessionManagementPacketResult</span>};
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">Actor</span>, <span class="ident">Context</span>, <span class="ident">Handler</span>};
@@ -43,6 +48,19 @@
 
 <span class="kw">impl</span> <span class="ident">Actor</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
     <span class="kw">type</span> <span class="ident">Context</span> <span class="op">=</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
+
+    <span class="kw">fn</span> <span class="ident">started</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) {
+        <span class="macro">println!</span>(<span class="string">&quot;Starting UnauthenticatedSession&quot;</span>);
+    }
+
+    <span class="kw">fn</span> <span class="ident">stopping</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">actix::Running</span> {
+        <span class="macro">println!</span>(<span class="string">&quot;Stopping UnauthenticatedSession&quot;</span>);
+        <span class="ident">actix::Running::Stop</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">stopped</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) {
+        <span class="macro">println!</span>(<span class="string">&quot;UnauthenticatedSession Stopped&quot;</span>);
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">Handler</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
@@ -50,14 +68,6 @@
 
     <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="ident">SessionManagementPacketResult</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="self">self</span>.<span class="ident">packets</span>.<span class="ident">push</span>(<span class="ident">packet</span>);
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Handler</span><span class="op">&lt;</span><span class="ident">GetPacket</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
-    <span class="kw">type</span> <span class="prelude-ty">Result</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span>, ()<span class="op">&gt;</span>;
-
-    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_msg</span>: <span class="ident">GetPacket</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
-        <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
     }
 }
 </pre></div>

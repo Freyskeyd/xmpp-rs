@@ -105,6 +105,15 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">super</span><span class="ident">::session::TcpSession</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::listeners::tcp::NewSession</span>;
@@ -184,9 +193,15 @@
 
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">UnauthenticatedSession::default</span>().<span class="ident">start</span>();
 
-        <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">session</span>.<span class="ident">send</span>(<span class="ident">TcpOpenStream</span> { <span class="ident">stream</span>: <span class="ident">msg</span>.<span class="number">0</span>, <span class="ident">acceptor</span> }).<span class="kw">await</span>.<span class="ident">unwrap</span>().<span class="ident">unwrap</span>() }
-            .<span class="ident">into_actor</span>(<span class="self">self</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">stream</span>: <span class="ident">XmppStream</span>, <span class="ident">act</span>, <span class="ident">_ctx</span><span class="op">|</span> {
+        <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
+            <span class="kw">match</span> <span class="ident">session</span>.<span class="ident">send</span>(<span class="ident">TcpOpenStream</span> { <span class="ident">stream</span>: <span class="ident">msg</span>.<span class="number">0</span>, <span class="ident">acceptor</span> }).<span class="kw">await</span>.<span class="ident">unwrap</span>() {
+                <span class="prelude-val">Ok</span>(<span class="ident">session</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">session</span>),
+                <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(()),
+            }
+        }
+        .<span class="ident">into_actor</span>(<span class="self">self</span>)
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">res</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">XmppStream</span>, ()<span class="op">&gt;</span>, <span class="ident">act</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TcpListener</span>, <span class="ident">_ctx</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">res</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">stream</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">TcpSession::create</span>(<span class="op">|</span><span class="ident">ctx</span><span class="op">|</span> {
                     <span class="kw">let</span> (<span class="ident">r</span>, <span class="ident">w</span>) <span class="op">=</span> <span class="ident">tokio::io::split</span>(<span class="ident">stream</span>.<span class="ident">inner</span>);
 
@@ -195,7 +210,10 @@
                 });
 
                 <span class="ident">act</span>.<span class="ident">sessions</span>.<span class="ident">push</span>(<span class="ident">session</span>)
-            });
+            }
+
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {}
+        });
 
         <span class="ident">Box::pin</span>(<span class="ident">fut</span>)
     }

@@ -16,6 +16,8 @@
 <span id="13">13</span>
 <span id="14">14</span>
 <span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
 </pre><pre class="rust">
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">SessionState</span> {
@@ -25,6 +27,8 @@
     <span class="ident">Authenticating</span>,
     <span class="ident">Authenticated</span>,
     <span class="ident">Binding</span>,
+    <span class="ident">Binded</span>,
+    <span class="ident">Closing</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">SessionState</span> {

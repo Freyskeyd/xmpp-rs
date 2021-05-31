@@ -151,6 +151,24 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::router::Router</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -239,6 +257,12 @@
                     }
                     <span class="kw">match</span> <span class="ident">session_state</span> {
                         <span class="ident">SessionState::Negociating</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                        <span class="ident">SessionState::Closing</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">shutdown</span>().<span class="kw">await</span> {
+                                <span class="macro">println!</span>(<span class="string">&quot;ERROR SHUTTING DOWN SESSION: {:?}&quot;</span>, <span class="ident">e</span>);
+                            }
+                            <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                        }
                         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">continue</span>,
                     }
                 }
@@ -250,16 +274,24 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">BytesMut::with_capacity</span>(<span class="number">4096</span>);
 
             <span class="kw">loop</span> {
-                <span class="kw">match</span> <span class="ident">tls_stream</span>.<span class="ident">read_buf</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>).<span class="kw">await</span> {
-                    <span class="prelude-val">Ok</span>(<span class="number">0</span>) <span class="op">=</span><span class="op">&gt;</span> {}
+                <span class="kw">let</span> <span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), ()<span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">tls_stream</span>.<span class="ident">read_buf</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>).<span class="kw">await</span> {
+                    <span class="prelude-val">Ok</span>(<span class="number">0</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">println!</span>(<span class="string">&quot;NO MORE BYTES&quot;</span>);
+                        <span class="prelude-val">Err</span>(())
+                    }
                     <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">packet</span>)) <span class="op">=</span> <span class="ident">codec</span>.<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>) {
                             <span class="macro">println!</span>(<span class="string">&quot;Sending packet to manager&quot;</span>);
-                            <span class="ident">SessionManager::from_registry</span>().<span class="ident">do_send</span>(<span class="ident">SessionManagementPacket</span> {
-                                <span class="ident">session_state</span>: <span class="ident">state</span>,
-                                <span class="ident">packet</span>,
-                                <span class="ident">referer</span>: <span class="ident">tx</span>.<span class="ident">clone</span>(),
-                            });
+                            <span class="ident">SessionManager::from_registry</span>()
+                                .<span class="ident">send</span>(<span class="ident">SessionManagementPacket</span> {
+                                    <span class="ident">session_state</span>: <span class="ident">state</span>,
+                                    <span class="ident">packet</span>,
+                                    <span class="ident">referer</span>: <span class="ident">tx</span>.<span class="ident">clone</span>(),
+                                })
+                                .<span class="kw">await</span>
+                                .<span class="ident">unwrap</span>()
+                        } <span class="kw">else</span> {
+                            <span class="prelude-val">Err</span>(())
                         }
                     }
                     <span class="prelude-val">Err</span>(<span class="kw-2">ref</span> <span class="ident">e</span>) <span class="kw">if</span> <span class="ident">e</span>.<span class="ident">kind</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">io::ErrorKind::WouldBlock</span> <span class="op">=</span><span class="op">&gt;</span> {
@@ -270,29 +302,33 @@
                         <span class="macro">println!</span>(<span class="string">&quot;err: {:?}&quot;</span>, <span class="ident">e</span>);
                         <span class="kw">break</span>;
                     }
-                }
+                };
 
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">SessionManagementPacketResult</span> { <span class="ident">session_state</span>, <span class="ident">packets</span> }) <span class="op">=</span> <span class="ident">rx</span>.<span class="ident">recv</span>().<span class="kw">await</span> {
-                    <span class="ident">state</span> <span class="op">=</span> <span class="ident">session_state</span>;
+                <span class="kw">if</span> <span class="ident">result</span>.<span class="ident">is_ok</span>() {
+                    <span class="macro">println!</span>(<span class="string">&quot;Waiting for response&quot;</span>);
 
-                    <span class="macro">println!</span>(<span class="string">&quot;SessionState is {:?}&quot;</span>, <span class="ident">session_state</span>);
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">SessionManagementPacketResult</span> { <span class="ident">session_state</span>, <span class="ident">packets</span> }) <span class="op">=</span> <span class="ident">rx</span>.<span class="ident">recv</span>().<span class="kw">await</span> {
+                        <span class="ident">state</span> <span class="op">=</span> <span class="ident">session_state</span>;
 
-                    <span class="ident">packets</span>.<span class="ident">into_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">packet</span><span class="op">|</span> {
-                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">codec</span>.<span class="ident">encode</span>(<span class="ident">packet</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>) {
-                            <span class="macro">println!</span>(<span class="string">&quot;Error: {:?}&quot;</span>, <span class="ident">e</span>);
+                        <span class="macro">println!</span>(<span class="string">&quot;SessionState is {:?}&quot;</span>, <span class="ident">session_state</span>);
+
+                        <span class="ident">packets</span>.<span class="ident">into_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">packet</span><span class="op">|</span> {
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">codec</span>.<span class="ident">encode</span>(<span class="ident">packet</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>) {
+                                <span class="macro">println!</span>(<span class="string">&quot;Error: {:?}&quot;</span>, <span class="ident">e</span>);
+                            }
+                        });
+
+                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">tls_stream</span>.<span class="ident">write_buf</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>).<span class="kw">await</span> {
+                            <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
                         }
-                    });
 
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">tls_stream</span>.<span class="ident">write_buf</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>).<span class="kw">await</span> {
-                        <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
-                    }
-
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">tls_stream</span>.<span class="ident">flush</span>().<span class="kw">await</span> {
-                        <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
-                    }
-                    <span class="kw">match</span> <span class="ident">session_state</span> {
-                        <span class="ident">SessionState::Negociating</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
-                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">continue</span>,
+                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">tls_stream</span>.<span class="ident">flush</span>().<span class="kw">await</span> {
+                            <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
+                        }
+                        <span class="kw">match</span> <span class="ident">session_state</span> {
+                            <span class="ident">SessionState::Negociating</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">continue</span>,
+                        }
                     }
                 }
             }

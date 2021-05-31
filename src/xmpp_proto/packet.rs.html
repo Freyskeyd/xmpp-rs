@@ -103,6 +103,10 @@
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">non_stanza::StartTls</span>, <span class="ident">ns</span>, <span class="ident">stanza::GenericIq</span>, <span class="ident">Auth</span>, <span class="ident">OpenStream</span>, <span class="ident">StreamFeatures</span>, <span class="ident">ToXmlElement</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">FromXmlElement</span>, <span class="ident">ProceedTls</span>};
@@ -191,8 +195,12 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Packet</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_to_stream</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">stream</span>: <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">std::io::Error</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_to_stream</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">stream</span>: <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">std::io::Error</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Packet::NonStanza</span>(<span class="ident">s</span>) <span class="kw">if</span> <span class="macro">matches!</span>(<span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">s</span>, <span class="ident">NonStanza::CloseStream</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">stream</span>.<span class="ident">write</span>(<span class="string">b&quot;&lt;/stream:stream&gt;&quot;</span>)<span class="question-mark">?</span>;
+                <span class="prelude-val">Ok</span>(())
+            }
             <span class="ident">Packet::NonStanza</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">s</span>.<span class="ident">to_element</span>()<span class="question-mark">?</span>.<span class="ident">to_writer_with_options</span>(<span class="ident">stream</span>, <span class="ident">WriteOptions::new</span>().<span class="ident">set_xml_prolog</span>(<span class="prelude-val">None</span>))<span class="question-mark">?</span>),
             <span class="ident">Packet::Stanza</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">s</span>.<span class="ident">to_element</span>()<span class="question-mark">?</span>.<span class="ident">to_writer_with_options</span>(<span class="ident">stream</span>, <span class="ident">WriteOptions::new</span>().<span class="ident">set_xml_prolog</span>(<span class="prelude-val">None</span>))<span class="question-mark">?</span>),
         }
