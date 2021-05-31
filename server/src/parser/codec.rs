@@ -37,13 +37,15 @@ impl Decoder for XmppCodec {
         if !self.sink.parser.source().data().is_empty() {
             trace!("Buffer contains: {}", String::from_utf8_lossy(self.sink.parser.source().data()));
         }
+
         let event = match self.sink.next_packet() {
             Some(e) => {
-                println!("Decoded Packet: {:?}", e);
+                trace!("Decoded Packet: {:?}", e);
                 Some(e)
             }
             _ => None,
         };
+
         let l = buf.len();
         let _ = buf.split_to(l);
         Ok(event)

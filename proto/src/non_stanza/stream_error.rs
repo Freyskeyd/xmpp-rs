@@ -11,6 +11,7 @@ pub struct StreamError {
 #[derive(Debug, Clone)]
 pub enum StreamErrorKind {
     HostUnknown,
+    NotAuthorized,
 }
 
 impl From<StreamError> for Packet {
@@ -26,6 +27,7 @@ impl ToXmlElement for StreamError {
 
         match self.kind {
             StreamErrorKind::HostUnknown => root.append_new_child(("urn:ietf:params:xml:ns:xmpp-streams", "host-unknown")),
+            StreamErrorKind::NotAuthorized => root.append_new_child(("urn:ietf:params:xml:ns:xmpp-streams", "not-authorized")),
         };
 
         Ok(root)

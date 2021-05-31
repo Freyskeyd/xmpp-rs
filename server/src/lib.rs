@@ -1,4 +1,5 @@
 use actix::Actor;
+use log::info;
 use router::Router;
 use std::path::Path;
 
@@ -35,8 +36,6 @@ impl ServerBuilder {
 
     pub fn keys<T: Into<String>>(mut self, keys: T) -> Self {
         self.keys = Some(keys.into());
-
-        println!("{:?}", self.keys);
 
         self
     }
@@ -80,7 +79,7 @@ impl ServerBuilder {
         // Start API
 
         tokio::signal::ctrl_c().await.unwrap();
-        println!("Ctrl-C received, shutting down");
+        info!("Ctrl-C received, shutting down");
 
         Ok(())
     }

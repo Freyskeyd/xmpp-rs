@@ -1,4 +1,5 @@
 use actix::{Actor, Context};
+use log::trace;
 
 /// Manage to route packet on a node
 #[derive(Debug)]
@@ -14,7 +15,7 @@ impl Actor for Router {
     type Context = Context<Self>;
 
     fn started(&mut self, _ctx: &mut Self::Context) {
-        println!("Router started");
+        trace!("Router started");
     }
 }
 

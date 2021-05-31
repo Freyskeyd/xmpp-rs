@@ -87,10 +87,7 @@ mod tests {
     use circular::Buffer;
     use std::io::Write;
 
-    use xmpp_xml::{
-        xml::{reader::XmlEvent, ParserConfig},
-        WriteOptions,
-    };
+    use xmpp_xml::xml::{reader::XmlEvent, ParserConfig};
 
     #[test]
     fn from() {
@@ -124,7 +121,7 @@ mod tests {
         let to: String = "jid@localhost".into();
         let from: String = "localhost".into();
         let expected = format!(
-            r#"<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" from="{from}" id="{id}" xml:lang="{lang}" to="{to}" version="{version}">"#,
+            r#"<?xml version="1.0" encoding="utf-8"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" from="{from}" id="{id}" xml:lang="{lang}" to="{to}" version="{version}">"#,
             id = id,
             lang = lang,
             from = from,
@@ -139,10 +136,10 @@ mod tests {
         assert!(matches!(open_stream, Ok(OpenStream { .. })));
 
         let mut output: Vec<u8> = Vec::new();
-        let _ = open_stream.unwrap().to_element().unwrap().to_writer_with_options(&mut output, WriteOptions::new().set_xml_prolog(None));
+        let _ = open_stream.unwrap().to_element().unwrap().to_writer(&mut output);
 
         let generated = String::from_utf8(output).unwrap();
 
-        assert!(expected == generated);
+        assert!(expected == generated, "{} != {}", expected, generated);
     }
 }

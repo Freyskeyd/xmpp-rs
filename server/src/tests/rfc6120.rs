@@ -23,7 +23,7 @@ async fn should_return_an_open_stream() {
     let (referer, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
     let response = handler.handle_packet(SessionManagementPacket {
         session_state: SessionState::Opening,
-        packet: OpenStreamBuilder::default().lang("en").version("1.0").id(Uuid::new_v4()).build().unwrap().into(),
+        packet: OpenStreamBuilder::default().to("localhost").lang("en").version("1.0").id(Uuid::new_v4()).build().unwrap().into(),
         referer,
     });
 

@@ -21,11 +21,10 @@ S2: = server2
 - [ ] XML Streams
     - [x] Opening a Stream
     - [ ] Stream Negotiation
-        - [ ] Restarts
-        - [ ] Resending Features
+        - [x] Restarts
+        - [x] Resending Features
         - [ ] Completion of Stream Negotiation
         - [ ] Determination of Addresses
-        - [ ] Flow Chart
     - [ ] Closing a Stream
     - [ ] Directionality
     - [ ] Handling of Silent Peers
@@ -65,7 +64,7 @@ S2: = server2
             - [ ] invalid-from
             - [ ] invalid-namespace
             - [ ] invalid-xml
-            - [ ] not-authorized
+            - [x] not-authorized
             - [ ] not-well-formed
             - [ ] policy-violation
             - [ ] remote-connection-failed

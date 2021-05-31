@@ -1,9 +1,9 @@
 use circular::Buffer;
-use log::trace;
-use std::{borrow::Cow, io::Write};
+use log::{error, trace};
+use std::{borrow::Cow, io::Write, str::FromStr};
 use xml::{attribute::OwnedAttribute, name::OwnedName, namespace::Namespace, reader::ErrorKind as XmlErrorKind};
 use xml::{reader::XmlEvent, EventReader, ParserConfig};
-use xmpp_proto::{Packet, PacketParsingError};
+use xmpp_proto::{ns, CloseStream, NonStanza, Packet, PacketParsingError};
 
 pub struct PacketSink {
     pub parser: EventReader<Buffer>,
@@ -11,6 +11,7 @@ pub struct PacketSink {
 
 impl PacketSink {
     fn reset(&mut self, saved_buffer: &[u8]) {
+        trace!("RESETTING stream");
         let mut cfg = ParserConfig::new().whitespace_to_characters(true);
         cfg.ignore_end_of_stream = true;
         self.parser = {
@@ -40,12 +41,20 @@ impl PacketSink {
                     XmlEvent::StartDocument { .. } => {
                         continue;
                     }
+
                     XmlEvent::StartElement { name, namespace, attributes } => {
                         if let Ok(e) = self.parse_start_element(name, namespace, attributes) {
                             return Some(e);
                         }
                     }
 
+                    XmlEvent::EndElement { name } => {
+                        if name == OwnedName::qualified("stream", ns::STREAM, Some("stream")) {
+                            return Some(CloseStream {}.into());
+                        } else {
+                            break;
+                        }
+                    }
                     e => {
                         trace!("{:?}", e);
                         continue;
@@ -62,7 +71,7 @@ impl PacketSink {
                 }
                 // Err(ref e) if e.kind().eq(&XmlErrorKind::Syntax(Cow::from("Unexpected end of stream: still inside the root element"))) => break,
                 Err(e) => {
-                    trace!("Error {:?}", e);
+                    error!("Error {:?}", e);
                     break;
                 }
             }

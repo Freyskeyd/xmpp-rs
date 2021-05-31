@@ -4,6 +4,7 @@ use crate::{NonStanza, NonStanzaTrait, Stanza};
 
 use actix::Message;
 use circular::Buffer;
+use log::error;
 use std::{
     convert::{TryFrom, TryInto},
     io::Write,
@@ -77,7 +78,7 @@ impl TryFrom<Element> for Packet {
             (None, "message") => Ok(Stanza::Message(element).into()),
             (None, "presence") => Ok(Stanza::Presence(element).into()),
             e => {
-                println!("{:?}", e);
+                error!("{:?}", e);
                 Err(PacketParsingError::Unknown)
             }
         }
@@ -91,6 +92,7 @@ impl Packet {
                 stream.write(b"</stream:stream>")?;
                 Ok(())
             }
+            Packet::NonStanza(s) if matches!(**s, NonStanza::OpenStream(_)) => Ok(s.to_element()?.to_writer(stream)?),
             Packet::NonStanza(s) => Ok(s.to_element()?.to_writer_with_options(stream, WriteOptions::new().set_xml_prolog(None))?),
             Packet::Stanza(s) => Ok(s.to_element()?.to_writer_with_options(stream, WriteOptions::new().set_xml_prolog(None))?),
         }

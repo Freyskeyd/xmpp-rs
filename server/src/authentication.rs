@@ -1,4 +1,5 @@
 use actix::prelude::*;
+use log::trace;
 use tokio::sync::mpsc::Sender;
 use xmpp_proto::{Auth, SASLSuccess};
 
@@ -14,7 +15,7 @@ impl Actor for AuthenticationManager {
     type Context = Context<Self>;
 
     fn started(&mut self, _ctx: &mut Self::Context) {
-        println!("AuthenticationManager started");
+        trace!("AuthenticationManager started");
     }
 }
 

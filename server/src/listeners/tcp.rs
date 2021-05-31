@@ -7,6 +7,7 @@ use crate::{
 use actix::{prelude::*, Message};
 use actix_codec::{Decoder, Encoder};
 use bytes::BytesMut;
+use log::{error, trace};
 use std::io;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -32,7 +33,7 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
     type Result = ResponseFuture<Result<XmppStream, ()>>;
 
     fn handle(&mut self, msg: TcpOpenStream, _ctx: &mut Self::Context) -> Self::Result {
-        println!("Opening TCP");
+        trace!("Opening TCP");
         let mut stream = msg.stream;
         let acceptor = msg.acceptor;
         let mut state = self.state;
@@ -41,85 +42,62 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
 
         let fut = async move {
             let (tx, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
+
             loop {
                 stream.readable().await.unwrap();
 
                 match stream.read_buf(&mut buf).await {
                     Ok(0) => {}
                     Ok(_) => {
-                        if let Ok(Some(packet)) = codec.decode(&mut buf) {
-                            println!("Sending packet to manager");
-                            SessionManager::from_registry().do_send(SessionManagementPacket {
-                                session_state: state,
-                                packet,
-                                referer: tx.clone(),
-                            });
+                        while let Ok(Some(packet)) = codec.decode(&mut buf) {
+                            match Self::proceed_packet(packet, state, tx.clone(), &mut rx, &mut codec, &mut stream, &mut buf).await {
+                                Ok(new_state) => state = new_state,
+                                Err(_) => break,
+                            }
+                        }
+                        match state {
+                            SessionState::Negociating => break,
+                            SessionState::Closing => {
+                                // TODO: remove unwrap
+                                let _ = stream.into_std().unwrap().shutdown(std::net::Shutdown::Both);
+                                return Err(());
+                            }
+                            _ => {}
                         }
                     }
                     Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                         continue;
                     }
                     Err(e) => {
-                        println!("err: {:?}", e);
+                        error!("err: {:?}", e);
                         break;
-                    }
-                }
-
-                if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
-                    state = session_state;
-
-                    println!("SessionState is {:?}", session_state);
-
-                    packets.into_iter().for_each(|packet| {
-                        if let Err(e) = codec.encode(packet, &mut buf) {
-                            println!("Error: {:?}", e);
-                        }
-                    });
-
-                    if let Err(e) = stream.write_buf(&mut buf).await {
-                        println!("{:?}", e);
-                    }
-
-                    if let Err(e) = stream.flush().await {
-                        println!("{:?}", e);
-                    }
-                    match session_state {
-                        SessionState::Negociating => break,
-                        SessionState::Closing => {
-                            if let Err(e) = stream.shutdown().await {
-                                println!("ERROR SHUTTING DOWN SESSION: {:?}", e);
-                            }
-                            return Err(());
-                        }
-                        _ => continue,
                     }
                 }
             }
 
-            println!("Session switching to TLS");
+            trace!("Session switching to TLS");
             let mut tls_stream = acceptor.accept(stream).await.unwrap();
             state = SessionState::Negociated;
             let mut buf = BytesMut::with_capacity(4096);
 
             loop {
-                let result: Result<(), ()> = match tls_stream.read_buf(&mut buf).await {
-                    Ok(0) => {
-                        println!("NO MORE BYTES");
-                        Err(())
-                    }
+                match tls_stream.read_buf(&mut buf).await {
+                    Ok(0) => {}
                     Ok(_) => {
-                        if let Ok(Some(packet)) = codec.decode(&mut buf) {
-                            println!("Sending packet to manager");
-                            SessionManager::from_registry()
-                                .send(SessionManagementPacket {
-                                    session_state: state,
-                                    packet,
-                                    referer: tx.clone(),
-                                })
-                                .await
-                                .unwrap()
-                        } else {
-                            Err(())
+                        while let Ok(Some(packet)) = codec.decode(&mut buf) {
+                            match Self::proceed_packet(packet, state, tx.clone(), &mut rx, &mut codec, &mut tls_stream, &mut buf).await {
+                                Ok(new_state) => state = new_state,
+                                Err(_) => break,
+                            }
+                        }
+                        match state {
+                            SessionState::Closing => {
+                                // TODO: remove unwrap
+                                let (inner_stream, _) = tls_stream.into_inner();
+                                let _ = inner_stream.into_std().unwrap().shutdown(std::net::Shutdown::Both);
+                                return Err(());
+                            }
+                            _ => {}
                         }
                     }
                     Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
@@ -127,38 +105,10 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                     }
                     Err(e) => {
                         // return Err(e.into());
-                        println!("err: {:?}", e);
+                        error!("err: {:?}", e);
                         break;
                     }
                 };
-
-                if result.is_ok() {
-                    println!("Waiting for response");
-
-                    if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
-                        state = session_state;
-
-                        println!("SessionState is {:?}", session_state);
-
-                        packets.into_iter().for_each(|packet| {
-                            if let Err(e) = codec.encode(packet, &mut buf) {
-                                println!("Error: {:?}", e);
-                            }
-                        });
-
-                        if let Err(e) = tls_stream.write_buf(&mut buf).await {
-                            println!("{:?}", e);
-                        }
-
-                        if let Err(e) = tls_stream.flush().await {
-                            println!("{:?}", e);
-                        }
-                        match session_state {
-                            SessionState::Negociating => break,
-                            _ => continue,
-                        }
-                    }
-                }
             }
 
             Ok(XmppStream { inner: Box::new(tls_stream) })

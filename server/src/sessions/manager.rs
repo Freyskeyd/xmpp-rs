@@ -3,8 +3,12 @@ use crate::{
     AuthenticationManager,
 };
 use actix::{Actor, Context, Handler, Supervised, SystemService};
+use log::{error, trace};
+use tokio::sync::mpsc::Sender;
 use xmpp_proto::{ns, Bind, CloseStream, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, StreamError, StreamErrorKind, StreamFeatures};
 use xmpp_xml::Element;
+
+use super::SessionManagementPacketResult;
 
 /// Manage sessions on a node
 #[derive(Default)]
@@ -15,8 +19,20 @@ impl SessionManager {
         Self {}
     }
 
+    fn not_authorized_and_close(mut response: SessionManagementPacketResultBuilder, referer: Sender<SessionManagementPacketResult>) -> Result<(), ()> {
+        if let Ok(res) = response
+            .packet(StreamError { kind: StreamErrorKind::NotAuthorized }.into())
+            .packet(CloseStream {}.into())
+            .session_state(SessionState::Closing)
+            .build()
+        {
+            res.send(referer);
+        }
+        Ok(())
+    }
+
     pub(crate) fn handle_packet(&self, packet: SessionManagementPacket) -> Result<(), ()> {
-        println!("Session manager receive packet");
+        trace!("Session manager receive packet");
         let mut response = SessionManagementPacketResultBuilder::default();
 
         match packet.packet {
@@ -63,21 +79,9 @@ impl SessionManager {
                         SessionState::Authenticated => {
                             response.packet(StreamFeatures { features: Features::Bind }.into()).session_state(SessionState::Binding);
                         }
-                        SessionState::Negociating => {
-                            println!("Something failed in manager");
-                            return Err(());
-                        }
-                        SessionState::Authenticating => {
-                            println!("Something failed in manager");
-                            return Err(());
-                        }
-                        SessionState::Binding => {
-                            println!("Something failed in manager");
-                            return Err(());
-                        }
-                        _ => {
-                            println!("Something failed in manager");
-                            return Err(());
+                        state => {
+                            error!("Action({:?}) at this stage isn't possible", state);
+                            return Self::not_authorized_and_close(response, packet.referer);
                         }
                     }
                 }
@@ -92,8 +96,14 @@ impl SessionManager {
                     return Ok(());
                 }
 
+                NonStanza::CloseStream(_) => {
+                    if let Ok(res) = response.session_state(SessionState::Closing).packet(CloseStream {}.into()).build() {
+                        res.send(packet.referer);
+                    }
+                    return Ok(());
+                }
                 _ => {
-                    println!("Something failed in manager");
+                    trace!("Something failed in manager");
                     return Err(());
                 }
             },
@@ -118,37 +128,37 @@ impl SessionManager {
                                                 .set_text(format!("SOME@localhost/{}", ""));
 
                                             let result = GenericIq::from_element(&result_element).unwrap();
-                                            println!("Respond with : {:?}", result);
+                                            trace!("Respond with : {:?}", result);
                                             // its bind
                                             response.packet(result.into()).session_state(SessionState::Binded);
                                         }
                                         None => {
-                                            println!("Something failed in manager");
+                                            trace!("Something failed in manager");
                                             return Err(());
                                         }
                                     }
                                 }
                                 None => {
-                                    println!("Something failed in manager");
+                                    trace!("Something failed in manager");
                                     return Err(());
                                 }
                             }
                         }
                         _ => {
-                            println!("Something failed in manager");
+                            trace!("Something failed in manager");
                             return Err(());
                         }
                     }
                 }
                 _ => {
-                    println!("1. Something failed in manager");
+                    // return Self::not_authorized_and_close(response, packet.referer);
                     return Err(());
                 }
             },
         }
 
         if let Ok(res) = response.build() {
-            println!("Sending response to referer");
+            trace!("Sending response to referer");
             res.send(packet.referer);
         }
 
@@ -163,7 +173,7 @@ impl Actor for SessionManager {
     type Context = Context<Self>;
 
     fn started(&mut self, _ctx: &mut Self::Context) {
-        println!("SessionManager started");
+        trace!("SessionManager started");
     }
 }
 

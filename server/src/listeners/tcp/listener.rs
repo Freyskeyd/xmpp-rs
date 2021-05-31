@@ -4,7 +4,7 @@ use crate::listeners::tcp::TcpOpenStream;
 use crate::router::Router;
 use crate::{listeners::XmppStream, parser::codec::XmppCodec, sessions::unauthenticated::UnauthenticatedSession};
 use actix::{prelude::*, spawn};
-use log::info;
+use log::{error, info, trace};
 use std::{
     fs::File,
     io::{self, BufReader},
@@ -85,6 +85,7 @@ impl Handler<NewSession> for TcpListener {
         .into_actor(self)
         .map(|res: Result<XmppStream, ()>, act: &mut TcpListener, _ctx| match res {
             Ok(stream) => {
+                trace!("Session succeed");
                 let session = TcpSession::create(|ctx| {
                     let (r, w) = tokio::io::split(stream.inner);
 
@@ -95,7 +96,12 @@ impl Handler<NewSession> for TcpListener {
                 act.sessions.push(session)
             }
 
-            Err(_) => {}
+            Err(_) => {
+                error!("Session failed");
+            }
+        })
+        .map(|_, _, _| {
+            trace!("Session killed");
         });
 
         Box::pin(fut)

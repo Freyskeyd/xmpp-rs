@@ -1,6 +1,7 @@
 use crate::parser::codec::XmppCodec;
 use crate::router::Router;
 use actix::{io::FramedWrite, prelude::*};
+use log::trace;
 use std::{io, pin::Pin};
 use tokio::io::AsyncWrite;
 use xmpp_proto::Packet;
@@ -22,16 +23,16 @@ impl Actor for TcpSession {
     type Context = Context<Self>;
 
     fn started(&mut self, _ctx: &mut Self::Context) {
-        println!("Starting TcpSession");
+        trace!("Starting TcpSession");
     }
 
     fn stopping(&mut self, _ctx: &mut Self::Context) -> actix::Running {
-        println!("Stopping TcpSession");
+        trace!("Stopping TcpSession");
         actix::Running::Stop
     }
 
     fn stopped(&mut self, _ctx: &mut Self::Context) {
-        println!("TcpSession Stopped");
+        trace!("TcpSession Stopped");
     }
 }
 
