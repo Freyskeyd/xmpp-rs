@@ -3,7 +3,7 @@ use crate::{
     AuthenticationManager,
 };
 use actix::{Actor, Context, Handler, Supervised, SystemService};
-use xmpp_proto::{ns, Bind, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, StreamFeatures};
+use xmpp_proto::{ns, Bind, CloseStream, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, StreamError, StreamErrorKind, StreamFeatures};
 use xmpp_xml::Element;
 
 /// Manage sessions on a node
@@ -26,12 +26,24 @@ impl SessionManager {
                         OpenStream {
                             id,
                             to: from,
-                            from: to,
+                            from: Some("localhost".into()),
                             lang,
                             version,
                         }
                         .into(),
                     );
+
+                    if to != Some("localhost".into()) {
+                        if let Ok(res) = response
+                            .packet(StreamError { kind: StreamErrorKind::HostUnknown }.into())
+                            .packet(CloseStream {}.into())
+                            .session_state(SessionState::Closing)
+                            .build()
+                        {
+                            res.send(packet.referer);
+                        }
+                        return Ok(());
+                    }
 
                     match packet.session_state {
                         SessionState::Opening => {
@@ -51,9 +63,22 @@ impl SessionManager {
                         SessionState::Authenticated => {
                             response.packet(StreamFeatures { features: Features::Bind }.into()).session_state(SessionState::Binding);
                         }
-                        SessionState::Negociating => return Err(()),
-                        SessionState::Authenticating => return Err(()),
-                        SessionState::Binding => return Err(()),
+                        SessionState::Negociating => {
+                            println!("Something failed in manager");
+                            return Err(());
+                        }
+                        SessionState::Authenticating => {
+                            println!("Something failed in manager");
+                            return Err(());
+                        }
+                        SessionState::Binding => {
+                            println!("Something failed in manager");
+                            return Err(());
+                        }
+                        _ => {
+                            println!("Something failed in manager");
+                            return Err(());
+                        }
                     }
                 }
 
@@ -66,7 +91,11 @@ impl SessionManager {
                     AuthenticationManager::from_registry().do_send(AuthenticationRequest::new(e, packet.referer));
                     return Ok(());
                 }
-                _ => return Err(()),
+
+                _ => {
+                    println!("Something failed in manager");
+                    return Err(());
+                }
             },
 
             Packet::Stanza(stanza) => match *stanza {
@@ -91,18 +120,30 @@ impl SessionManager {
                                             let result = GenericIq::from_element(&result_element).unwrap();
                                             println!("Respond with : {:?}", result);
                                             // its bind
-                                            response.packet(result.into());
+                                            response.packet(result.into()).session_state(SessionState::Binded);
                                         }
-                                        None => return Err(()),
+                                        None => {
+                                            println!("Something failed in manager");
+                                            return Err(());
+                                        }
                                     }
                                 }
-                                None => return Err(()),
+                                None => {
+                                    println!("Something failed in manager");
+                                    return Err(());
+                                }
                             }
                         }
-                        _ => return Err(()),
+                        _ => {
+                            println!("Something failed in manager");
+                            return Err(());
+                        }
                     }
                 }
-                _ => return Err(()),
+                _ => {
+                    println!("1. Something failed in manager");
+                    return Err(());
+                }
             },
         }
 

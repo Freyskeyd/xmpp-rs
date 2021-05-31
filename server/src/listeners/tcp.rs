@@ -85,6 +85,12 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                     }
                     match session_state {
                         SessionState::Negociating => break,
+                        SessionState::Closing => {
+                            if let Err(e) = stream.shutdown().await {
+                                println!("ERROR SHUTTING DOWN SESSION: {:?}", e);
+                            }
+                            return Err(());
+                        }
                         _ => continue,
                     }
                 }
@@ -96,16 +102,24 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
             let mut buf = BytesMut::with_capacity(4096);
 
             loop {
-                match tls_stream.read_buf(&mut buf).await {
-                    Ok(0) => {}
+                let result: Result<(), ()> = match tls_stream.read_buf(&mut buf).await {
+                    Ok(0) => {
+                        println!("NO MORE BYTES");
+                        Err(())
+                    }
                     Ok(_) => {
                         if let Ok(Some(packet)) = codec.decode(&mut buf) {
                             println!("Sending packet to manager");
-                            SessionManager::from_registry().do_send(SessionManagementPacket {
-                                session_state: state,
-                                packet,
-                                referer: tx.clone(),
-                            });
+                            SessionManager::from_registry()
+                                .send(SessionManagementPacket {
+                                    session_state: state,
+                                    packet,
+                                    referer: tx.clone(),
+                                })
+                                .await
+                                .unwrap()
+                        } else {
+                            Err(())
                         }
                     }
                     Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
@@ -116,29 +130,33 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                         println!("err: {:?}", e);
                         break;
                     }
-                }
+                };
 
-                if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
-                    state = session_state;
+                if result.is_ok() {
+                    println!("Waiting for response");
 
-                    println!("SessionState is {:?}", session_state);
+                    if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
+                        state = session_state;
 
-                    packets.into_iter().for_each(|packet| {
-                        if let Err(e) = codec.encode(packet, &mut buf) {
-                            println!("Error: {:?}", e);
+                        println!("SessionState is {:?}", session_state);
+
+                        packets.into_iter().for_each(|packet| {
+                            if let Err(e) = codec.encode(packet, &mut buf) {
+                                println!("Error: {:?}", e);
+                            }
+                        });
+
+                        if let Err(e) = tls_stream.write_buf(&mut buf).await {
+                            println!("{:?}", e);
                         }
-                    });
 
-                    if let Err(e) = tls_stream.write_buf(&mut buf).await {
-                        println!("{:?}", e);
-                    }
-
-                    if let Err(e) = tls_stream.flush().await {
-                        println!("{:?}", e);
-                    }
-                    match session_state {
-                        SessionState::Negociating => break,
-                        _ => continue,
+                        if let Err(e) = tls_stream.flush().await {
+                            println!("{:?}", e);
+                        }
+                        match session_state {
+                            SessionState::Negociating => break,
+                            _ => continue,
+                        }
                     }
                 }
             }

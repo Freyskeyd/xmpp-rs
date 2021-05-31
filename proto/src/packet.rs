@@ -85,8 +85,12 @@ impl TryFrom<Element> for Packet {
 }
 
 impl Packet {
-    pub fn write_to_stream<W: Write>(&self, stream: W) -> Result<(), std::io::Error> {
+    pub fn write_to_stream<W: Write>(&self, mut stream: W) -> Result<(), std::io::Error> {
         match self {
+            Packet::NonStanza(s) if matches!(**s, NonStanza::CloseStream(_)) => {
+                stream.write(b"</stream:stream>")?;
+                Ok(())
+            }
             Packet::NonStanza(s) => Ok(s.to_element()?.to_writer_with_options(stream, WriteOptions::new().set_xml_prolog(None))?),
             Packet::Stanza(s) => Ok(s.to_element()?.to_writer_with_options(stream, WriteOptions::new().set_xml_prolog(None))?),
         }

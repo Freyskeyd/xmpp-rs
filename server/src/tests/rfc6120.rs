@@ -1,16 +1,19 @@
 use std::{error::Error, io, path::PathBuf};
 
 use crate::{
+    parser::codec::XmppCodec,
     sessions::{manager::SessionManager, state::SessionState, SessionManagementPacket, SessionManagementPacketResult},
     Server,
 };
+use actix::SystemService;
+use actix_codec::Decoder;
 use bytes::BytesMut;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     sync::mpsc::{self, Receiver, Sender},
 };
 use uuid::Uuid;
-use xmpp_proto::{NonStanza, Packet};
+use xmpp_proto::{NonStanza, Packet, StreamError, StreamErrorKind};
 use xmpp_proto::{OpenStream, OpenStreamBuilder};
 
 #[tokio::test]
@@ -39,37 +42,28 @@ async fn should_return_an_open_stream() {
 
 #[actix::test]
 async fn should_return_an_open_stream_2() -> Result<(), Box<dyn Error>> {
-    actix_rt::spawn(async move {
-        let _ = Server::build().cert("./src/tests/fixtures/server.crt").keys("./src/tests/fixtures/server.key").launch().await;
-    });
+    let (referer, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
 
-    std::thread::sleep_ms(100);
-    let mut expected = String::new();
+    let response = SessionManager::from_registry()
+        .send(SessionManagementPacket {
+            session_state: SessionState::Opening,
+            packet: OpenStreamBuilder::default().to("unknownhost").lang("en").version("1.0").id(Uuid::new_v4()).build().unwrap().into(),
+            referer,
+        })
+        .await;
 
-    let mut stream = tokio::net::TcpStream::connect("localhost:5222").await?;
+    assert!(response.is_ok());
 
-    stream.write_all(b"hello world!").await?;
-    expected.push_str("SENT:\nhello world!");
-
-    let mut buf = BytesMut::with_capacity(4096);
-
-    loop {
-        stream.readable().await.unwrap();
-
-        match stream.read_buf(&mut buf).await {
-            Ok(0) => break,
-            Ok(size) => {
-                let readed = buf.split_to(size);
-                println!("{:?}", readed);
-            }
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                continue;
-            }
-            Err(e) => {
-                println!("err: {:?}", e);
-                break;
-            }
-        }
+    if let Some(result) = rx.recv().await {
+        assert_eq!(result.session_state, SessionState::Closing);
+        assert!(
+            matches!(result.packets.as_slice(), [Packet::NonStanza(open_stream), Packet::NonStanza(error), Packet::NonStanza(close)] if matches!(**open_stream, NonStanza::OpenStream(_))
+            && matches!(**error, NonStanza::StreamError(StreamError { kind: StreamErrorKind::HostUnknown }))
+            && matches!(**close, NonStanza::CloseStream(_))
+            )
+        );
+    } else {
+        panic!("Should have respond something");
     }
 
     Ok(())

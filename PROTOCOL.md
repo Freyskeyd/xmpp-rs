@@ -59,7 +59,7 @@ S2: = server2
             - [ ] conflict
             - [ ] connection-timeout
             - [ ] host-gone
-            - [ ] host-unknown
+            - [x] host-unknown
             - [ ] improper-addressing
             - [ ] internal-server-error
             - [ ] invalid-from

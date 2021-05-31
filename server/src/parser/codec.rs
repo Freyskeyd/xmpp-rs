@@ -39,7 +39,7 @@ impl Decoder for XmppCodec {
         }
         let event = match self.sink.next_packet() {
             Some(e) => {
-                trace!("Decoded Packet: {:?}", e);
+                println!("Decoded Packet: {:?}", e);
                 Some(e)
             }
             _ => None,

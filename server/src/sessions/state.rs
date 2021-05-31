@@ -6,6 +6,8 @@ pub(crate) enum SessionState {
     Authenticating,
     Authenticated,
     Binding,
+    Binded,
+    Closing,
 }
 
 impl Default for SessionState {

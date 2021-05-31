@@ -10,6 +10,19 @@ pub(crate) struct UnauthenticatedSession {
 
 impl Actor for UnauthenticatedSession {
     type Context = Context<Self>;
+
+    fn started(&mut self, _ctx: &mut Self::Context) {
+        println!("Starting UnauthenticatedSession");
+    }
+
+    fn stopping(&mut self, _ctx: &mut Self::Context) -> actix::Running {
+        println!("Stopping UnauthenticatedSession");
+        actix::Running::Stop
+    }
+
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
+        println!("UnauthenticatedSession Stopped");
+    }
 }
 
 impl Handler<SessionManagementPacketResult> for UnauthenticatedSession {
@@ -17,13 +30,5 @@ impl Handler<SessionManagementPacketResult> for UnauthenticatedSession {
 
     fn handle(&mut self, packet: SessionManagementPacketResult, _ctx: &mut Self::Context) -> Self::Result {
         self.packets.push(packet);
-    }
-}
-
-impl Handler<GetPacket> for UnauthenticatedSession {
-    type Result = Result<Vec<Packet>, ()>;
-
-    fn handle(&mut self, _msg: GetPacket, _ctx: &mut Self::Context) -> Self::Result {
-        Ok(vec![])
     }
 }

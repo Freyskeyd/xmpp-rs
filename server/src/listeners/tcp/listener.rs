@@ -76,9 +76,15 @@ impl Handler<NewSession> for TcpListener {
 
         let session = UnauthenticatedSession::default().start();
 
-        let fut = async move { session.send(TcpOpenStream { stream: msg.0, acceptor }).await.unwrap().unwrap() }
-            .into_actor(self)
-            .map(|stream: XmppStream, act, _ctx| {
+        let fut = async move {
+            match session.send(TcpOpenStream { stream: msg.0, acceptor }).await.unwrap() {
+                Ok(session) => Ok(session),
+                Err(_) => Err(()),
+            }
+        }
+        .into_actor(self)
+        .map(|res: Result<XmppStream, ()>, act: &mut TcpListener, _ctx| match res {
+            Ok(stream) => {
                 let session = TcpSession::create(|ctx| {
                     let (r, w) = tokio::io::split(stream.inner);
 
@@ -87,7 +93,10 @@ impl Handler<NewSession> for TcpListener {
                 });
 
                 act.sessions.push(session)
-            });
+            }
+
+            Err(_) => {}
+        });
 
         Box::pin(fut)
     }
