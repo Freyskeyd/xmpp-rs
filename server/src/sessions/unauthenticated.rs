@@ -2,7 +2,7 @@ use crate::{
     parser::codec::XmppCodec,
     sessions::{manager::SessionManager, state::SessionState, SessionManagementPacket, SessionManagementPacketResult},
 };
-use actix::{Actor, Context, Handler, SystemService};
+use actix::{Actor, Context, SystemService};
 use actix_codec::Encoder;
 use bytes::BytesMut;
 use log::{error, trace};
@@ -15,7 +15,6 @@ use xmpp_proto::Packet;
 #[derive(Default)]
 pub(crate) struct UnauthenticatedSession {
     pub(crate) state: SessionState,
-    pub(crate) packets: Vec<SessionManagementPacketResult>,
 }
 
 impl UnauthenticatedSession {
@@ -81,13 +80,5 @@ impl Actor for UnauthenticatedSession {
 
     fn stopped(&mut self, _ctx: &mut Self::Context) {
         trace!("UnauthenticatedSession Stopped");
-    }
-}
-
-impl Handler<SessionManagementPacketResult> for UnauthenticatedSession {
-    type Result = ();
-
-    fn handle(&mut self, packet: SessionManagementPacketResult, _ctx: &mut Self::Context) -> Self::Result {
-        self.packets.push(packet);
     }
 }

@@ -18,12 +18,16 @@ use xmpp_proto::{OpenStream, OpenStreamBuilder};
 
 #[tokio::test]
 async fn should_return_an_open_stream() {
+    let host: String = "localhost".into();
+    let lang: String = "en".into();
+    let version: String = "1.0".into();
+
     let handler = SessionManager::default();
 
     let (referer, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
     let response = handler.handle_packet(SessionManagementPacket {
         session_state: SessionState::Opening,
-        packet: OpenStreamBuilder::default().to("localhost").lang("en").version("1.0").id(Uuid::new_v4()).build().unwrap().into(),
+        packet: OpenStreamBuilder::default().to(host).lang(lang).version(version).id(Uuid::new_v4().to_string()).build().unwrap().into(),
         referer,
     });
 
@@ -42,12 +46,16 @@ async fn should_return_an_open_stream() {
 
 #[actix::test]
 async fn should_return_an_open_stream_2() -> Result<(), Box<dyn Error>> {
+    let host: String = "unknownhost".into();
+    let lang: String = "en".into();
+    let version: String = "1.0".into();
+
     let (referer, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
 
     let response = SessionManager::from_registry()
         .send(SessionManagementPacket {
             session_state: SessionState::Opening,
-            packet: OpenStreamBuilder::default().to("unknownhost").lang("en").version("1.0").id(Uuid::new_v4()).build().unwrap().into(),
+            packet: OpenStreamBuilder::default().to(host).lang(lang).version(version).id(Uuid::new_v4().to_string()).build().unwrap().into(),
             referer,
         })
         .await;
