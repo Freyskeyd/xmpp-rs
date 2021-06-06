@@ -54,3 +54,7 @@ sasl = "*"
 
 derive_builder = "0.10.0"
 
+jid = "0"
+
+[dev-dependencies]
+demonstrate = "0.4.5"

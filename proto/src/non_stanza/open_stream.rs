@@ -1,4 +1,7 @@
+use std::str::FromStr;
+
 use crate::{ns, NonStanza, Packet, PacketParsingError, ToXmlElement};
+use jid::Jid;
 use uuid::Uuid;
 use xmpp_xml::{xml::attribute::OwnedAttribute, Element, QName};
 
@@ -25,9 +28,9 @@ pub struct OpenStream {
     /// See [RFC-6120]( https://xmpp.org/rfcs/rfc6120.html#streams-attr-version )
     pub version: String,
     #[builder(setter(into), default)]
-    pub to: Option<String>,
+    pub to: Option<Jid>,
     #[builder(setter(into), default)]
-    pub from: Option<String>,
+    pub from: Option<Jid>,
 }
 
 impl OpenStream {
@@ -35,8 +38,8 @@ impl OpenStream {
         attributes
             .into_iter()
             .fold(&mut OpenStreamBuilder::default(), |packet, attribute| match attribute.name.local_name.as_ref() {
-                "to" if attribute.name.namespace.is_none() => packet.to(attribute.value),
-                "from" if attribute.name.namespace.is_none() => packet.from(attribute.value),
+                "to" if attribute.name.namespace.is_none() => packet.to(Jid::from_str(&attribute.value).ok()),
+                "from" if attribute.name.namespace.is_none() => packet.from(Jid::from_str(&attribute.value).ok()),
                 "lang" if attribute.name.namespace == Some(ns::XML_URI.to_string()) => packet.lang(attribute.value),
                 "version" if attribute.name.namespace.is_none() => packet.version(attribute.value),
                 "id" if attribute.name.namespace.is_none() => packet.id(attribute.value),
@@ -117,8 +120,8 @@ mod tests {
         let id = Uuid::new_v4().to_string();
         let lang: String = "en".into();
         let version: String = "1.0".into();
-        let to: String = "jid@localhost".into();
-        let from: String = "localhost".into();
+        let to: Jid = Jid::from_str("jid@localhost").unwrap();
+        let from: Jid = Jid::from_str("localhost").unwrap();
         let expected = format!(
             r#"<?xml version="1.0" encoding="utf-8"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" from="{from}" id="{id}" xml:lang="{lang}" to="{to}" version="{version}">"#,
             id = id,

@@ -1,8 +1,11 @@
+use std::str::FromStr;
+
 use crate::{
     sessions::{state::SessionState, AuthenticationRequest, SessionManagementPacket, SessionManagementPacketResultBuilder},
     AuthenticationManager,
 };
 use actix::{Actor, Context, Handler, Supervised, SystemService};
+use jid::Jid;
 use log::{error, trace};
 use tokio::sync::mpsc::Sender;
 use xmpp_proto::{ns, Bind, CloseStream, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, StreamError, StreamErrorKind, StreamFeatures};
@@ -42,14 +45,15 @@ impl SessionManager {
                         OpenStream {
                             id,
                             to: from,
-                            from: Some("localhost".into()),
+                            // TODO: Replace JID crate with another?
+                            from: Jid::from_str("localhost").ok(),
                             lang,
                             version,
                         }
                         .into(),
                     );
 
-                    if to != Some("localhost".into()) {
+                    if to.map(|t| t.to_string()) != Some("localhost".into()) {
                         if let Ok(res) = response
                             .packet(StreamError { kind: StreamErrorKind::HostUnknown }.into())
                             .packet(CloseStream {}.into())
