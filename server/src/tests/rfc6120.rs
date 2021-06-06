@@ -41,7 +41,7 @@ async fn executor(packet: impl Into<Packet>, expected_session_state: SessionStat
 use demonstrate::demonstrate;
 
 demonstrate! {
-    describe "Opening a Stream" {
+    describe "when opening a Stream" {
         use super::*;
 
         before {
@@ -56,17 +56,15 @@ demonstrate! {
                 .id(Uuid::new_v4().to_string())
                 .build()
                 .unwrap();
-
         }
 
         #[actix::test]
-        async it "should accept a valid host when opening stream" -> Result<(), ()> {
+        async it "should accept a valid host" -> Result<(), ()> {
             executor(packet, SessionState::Opening, |packets| {
                 assert!(
                     matches!(
                         packets.as_slice(),
-                        [Packet::NonStanza(open_stream), Packet::NonStanza(features)] if matches!(**open_stream, NonStanza::OpenStream(_))
-                        && matches!(**features, NonStanza::StreamFeatures(_))
+                        [Packet::NonStanza(open_stream), ..] if matches!(**open_stream, NonStanza::OpenStream(_))
                     )
                 );
             }).await
