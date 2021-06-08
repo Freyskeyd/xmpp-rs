@@ -115,6 +115,11 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::router::Router</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -144,7 +149,7 @@
 <span class="attribute">#[<span class="ident">rtype</span>(<span class="string">&quot;Result&lt;XmppStream, ()&gt;&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TcpOpenStream</span> {
     <span class="ident">stream</span>: <span class="ident">TcpStream</span>,
-    <span class="ident">acceptor</span>: <span class="ident">tokio_rustls::TlsAcceptor</span>,
+    <span class="ident">acceptor</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">tokio_rustls::TlsAcceptor</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Handler</span><span class="op">&lt;</span><span class="ident">TcpOpenStream</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
@@ -193,40 +198,45 @@
                 }
             }
 
-            <span class="macro">trace!</span>(<span class="string">&quot;Session switching to TLS&quot;</span>);
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tls_stream</span> <span class="op">=</span> <span class="ident">acceptor</span>.<span class="ident">accept</span>(<span class="ident">stream</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-            <span class="ident">state</span> <span class="op">=</span> <span class="ident">SessionState::Negociated</span>;
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">BytesMut::with_capacity</span>(<span class="number">4096</span>);
+            <span class="kw">match</span> <span class="ident">acceptor</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">acceptor</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">trace!</span>(<span class="string">&quot;Session switching to TLS&quot;</span>);
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tls_stream</span> <span class="op">=</span> <span class="ident">acceptor</span>.<span class="ident">accept</span>(<span class="ident">stream</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
+                    <span class="ident">state</span> <span class="op">=</span> <span class="ident">SessionState::Negociated</span>;
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">BytesMut::with_capacity</span>(<span class="number">4096</span>);
 
-            <span class="kw">loop</span> {
-                <span class="kw">match</span> <span class="ident">tls_stream</span>.<span class="ident">read_buf</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>).<span class="kw">await</span> {
-                    <span class="prelude-val">Ok</span>(<span class="number">0</span>) <span class="op">=</span><span class="op">&gt;</span> {}
-                    <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">packet</span>)) <span class="op">=</span> <span class="ident">codec</span>.<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>) {
-                            <span class="kw">match</span> <span class="self">Self</span><span class="ident">::proceed_packet</span>(<span class="ident">packet</span>, <span class="ident">state</span>, <span class="ident">tx</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rx</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">codec</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tls_stream</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>).<span class="kw">await</span> {
-                                <span class="prelude-val">Ok</span>(<span class="ident">new_state</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">new_state</span>,
-                                <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                    <span class="kw">loop</span> {
+                        <span class="kw">match</span> <span class="ident">tls_stream</span>.<span class="ident">read_buf</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>).<span class="kw">await</span> {
+                            <span class="prelude-val">Ok</span>(<span class="number">0</span>) <span class="op">=</span><span class="op">&gt;</span> {}
+                            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                                <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">packet</span>)) <span class="op">=</span> <span class="ident">codec</span>.<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>) {
+                                    <span class="kw">match</span> <span class="self">Self</span><span class="ident">::proceed_packet</span>(<span class="ident">packet</span>, <span class="ident">state</span>, <span class="ident">tx</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rx</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">codec</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tls_stream</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>).<span class="kw">await</span> {
+                                        <span class="prelude-val">Ok</span>(<span class="ident">new_state</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">new_state</span>,
+                                        <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                                    }
+                                }
+                                <span class="kw">if</span> <span class="ident">state</span> <span class="op">=</span><span class="op">=</span> <span class="ident">SessionState::Closing</span> {
+                                    <span class="comment">// TODO: remove unwrap</span>
+                                    <span class="kw">let</span> (<span class="ident">inner_stream</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">tls_stream</span>.<span class="ident">into_inner</span>();
+                                    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">inner_stream</span>.<span class="ident">into_std</span>().<span class="ident">unwrap</span>().<span class="ident">shutdown</span>(<span class="ident">std::net::Shutdown::Both</span>);
+                                    <span class="kw">return</span> <span class="prelude-val">Err</span>(());
+                                }
                             }
-                        }
-                        <span class="kw">if</span> <span class="ident">state</span> <span class="op">=</span><span class="op">=</span> <span class="ident">SessionState::Closing</span> {
-                            <span class="comment">// TODO: remove unwrap</span>
-                            <span class="kw">let</span> (<span class="ident">inner_stream</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">tls_stream</span>.<span class="ident">into_inner</span>();
-                            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">inner_stream</span>.<span class="ident">into_std</span>().<span class="ident">unwrap</span>().<span class="ident">shutdown</span>(<span class="ident">std::net::Shutdown::Both</span>);
-                            <span class="kw">return</span> <span class="prelude-val">Err</span>(());
-                        }
+                            <span class="prelude-val">Err</span>(<span class="kw-2">ref</span> <span class="ident">e</span>) <span class="kw">if</span> <span class="ident">e</span>.<span class="ident">kind</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">io::ErrorKind::WouldBlock</span> <span class="op">=</span><span class="op">&gt;</span> {
+                                <span class="kw">continue</span>;
+                            }
+                            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                                <span class="comment">// return Err(e.into());</span>
+                                <span class="macro">error!</span>(<span class="string">&quot;err: {:?}&quot;</span>, <span class="ident">e</span>);
+                                <span class="kw">break</span>;
+                            }
+                        };
                     }
-                    <span class="prelude-val">Err</span>(<span class="kw-2">ref</span> <span class="ident">e</span>) <span class="kw">if</span> <span class="ident">e</span>.<span class="ident">kind</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">io::ErrorKind::WouldBlock</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="kw">continue</span>;
-                    }
-                    <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="comment">// return Err(e.into());</span>
-                        <span class="macro">error!</span>(<span class="string">&quot;err: {:?}&quot;</span>, <span class="ident">e</span>);
-                        <span class="kw">break</span>;
-                    }
-                };
-            }
 
-            <span class="prelude-val">Ok</span>(<span class="ident">XmppStream</span> { <span class="ident">inner</span>: <span class="ident">Box::new</span>(<span class="ident">tls_stream</span>) })
+                    <span class="prelude-val">Ok</span>(<span class="ident">XmppStream</span> { <span class="ident">inner</span>: <span class="ident">Box::new</span>(<span class="ident">tls_stream</span>) })
+                }
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">XmppStream</span> { <span class="ident">inner</span>: <span class="ident">Box::new</span>(<span class="ident">stream</span>) }),
+            }
         };
         <span class="ident">Box::pin</span>(<span class="ident">fut</span>)
     }
