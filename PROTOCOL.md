@@ -45,15 +45,15 @@ S2: = server2
         - [ ] Other Namespaces
         - [ ] Namespace Declarations and Prefixes
     - [ ] Stream Errors
-        - [ ] Rules
-            - [ ]  Stream Errors Are Unrecoverable
-            - [ ]  Stream Errors Can Occur During Setup
-            - [ ]  Stream Errors When the Host Is Unspecified or Unknown
-            - [ ]  Where Stream Errors Are Sent
-        - [ ] Syntax
+        - [x] Rules
+            - [x]  Stream Errors Are Unrecoverable
+            - [x]  Stream Errors Can Occur During Setup
+            - [x]  Stream Errors When the Host Is Unspecified or Unknown
+            - [x]  Where Stream Errors Are Sent
+        - [x] Syntax
         - [ ] Stream Error Conditions
-            - [ ] bad-format
-            - [ ] bad-namespace-prefix
+            - [ ] bad-format -> not applied
+            - [x] bad-namespace-prefix
             - [ ] conflict
             - [ ] connection-timeout
             - [ ] host-gone
@@ -61,7 +61,7 @@ S2: = server2
             - [ ] improper-addressing
             - [ ] internal-server-error
             - [ ] invalid-from
-            - [ ] invalid-namespace
+            - [x] invalid-namespace
             - [ ] invalid-xml
             - [x] not-authorized
             - [ ] not-well-formed
