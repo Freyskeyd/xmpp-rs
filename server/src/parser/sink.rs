@@ -34,16 +34,19 @@ impl PacketSink {
                 return None;
             }
 
-            // Reopen the parser to check new bytes
-            // self.parser.reopen_parser();
             match self.parser.next() {
                 Ok(xml_event) => match xml_event {
-                    XmlEvent::StartDocument { .. } => {
+                    XmlEvent::StartDocument { ref encoding, .. } if encoding.to_uppercase() == "UTF-8" => {
                         continue;
+                    }
+
+                    XmlEvent::StartDocument { ref encoding, .. } if encoding.to_uppercase() == "UTF-8" => {
+                        return Some(Packet::InvalidPacket(Box::new(xmpp_proto::StreamErrorKind::UnsupportedEncoding)))
                     }
 
                     XmlEvent::StartElement { name, namespace, attributes } => {
                         if let Ok(e) = self.parse_start_element(name, namespace, attributes) {
+                            println!("Return {:?}", e);
                             return Some(e);
                         }
                     }

@@ -32,7 +32,7 @@ pub(crate) struct SessionManagementPacket {
 pub(crate) struct SessionManagementPacketResult {
     #[builder(default = "state::SessionState::Opening")]
     pub(crate) session_state: state::SessionState,
-    #[builder(setter(each = "packet", into = "true"))]
+    #[builder(default = "Vec::new()", setter(each = "packet", into = "true"))]
     pub(crate) packets: Vec<Packet>,
 }
 

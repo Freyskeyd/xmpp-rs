@@ -6,12 +6,18 @@ use xmpp_xml::Element;
 #[derive(Debug, Clone)]
 pub struct StreamError {
     pub kind: StreamErrorKind,
+    //TODO: Implement error text
+    // pub text: String
 }
 
 #[derive(Debug, Clone)]
 pub enum StreamErrorKind {
+    BadNamespacePrefix,
     HostUnknown,
+    InvalidNamespace,
     NotAuthorized,
+    UnsupportedEncoding,
+    UnsupportedVersion,
 }
 
 impl From<StreamError> for Packet {
@@ -26,8 +32,12 @@ impl ToXmlElement for StreamError {
         let mut root = Element::new((ns::STREAM, "error"));
 
         match self.kind {
+            StreamErrorKind::BadNamespacePrefix => root.append_new_child(("urn:ietf:params:xml:ns:xmpp-streams", "bad-namespace-prefix")),
             StreamErrorKind::HostUnknown => root.append_new_child(("urn:ietf:params:xml:ns:xmpp-streams", "host-unknown")),
+            StreamErrorKind::InvalidNamespace => root.append_new_child(("urn:ietf:params:xml:ns:xmpp-streams", "invalid-namespace")),
             StreamErrorKind::NotAuthorized => root.append_new_child(("urn:ietf:params:xml:ns:xmpp-streams", "not-authorized")),
+            StreamErrorKind::UnsupportedEncoding => root.append_new_child(("urn:ietf:params:xml:ns:xmpp-streams", "unsupported-encoding")),
+            StreamErrorKind::UnsupportedVersion => root.append_new_child(("urn:ietf:params:xml:ns:xmpp-streams", "unsupported-version")),
         };
 
         Ok(root)

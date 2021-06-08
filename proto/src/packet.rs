@@ -1,4 +1,4 @@
-use crate::{non_stanza::StartTls, ns, stanza::GenericIq, Auth, OpenStream, StreamFeatures, ToXmlElement};
+use crate::{non_stanza::StartTls, ns, stanza::GenericIq, Auth, OpenStream, StreamErrorKind, StreamFeatures, ToXmlElement};
 use crate::{FromXmlElement, ProceedTls};
 use crate::{NonStanza, NonStanzaTrait, Stanza};
 
@@ -7,7 +7,7 @@ use circular::Buffer;
 use log::error;
 use std::{
     convert::{TryFrom, TryInto},
-    io::Write,
+    io::{ErrorKind, Write},
 };
 use xmpp_xml::WriteOptions;
 use xmpp_xml::{
@@ -22,6 +22,7 @@ pub enum Packet {
     NonStanza(Box<NonStanza>),
     /// Represent a packet which isn't an XML Stanza
     Stanza(Box<Stanza>),
+    InvalidPacket(Box<StreamErrorKind>),
 }
 
 impl<T> From<T> for Packet
@@ -51,6 +52,7 @@ pub enum PacketParsingError {
     Xml(xmpp_xml::Error),
     Io,
     Unknown,
+    InvalidNamespace,
 }
 
 impl From<xmpp_xml::Error> for PacketParsingError {
@@ -75,8 +77,9 @@ impl TryFrom<Element> for Packet {
             (Some(ns::TLS), "starttls") => Ok(StartTls::from_element(&element)?.into()),
             (Some(ns::TLS), "proceed") => Ok(ProceedTls::from_element(&element)?.into()),
             (Some(ns::CLIENT), "iq") => Ok(GenericIq::from_element(&element)?.into()),
-            (None, "message") => Ok(Stanza::Message(element).into()),
-            (None, "presence") => Ok(Stanza::Presence(element).into()),
+            (Some(ns::CLIENT), "message") => Ok(Stanza::Message(element).into()),
+            (Some(ns::CLIENT), "presence") => Ok(Stanza::Presence(element).into()),
+            (_, name) if ["features", "auth", "starttls", "proceed", "iq", "message", "presence"].contains(&name) => Ok(Packet::InvalidPacket(Box::new(StreamErrorKind::BadNamespacePrefix))),
             e => {
                 error!("{:?}", e);
                 Err(PacketParsingError::Unknown)
@@ -95,13 +98,17 @@ impl Packet {
             Packet::NonStanza(s) if matches!(**s, NonStanza::OpenStream(_)) => Ok(s.to_element()?.to_writer(stream)?),
             Packet::NonStanza(s) => Ok(s.to_element()?.to_writer_with_options(stream, WriteOptions::new().set_xml_prolog(None))?),
             Packet::Stanza(s) => Ok(s.to_element()?.to_writer_with_options(stream, WriteOptions::new().set_xml_prolog(None))?),
+            // TODO: should we fail the write or ignore it ?
+            Packet::InvalidPacket(_) => Err(std::io::Error::new(ErrorKind::InvalidData, "Invalid packet shouldn't be written back")),
         }
     }
 
     pub fn parse(buffer: &mut EventReader<Buffer>, name: OwnedName, namespace: Namespace, attributes: Vec<OwnedAttribute>) -> Result<Self, PacketParsingError> {
-        match (name.namespace_ref(), name.local_name.as_ref()) {
+        match (name.namespace_ref(), name.prefix_ref(), name.local_name.as_ref()) {
             // open stream isn't an element
-            (Some(ns::STREAM), "stream") => Ok(OpenStream::from_start_element(attributes)?.into()),
+            (Some(ns::STREAM), Some("stream"), "stream") => Ok(OpenStream::from_start_element(attributes)?.into()),
+            (_, Some("stream"), "stream") => Ok(Packet::InvalidPacket(Box::new(StreamErrorKind::InvalidNamespace))),
+            (_, _, "stream") => Ok(Packet::InvalidPacket(Box::new(StreamErrorKind::BadNamespacePrefix))),
             _ => Element::from_start_element(name, attributes, namespace, None, buffer)?.try_into(),
         }
     }

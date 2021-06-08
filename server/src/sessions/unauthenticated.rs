@@ -47,7 +47,7 @@ impl UnauthenticatedSession {
 
                 packets.into_iter().for_each(|packet| {
                     if let Err(e) = codec.encode(packet, buf) {
-                        error!("Error: {:?}", e);
+                        error!("Error in proceed_packet: {:?}", e);
                     }
                 });
 

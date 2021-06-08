@@ -8,6 +8,8 @@ pub(crate) enum SessionState {
     Binding,
     Binded,
     Closing,
+
+    UnsupportedEncoding,
 }
 
 impl Default for SessionState {

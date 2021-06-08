@@ -34,11 +34,10 @@ S2: = server2
         - [ ] Use of Checking Methods
     - [ ] Stream Attributes
         - [ ] from
-        - [ ] to
-        - [ ] id
+        - [x] to
+        - [x] id
         - [ ] xml:lang
-        - [ ] version
-        - [ ] Summary of Stream Attributes
+        - [x] version
     - [ ] XML Namespaces
         - [ ] Stream Namespace
         - [ ] Content Namespace
@@ -74,7 +73,7 @@ S2: = server2
             - [ ] see-other-host
             - [ ] system-shutdown
             - [ ] undefined-condition
-            - [ ] unsupported-encoding
+            - [x] unsupported-encoding
             - [ ] unsupported-feature
             - [ ] unsupported-stanza-type
             - [ ] unsupported-version

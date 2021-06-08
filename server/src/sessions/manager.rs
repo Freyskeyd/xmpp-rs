@@ -5,9 +5,10 @@ use crate::{
     AuthenticationManager,
 };
 use actix::{Actor, Context, Handler, Supervised, SystemService};
-use jid::Jid;
+use jid::{BareJid, Jid};
 use log::{error, trace};
 use tokio::sync::mpsc::Sender;
+use uuid::Uuid;
 use xmpp_proto::{ns, Bind, CloseStream, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, StreamError, StreamErrorKind, StreamFeatures};
 use xmpp_xml::Element;
 
@@ -39,19 +40,79 @@ impl SessionManager {
         let mut response = SessionManagementPacketResultBuilder::default();
 
         match packet.packet {
+            Packet::InvalidPacket(invalid_packet) => {
+                if matches!(*invalid_packet, StreamErrorKind::UnsupportedEncoding) && packet.session_state == SessionState::Opening {
+                    if let Ok(res) = response.session_state(SessionState::UnsupportedEncoding).build() {
+                        res.send(packet.referer);
+                    }
+                    return Ok(());
+                }
+
+                match packet.session_state {
+                    SessionState::Opening => {
+                        response.packet(OpenStream::default().into());
+                    }
+                    _ => {}
+                }
+                if let Ok(res) = response
+                    .packet(StreamError { kind: *invalid_packet }.into())
+                    .packet(CloseStream {}.into())
+                    .session_state(SessionState::Closing)
+                    .build()
+                {
+                    res.send(packet.referer);
+                }
+                return Ok(());
+            }
             Packet::NonStanza(non_stanza_packet) => match *non_stanza_packet {
                 NonStanza::OpenStream(OpenStream { to, lang, version, from, id }) => {
                     response.packet(
                         OpenStream {
-                            id,
-                            to: from,
+                            id: Some(Uuid::new_v4().to_string()),
+                            to: from.map(|jid| BareJid::from(jid).into()),
                             // TODO: Replace JID crate with another?
+                            // TODO: Validate FQDN
                             from: Jid::from_str("localhost").ok(),
-                            lang,
-                            version,
+                            // TODO: Validate lang input
+                            lang: "en".into(),
+                            version: "1.0".to_string(),
                         }
                         .into(),
                     );
+
+                    if packet.session_state == SessionState::UnsupportedEncoding {
+                        if let Ok(res) = response
+                            .packet(
+                                StreamError {
+                                    kind: StreamErrorKind::UnsupportedEncoding,
+                                }
+                                .into(),
+                            )
+                            .packet(CloseStream {}.into())
+                            .session_state(SessionState::Closing)
+                            .build()
+                        {
+                            res.send(packet.referer);
+                        }
+                        return Ok(());
+                    }
+
+                    if version != "1.0" {
+                        if let Ok(res) = response
+                            .packet(
+                                StreamError {
+                                    kind: StreamErrorKind::UnsupportedVersion,
+                                }
+                                .into(),
+                            )
+                            .packet(CloseStream {}.into())
+                            .session_state(SessionState::Closing)
+                            .build()
+                        {
+                            res.send(packet.referer);
+                        }
+                        return Ok(());
+                    }
 
                     if to.map(|t| t.to_string()) != Some("localhost".into()) {
                         if let Ok(res) = response

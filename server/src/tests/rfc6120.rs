@@ -1,44 +1,13 @@
-use std::{error::Error, io, path::PathBuf, str::FromStr};
-
-use crate::{
-    parser::codec::XmppCodec,
-    sessions::{manager::SessionManager, state::SessionState, SessionManagementPacket, SessionManagementPacketResult},
-    Server,
-};
-use actix::{Addr, SystemService};
-use actix_codec::Decoder;
-use bytes::BytesMut;
-use jid::Jid;
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    sync::mpsc::{self, Receiver, Sender},
-};
-use uuid::Uuid;
-use xmpp_proto::{NonStanza, Packet, StreamError, StreamErrorKind};
-use xmpp_proto::{OpenStream, OpenStreamBuilder};
-
-async fn executor(packet: impl Into<Packet>, expected_session_state: SessionState, resolver: impl Fn(Vec<Packet>) -> ()) -> Result<(), ()> {
-    let sm = SessionManager::from_registry();
-    let (referer, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
-    let _ = sm
-        .send(SessionManagementPacket {
-            session_state: SessionState::Opening,
-            packet: packet.into(),
-            referer,
-        })
-        .await
-        .unwrap();
-
-    if let Some(result) = rx.recv().await {
-        assert_eq!(result.session_state, expected_session_state);
-        resolver(result.packets);
-        Ok(())
-    } else {
-        Err(())
-    }
-}
-
+use crate::{execute, sessions::state::SessionState, tests::executor::executor};
 use demonstrate::demonstrate;
+use jid::Jid;
+use std::str::FromStr;
+use uuid::Uuid;
+use xmpp_proto::OpenStreamBuilder;
+use xmpp_proto::{NonStanza, Packet, StreamError, StreamErrorKind};
+
+mod namespaces;
+mod stream_attribute;
 
 demonstrate! {
     describe "when opening a Stream" {
@@ -60,28 +29,35 @@ demonstrate! {
 
         #[actix::test]
         async it "should accept a valid host" -> Result<(), ()> {
-            executor(packet, SessionState::Opening, |packets| {
-                assert!(
-                    matches!(
-                        packets.as_slice(),
-                        [Packet::NonStanza(open_stream), ..] if matches!(**open_stream, NonStanza::OpenStream(_))
-                    )
-                );
-            }).await
+            execute!(packet, SessionState::Opening, [Packet::NonStanza(open_stream), ..] if matches!(**open_stream, NonStanza::OpenStream(_)))
         }
 
         #[actix::test]
         async it "should fail on invalid host" -> Result<(), ()> {
             packet.to = Jid::from_str("invalid").ok();
 
-            executor(packet, SessionState::Closing, |packets| {
-                assert!(
-                    matches!(packets.as_slice(), [Packet::NonStanza(open_stream), Packet::NonStanza(error), Packet::NonStanza(close)] if matches!(**open_stream, NonStanza::OpenStream(_))
-                    && matches!(**error, NonStanza::StreamError(StreamError { kind: StreamErrorKind::HostUnknown }))
-                    && matches!(**close, NonStanza::CloseStream(_))
-                    )
-                );
-            }).await
+            execute!(packet, SessionState::Closing,
+                [Packet::NonStanza(open_stream), Packet::NonStanza(error), Packet::NonStanza(close)]
+                if matches!(**open_stream, NonStanza::OpenStream(_)) &&
+                   matches!(**error, NonStanza::StreamError(StreamError { kind: StreamErrorKind::HostUnknown, .. })) &&
+                   matches!(**close, NonStanza::CloseStream(_))
+            )
+        }
+
+        #[actix::test]
+        async it "should fail on unsupported encoding" -> Result<(), ()> {
+            let fail_packet = Packet::InvalidPacket(Box::new(StreamErrorKind::UnsupportedEncoding));
+
+            assert!(execute!(fail_packet, SessionState::UnsupportedEncoding, []).is_ok());
+            execute!(
+                packet,
+                starting_state SessionState::UnsupportedEncoding,
+                expected_state SessionState::Closing,
+                [Packet::NonStanza(open_stream), Packet::NonStanza(error), Packet::NonStanza(close)]
+                if matches!(**open_stream, NonStanza::OpenStream(_)) &&
+                   matches!(**error, NonStanza::StreamError(StreamError { kind: StreamErrorKind::UnsupportedEncoding, .. })) &&
+                   matches!(**close, NonStanza::CloseStream(_))
+            )
         }
     }
 }
