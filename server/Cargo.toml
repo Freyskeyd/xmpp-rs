@@ -55,6 +55,7 @@ sasl = "*"
 derive_builder = "0.10.0"
 
 jid = "0"
-
+config = "0.11"
+lazy_static = "1"
 [dev-dependencies]
 demonstrate = "0.4.5"

@@ -1,7 +1,7 @@
 use super::session::TcpSession;
-use crate::listeners::tcp::NewSession;
-use crate::listeners::tcp::TcpOpenStream;
 use crate::router::Router;
+use crate::{config::StartTLSConfig, listeners::tcp::TcpOpenStream};
+use crate::{config::TcpListenerConfig, listeners::tcp::NewSession};
 use crate::{listeners::XmppStream, parser::codec::XmppCodec, sessions::unauthenticated::UnauthenticatedSession};
 use actix::{prelude::*, spawn};
 use log::{error, info, trace};
@@ -23,29 +23,42 @@ use tokio_rustls::{
 use tokio_util::codec::FramedRead;
 
 pub(crate) struct TcpListener {
-    acceptor: TlsAcceptor,
+    acceptor: Option<TlsAcceptor>,
     sessions: Vec<Addr<TcpSession>>,
 }
 
 impl TcpListener {
-    pub(crate) fn new(acceptor: TlsAcceptor) -> Self {
+    pub(crate) fn new(acceptor: Option<TlsAcceptor>) -> Self {
         Self { acceptor, sessions: Vec::new() }
     }
 
-    pub(crate) fn start(_s: &str, router: Addr<Router>, cert: &Path, keys: &Path) -> Result<Addr<Self>, ()> {
+    // pub(crate) fn start(ip: &str, router: Addr<Router>, cert: &Path, keys: &Path) -> Result<Addr<Self>, ()> {
+    pub(crate) fn start(config: &TcpListenerConfig, router: Addr<Router>) -> Result<Addr<Self>, ()> {
         // Create server listener
-        let socket_addr = SocketAddr::from_str("127.0.0.1:5222").unwrap();
+        let ip = format!("{}:{}", config.ip, config.port);
+        let socket_addr = SocketAddr::from_str(&ip).unwrap();
 
-        let certs = load_certs(cert).unwrap();
-        let mut keys = load_keys(keys).unwrap();
+        let acceptor = match config.starttls {
+            StartTLSConfig::Unavailable => None,
+            StartTLSConfig::Required(ref cert_cfg) | StartTLSConfig::Available(ref cert_cfg) => {
+                let cert = Path::new(&cert_cfg.cert_path);
+                let keys = Path::new(&cert_cfg.key_path);
 
-        let mut config = ServerConfig::new(NoClientAuth::new());
-        config.set_single_cert(certs, keys.remove(0)).map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err)).unwrap();
-        let acceptor = TlsAcceptor::from(Arc::new(config));
+                let certs = load_certs(cert).unwrap();
+                let mut keys = load_keys(keys).unwrap();
+
+                let mut config = ServerConfig::new(NoClientAuth::new());
+                config.set_single_cert(certs, keys.remove(0)).map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err)).unwrap();
+                let acceptor = TlsAcceptor::from(Arc::new(config));
+
+                Some(acceptor)
+            }
+        };
 
         let addr = Self::create(|_ctx| Self::new(acceptor));
         let tcp_listener = addr.clone();
 
+        trace!("Starting new TCP listener on {} with {}", ip, config.starttls);
         spawn(async move {
             // Openning TCP to prepare for STARTLS
             let listener = tokio::net::TcpListener::bind(&socket_addr).await.unwrap();

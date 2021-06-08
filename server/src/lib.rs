@@ -1,17 +1,26 @@
+#[macro_use]
+extern crate lazy_static;
+
 use actix::Actor;
 use log::info;
 use router::Router;
 use std::path::Path;
 
+use crate::config::Settings;
 use crate::{authentication::AuthenticationManager, sessions::manager::SessionManager};
 
 mod authentication;
+mod config;
 mod listeners;
 mod parser;
 mod router;
 mod sessions;
 #[cfg(test)]
 mod tests;
+
+lazy_static! {
+    static ref CONFIG: Settings = Settings::new().unwrap();
+}
 
 pub struct Server {}
 
@@ -41,6 +50,7 @@ impl ServerBuilder {
     }
 
     pub async fn launch(self) -> std::io::Result<()> {
+        println!("CONFIG: {:?}", *CONFIG);
         SessionManager::new().start();
         AuthenticationManager::default().start();
         // Starting systemd
@@ -54,7 +64,13 @@ impl ServerBuilder {
         // Starting Router
         let router = Router::new().start();
         // Starting all listener (tcp, ws)
-        let _tcp_listener = crate::listeners::tcp::listener::TcpListener::start("", router, Path::new(&self.cert.unwrap()), Path::new(&self.keys.unwrap()));
+        for listener_cfg in CONFIG.listeners.iter() {
+            match listener_cfg {
+                config::ListenerConfig::Tcp(tcp_config) => {
+                    let _tcp_listener = crate::listeners::tcp::listener::TcpListener::start(tcp_config, router.clone());
+                }
+            }
+        }
         // let _ws_listener = crate::listeners::ws::ws_listener();
         // Starting pkix
         // Starting ACL

@@ -26,7 +26,7 @@ pub struct NewSession(pub TcpStream, pub std::net::SocketAddr, pub Addr<Router>)
 #[rtype("Result<XmppStream, ()>")]
 pub struct TcpOpenStream {
     stream: TcpStream,
-    acceptor: tokio_rustls::TlsAcceptor,
+    acceptor: Option<tokio_rustls::TlsAcceptor>,
 }
 
 impl Handler<TcpOpenStream> for UnauthenticatedSession {
@@ -75,40 +75,45 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                 }
             }
 
-            trace!("Session switching to TLS");
-            let mut tls_stream = acceptor.accept(stream).await.unwrap();
-            state = SessionState::Negociated;
-            let mut buf = BytesMut::with_capacity(4096);
+            match acceptor {
+                Some(acceptor) => {
+                    trace!("Session switching to TLS");
+                    let mut tls_stream = acceptor.accept(stream).await.unwrap();
+                    state = SessionState::Negociated;
+                    let mut buf = BytesMut::with_capacity(4096);
 
-            loop {
-                match tls_stream.read_buf(&mut buf).await {
-                    Ok(0) => {}
-                    Ok(_) => {
-                        while let Ok(Some(packet)) = codec.decode(&mut buf) {
-                            match Self::proceed_packet(packet, state, tx.clone(), &mut rx, &mut codec, &mut tls_stream, &mut buf).await {
-                                Ok(new_state) => state = new_state,
-                                Err(_) => break,
+                    loop {
+                        match tls_stream.read_buf(&mut buf).await {
+                            Ok(0) => {}
+                            Ok(_) => {
+                                while let Ok(Some(packet)) = codec.decode(&mut buf) {
+                                    match Self::proceed_packet(packet, state, tx.clone(), &mut rx, &mut codec, &mut tls_stream, &mut buf).await {
+                                        Ok(new_state) => state = new_state,
+                                        Err(_) => break,
+                                    }
+                                }
+                                if state == SessionState::Closing {
+                                    // TODO: remove unwrap
+                                    let (inner_stream, _) = tls_stream.into_inner();
+                                    let _ = inner_stream.into_std().unwrap().shutdown(std::net::Shutdown::Both);
+                                    return Err(());
+                                }
                             }
-                        }
-                        if state == SessionState::Closing {
-                            // TODO: remove unwrap
-                            let (inner_stream, _) = tls_stream.into_inner();
-                            let _ = inner_stream.into_std().unwrap().shutdown(std::net::Shutdown::Both);
-                            return Err(());
-                        }
+                            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                                continue;
+                            }
+                            Err(e) => {
+                                // return Err(e.into());
+                                error!("err: {:?}", e);
+                                break;
+                            }
+                        };
                     }
-                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                        continue;
-                    }
-                    Err(e) => {
-                        // return Err(e.into());
-                        error!("err: {:?}", e);
-                        break;
-                    }
-                };
-            }
 
-            Ok(XmppStream { inner: Box::new(tls_stream) })
+                    Ok(XmppStream { inner: Box::new(tls_stream) })
+                }
+                None => Ok(XmppStream { inner: Box::new(stream) }),
+            }
         };
         Box::pin(fut)
     }
