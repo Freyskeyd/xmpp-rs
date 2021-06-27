@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Server",""],["ServerBuilder",""]]});
+initSidebarItems({"struct":[["AuthenticationRequest",""],["Server",""],["ServerBuilder",""]],"trait":[["Authenticator",""],["Service",""]]});
