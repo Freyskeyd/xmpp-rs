@@ -29,56 +29,6 @@ pub(crate) struct UnauthenticatedSession {
     pub(crate) state: SessionState,
 }
 
-impl UnauthenticatedSession {
-    // pub(crate) async fn proceed_packet<W: AsyncWriteExt + Unpin>(
-    //     packet: Packet,
-    //     mut state: SessionState,
-    //     tx: Sender<SessionManagementPacketResult>,
-    //     rx: &mut Receiver<SessionManagementPacketResult>,
-    //     codec: &mut XmppCodec,
-    //     stream: &mut W,
-    //     buf: &mut BytesMut,
-    // ) -> Result<SessionState, ()> {
-    //     trace!("Sending packet to manager");
-
-    //     let result = SessionManager::from_registry()
-    //         .send(SessionManagementPacket {
-    //             session_state: state,
-    //             packet,
-    //             referer: tx,
-    //         })
-    //         .await
-    //         .unwrap();
-
-    //     if result.is_ok() {
-    //         trace!("Waiting for response");
-
-    //         if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
-    //             state = session_state;
-
-    //             trace!("SessionState is {:?}", session_state);
-
-    //             packets.into_iter().for_each(|packet| {
-    //                 if let Err(e) = codec.encode(packet, buf) {
-    //                     error!("Error in proceed_packet: {:?}", e);
-    //                 }
-    //             });
-
-    //             if let Err(e) = stream.write_buf(buf).await {
-    //                 error!("{:?}", e);
-    //             }
-
-    //             if let Err(e) = stream.flush().await {
-    //                 error!("{:?}", e);
-    //             }
-    //         }
-    //         Ok(state)
-    //     } else {
-    //         Ok(state)
-    //     }
-    // }
-}
-
 impl Actor for UnauthenticatedSession {
     type Context = Context<Self>;
 
@@ -102,7 +52,11 @@ impl PacketHandler for UnauthenticatedSession {
         match stanza {
             Packet::NonStanza(stanza) => Self::handle(state, &**stanza).await.map(|res| res.send(from)),
             Packet::Stanza(stanza) => Self::handle(state, &**stanza).await.map(|res| res.send(from)),
-            Packet::InvalidPacket(_) => Err(()),
+            Packet::InvalidPacket(invalid_packet) => {
+                let mut response = SessionManagementPacketResultBuilder::default();
+
+                SessionManager::handle_invalid_packet(state, invalid_packet, &mut response).map(|res| res.send(from))
+            }
         }
     }
 }
@@ -117,8 +71,6 @@ impl StanzaHandler<Stanza> for UnauthenticatedSession {
     async fn handle(state: &SessionState, stanza: &Stanza) -> Result<SessionManagementPacketResult, ()> {
         let fut = match stanza {
             Stanza::IQ(stanza) => Self::handle(state, stanza),
-            // Stanza::Message(_) => {}
-            // Stanza::Presence(_) =>
             _ => Box::pin(async { Err(()) }),
         };
 
@@ -130,12 +82,8 @@ impl StanzaHandler<NonStanza> for UnauthenticatedSession {
     async fn handle(state: &SessionState, stanza: &NonStanza) -> Result<SessionManagementPacketResult, ()> {
         let fut = match stanza {
             NonStanza::OpenStream(stanza) => Self::handle(state, stanza),
-            // NonStanza::ProceedTls(stanza) => Self::handle(state, stanza),
             NonStanza::StartTls(stanza) => Self::handle(state, stanza),
-            // NonStanza::SASLSuccess(stanza) => Self::handle(state, stanza),
-            // NonStanza::StreamFeatures(stanza) => Self::handle(state, stanza),
             NonStanza::Auth(stanza) => Self::handle(state, stanza),
-            // NonStanza::Bind(stanza) => Self::handle(state, stanza),
             NonStanza::StreamError(stanza) => Self::handle(state, stanza),
             NonStanza::CloseStream(stanza) => Self::handle(state, stanza),
             _ => Box::pin(async { Err(()) }),

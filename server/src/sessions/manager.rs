@@ -29,19 +29,13 @@ impl SessionManager {
             .map_err(|_| ())
     }
 
-    #[allow(dead_code)]
-    fn handle_invalid_packet(
-        &self,
+    pub(crate) fn handle_invalid_packet(
         session_state: &SessionState,
         invalid_packet: &StreamErrorKind,
         response: &mut SessionManagementPacketResultBuilder,
-        referer: &Sender<SessionManagementPacketResult>,
-    ) -> Result<(), ()> {
+    ) -> Result<SessionManagementPacketResult, ()> {
         if matches!(*invalid_packet, StreamErrorKind::UnsupportedEncoding) && SessionState::Opening.eq(session_state) {
-            if let Ok(res) = response.session_state(SessionState::UnsupportedEncoding).build() {
-                res.send(Some(referer.to_owned()));
-            }
-            return Ok(());
+            return response.session_state(SessionState::UnsupportedEncoding).build().map_err(|_| ());
         }
 
         match session_state {
@@ -50,15 +44,13 @@ impl SessionManager {
             }
             _ => {}
         }
-        if let Ok(res) = response
+
+        response
             .packet(StreamError { kind: invalid_packet.clone() }.into())
             .packet(CloseStream {}.into())
             .session_state(SessionState::Closing)
             .build()
-        {
-            res.send(Some(referer.to_owned()));
-        }
-        return Ok(());
+            .map_err(|_| ())
     }
 }
 
