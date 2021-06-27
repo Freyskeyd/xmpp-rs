@@ -1,10 +1,10 @@
 #[macro_use]
 extern crate lazy_static;
 
-use actix::Actor;
+use actix::{Actor, Recipient};
 use log::info;
 use router::Router;
-use std::path::Path;
+use std::collections::HashMap;
 
 use crate::config::Settings;
 use crate::{authentication::AuthenticationManager, sessions::manager::SessionManager};
@@ -18,8 +18,16 @@ mod sessions;
 #[cfg(test)]
 mod tests;
 
+pub use authentication::AuthenticationRequest;
+
 lazy_static! {
     static ref CONFIG: Settings = Settings::new().unwrap();
+}
+
+pub trait Service {
+    type Config;
+
+    fn create_with_config(config: &Self::Config) -> Self;
 }
 
 pub struct Server {}
@@ -34,6 +42,7 @@ impl Server {
 pub struct ServerBuilder {
     cert: Option<String>,
     keys: Option<String>,
+    authenticators: HashMap<String, Recipient<authentication::AuthenticationRequest>>,
 }
 
 impl ServerBuilder {
@@ -49,10 +58,15 @@ impl ServerBuilder {
         self
     }
 
+    pub fn add_authenticator(mut self, authenticator_name: &str, authenticator: Recipient<AuthenticationRequest>) -> Self {
+        self.authenticators.insert(authenticator_name.into(), authenticator);
+        self
+    }
+
     pub async fn launch(self) -> std::io::Result<()> {
         println!("CONFIG: {:?}", *CONFIG);
         SessionManager::new().start();
-        AuthenticationManager::default().start();
+        AuthenticationManager::default().register(&self.authenticators).start();
         // Starting systemd
         // Starting hooks
         // Starting clustering
@@ -101,14 +115,10 @@ impl ServerBuilder {
     }
 }
 
-// /// Manage listeners on a node
-// pub struct Listeners {}
-// /// Listen for TCP on a node
-// pub struct TcpListener {}
-// /// Listen for WS on a node
-// pub struct WsListener {}
-// /// Hold a TCP session on a node
-// pub struct TcpSession {}
-// /// Hold a WS session on a node
-// pub struct WsSession {}
-// pub trait PacketReceiver {}
+pub trait Authenticator: actix::Actor {
+    // type Future;
+    // type Error;
+
+    // fn poll_ready(&mut self, cx: Context<'_>) -> Poll<Result<(), Self::Error>>;
+    // fn authenticate(&mut self, request: AuthenticationRequest) -> Self::Future;
+}

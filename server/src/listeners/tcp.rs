@@ -2,15 +2,19 @@ use crate::router::Router;
 use crate::{
     listeners::XmppStream,
     parser::codec::XmppCodec,
-    sessions::{state::SessionState, unauthenticated::UnauthenticatedSession, SessionManagementPacketResult},
+    sessions::{
+        state::SessionState,
+        unauthenticated::{PacketHandler, UnauthenticatedSession},
+        SessionManagementPacketResult,
+    },
 };
 use actix::{prelude::*, Message};
-use actix_codec::Decoder;
+use actix_codec::{Decoder, Encoder};
 use bytes::BytesMut;
 use log::{error, trace};
 use std::io;
 use tokio::{
-    io::AsyncReadExt,
+    io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
     sync::mpsc::{self, Receiver, Sender},
 };
@@ -50,9 +54,30 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                     Ok(0) => {}
                     Ok(_) => {
                         while let Ok(Some(packet)) = codec.decode(&mut buf) {
-                            match Self::proceed_packet(packet, state, tx.clone(), &mut rx, &mut codec, &mut stream, &mut buf).await {
-                                Ok(new_state) => state = new_state,
-                                Err(_) => break,
+                            let result = Self::handle_packet(&state, &packet, Some(tx.clone())).await;
+
+                            if result.is_ok() {
+                                trace!("Waiting for response");
+
+                                if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
+                                    state = session_state;
+
+                                    trace!("SessionState is {:?}", session_state);
+
+                                    packets.into_iter().for_each(|packet| {
+                                        if let Err(e) = codec.encode(packet, &mut buf) {
+                                            error!("Error in proceed_packet: {:?}", e);
+                                        }
+                                    });
+
+                                    if let Err(e) = stream.write_buf(&mut buf).await {
+                                        error!("{:?}", e);
+                                    }
+
+                                    if let Err(e) = stream.flush().await {
+                                        error!("{:?}", e);
+                                    }
+                                }
                             }
                         }
                         match state {
@@ -87,10 +112,36 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                             Ok(0) => {}
                             Ok(_) => {
                                 while let Ok(Some(packet)) = codec.decode(&mut buf) {
-                                    match Self::proceed_packet(packet, state, tx.clone(), &mut rx, &mut codec, &mut tls_stream, &mut buf).await {
-                                        Ok(new_state) => state = new_state,
-                                        Err(_) => break,
+                                    let result = Self::handle_packet(&state, &packet, Some(tx.clone())).await;
+
+                                    println!("{:?}", result);
+                                    if result.is_ok() {
+                                        trace!("Waiting for response");
+
+                                        if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
+                                            state = session_state;
+
+                                            trace!("SessionState is {:?}", session_state);
+
+                                            packets.into_iter().for_each(|packet| {
+                                                if let Err(e) = codec.encode(packet, &mut buf) {
+                                                    error!("Error in proceed_packet: {:?}", e);
+                                                }
+                                            });
+
+                                            if let Err(e) = tls_stream.write_buf(&mut buf).await {
+                                                error!("{:?}", e);
+                                            }
+
+                                            if let Err(e) = tls_stream.flush().await {
+                                                error!("{:?}", e);
+                                            }
+                                        }
                                     }
+                                }
+
+                                if state == SessionState::Binded {
+                                    break;
                                 }
                                 if state == SessionState::Closing {
                                     // TODO: remove unwrap

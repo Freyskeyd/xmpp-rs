@@ -109,8 +109,8 @@ impl Handler<NewSession> for TcpListener {
                 act.sessions.push(session)
             }
 
-            Err(_) => {
-                error!("Session failed");
+            Err(e) => {
+                error!("Session failed {:?}", e);
             }
         })
         .map(|_, _, _| {

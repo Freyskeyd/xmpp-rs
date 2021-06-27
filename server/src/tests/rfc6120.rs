@@ -7,6 +7,7 @@ use xmpp_proto::OpenStreamBuilder;
 use xmpp_proto::{NonStanza, Packet, StreamError, StreamErrorKind};
 
 mod namespaces;
+mod starttls;
 mod stream_attribute;
 
 demonstrate! {

@@ -1,238 +1,68 @@
-use std::str::FromStr;
+use crate::sessions::{state::SessionState, SessionManagementPacketResultBuilder};
+use actix::{Actor, Context, Handler, Message, Recipient, Supervised, SystemService};
 
-use crate::{
-    sessions::{state::SessionState, AuthenticationRequest, SessionManagementPacket, SessionManagementPacketResultBuilder},
-    AuthenticationManager,
-};
-use actix::{Actor, Context, Handler, Supervised, SystemService};
-use jid::{BareJid, Jid};
-use log::{error, trace};
+use log::trace;
 use tokio::sync::mpsc::Sender;
-use uuid::Uuid;
-use xmpp_proto::{ns, Bind, CloseStream, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, StreamError, StreamErrorKind, StreamFeatures};
-use xmpp_xml::Element;
+
+use xmpp_proto::{CloseStream, Features, OpenStream, StreamError, StreamErrorKind};
 
 use super::SessionManagementPacketResult;
 
 /// Manage sessions on a node
 #[derive(Default)]
-pub struct SessionManager {}
+pub struct SessionManager {
+    // sessions: HashMap<String, HashMap<String, Session>>,
+}
 
 impl SessionManager {
     pub(crate) fn new() -> Self {
+        // Self { sessions: HashMap::new() }
         Self {}
     }
 
-    fn not_authorized_and_close(mut response: SessionManagementPacketResultBuilder, referer: Sender<SessionManagementPacketResult>) -> Result<(), ()> {
-        if let Ok(res) = response
+    pub(crate) fn not_authorized_and_close(response: &mut SessionManagementPacketResultBuilder) -> Result<SessionManagementPacketResult, ()> {
+        response
             .packet(StreamError { kind: StreamErrorKind::NotAuthorized }.into())
             .packet(CloseStream {}.into())
             .session_state(SessionState::Closing)
             .build()
-        {
-            res.send(referer);
-        }
-        Ok(())
+            .map_err(|_| ())
     }
 
-    pub(crate) fn handle_packet(&self, packet: SessionManagementPacket) -> Result<(), ()> {
-        trace!("Session manager receive packet");
-        let mut response = SessionManagementPacketResultBuilder::default();
-
-        match packet.packet {
-            Packet::InvalidPacket(invalid_packet) => {
-                if matches!(*invalid_packet, StreamErrorKind::UnsupportedEncoding) && packet.session_state == SessionState::Opening {
-                    if let Ok(res) = response.session_state(SessionState::UnsupportedEncoding).build() {
-                        res.send(packet.referer);
-                    }
-                    return Ok(());
-                }
-
-                match packet.session_state {
-                    SessionState::Opening => {
-                        response.packet(OpenStream::default().into());
-                    }
-                    _ => {}
-                }
-                if let Ok(res) = response
-                    .packet(StreamError { kind: *invalid_packet }.into())
-                    .packet(CloseStream {}.into())
-                    .session_state(SessionState::Closing)
-                    .build()
-                {
-                    res.send(packet.referer);
-                }
-                return Ok(());
+    #[allow(dead_code)]
+    fn handle_invalid_packet(
+        &self,
+        session_state: &SessionState,
+        invalid_packet: &StreamErrorKind,
+        response: &mut SessionManagementPacketResultBuilder,
+        referer: &Sender<SessionManagementPacketResult>,
+    ) -> Result<(), ()> {
+        if matches!(*invalid_packet, StreamErrorKind::UnsupportedEncoding) && SessionState::Opening.eq(session_state) {
+            if let Ok(res) = response.session_state(SessionState::UnsupportedEncoding).build() {
+                res.send(Some(referer.to_owned()));
             }
-            Packet::NonStanza(non_stanza_packet) => match *non_stanza_packet {
-                NonStanza::OpenStream(OpenStream { to, lang, version, from, id }) => {
-                    response.packet(
-                        OpenStream {
-                            id: Some(Uuid::new_v4().to_string()),
-                            to: from.map(|jid| BareJid::from(jid).into()),
-                            // TODO: Replace JID crate with another?
-                            // TODO: Validate FQDN
-                            from: Jid::from_str("localhost").ok(),
-                            // TODO: Validate lang input
-                            lang: "en".into(),
-                            version: "1.0".to_string(),
-                        }
-                        .into(),
-                    );
-
-                    if packet.session_state == SessionState::UnsupportedEncoding {
-                        if let Ok(res) = response
-                            .packet(
-                                StreamError {
-                                    kind: StreamErrorKind::UnsupportedEncoding,
-                                }
-                                .into(),
-                            )
-                            .packet(CloseStream {}.into())
-                            .session_state(SessionState::Closing)
-                            .build()
-                        {
-                            res.send(packet.referer);
-                        }
-                        return Ok(());
-                    }
-
-                    if version != "1.0" {
-                        if let Ok(res) = response
-                            .packet(
-                                StreamError {
-                                    kind: StreamErrorKind::UnsupportedVersion,
-                                }
-                                .into(),
-                            )
-                            .packet(CloseStream {}.into())
-                            .session_state(SessionState::Closing)
-                            .build()
-                        {
-                            res.send(packet.referer);
-                        }
-                        return Ok(());
-                    }
-
-                    if to.map(|t| t.to_string()) != Some("localhost".into()) {
-                        if let Ok(res) = response
-                            .packet(StreamError { kind: StreamErrorKind::HostUnknown }.into())
-                            .packet(CloseStream {}.into())
-                            .session_state(SessionState::Closing)
-                            .build()
-                        {
-                            res.send(packet.referer);
-                        }
-                        return Ok(());
-                    }
-
-                    match packet.session_state {
-                        SessionState::Opening => {
-                            response.packet(StreamFeatures { features: Features::StartTls }.into());
-                        }
-
-                        SessionState::Negociated => {
-                            response
-                                .packet(
-                                    StreamFeatures {
-                                        features: Features::Mechanisms(vec!["PLAIN".to_string()]),
-                                    }
-                                    .into(),
-                                )
-                                .session_state(SessionState::Authenticating);
-                        }
-                        SessionState::Authenticated => {
-                            response.packet(StreamFeatures { features: Features::Bind }.into()).session_state(SessionState::Binding);
-                        }
-                        state => {
-                            error!("Action({:?}) at this stage isn't possible", state);
-                            return Self::not_authorized_and_close(response, packet.referer);
-                        }
-                    }
-                }
-
-                NonStanza::StartTls(_) => {
-                    response.session_state(SessionState::Negociating).packet(ProceedTls::default().into());
-                }
-
-                NonStanza::Auth(e) => {
-                    // TODO: Switch to send?
-                    AuthenticationManager::from_registry().do_send(AuthenticationRequest::new(e, packet.referer));
-                    return Ok(());
-                }
-
-                NonStanza::CloseStream(_) => {
-                    if let Ok(res) = response.session_state(SessionState::Closing).packet(CloseStream {}.into()).build() {
-                        res.send(packet.referer);
-                    }
-                    return Ok(());
-                }
-                _ => {
-                    trace!("Something failed in manager");
-                    return Err(());
-                }
-            },
-
-            Packet::Stanza(stanza) => match *stanza {
-                xmpp_proto::Stanza::IQ(generic_iq) if generic_iq.get_type() == IqType::Set => {
-                    match packet.session_state {
-                        SessionState::Binding => {
-                            // We expect a binding command here
-                            match generic_iq.get_element() {
-                                Some(element) => {
-                                    match element.find((ns::BIND, "bind")) {
-                                        Some(bind_element) => {
-                                            let _bindd = Bind::from_element(bind_element);
-                                            let mut result_element = Element::new_with_namespaces((ns::STREAM, "iq"), element);
-
-                                            result_element
-                                                .set_attr("id", generic_iq.get_id())
-                                                .set_attr("type", "result")
-                                                .append_new_child((ns::BIND, "bind"))
-                                                .append_new_child((ns::BIND, "jid"))
-                                                .set_text(format!("SOME@localhost/{}", ""));
-
-                                            let result = GenericIq::from_element(&result_element).unwrap();
-                                            trace!("Respond with : {:?}", result);
-                                            // its bind
-                                            response.packet(result.into()).session_state(SessionState::Binded);
-                                        }
-                                        None => {
-                                            trace!("Something failed in manager");
-                                            return Err(());
-                                        }
-                                    }
-                                }
-                                None => {
-                                    trace!("Something failed in manager");
-                                    return Err(());
-                                }
-                            }
-                        }
-                        _ => {
-                            trace!("Something failed in manager");
-                            return Err(());
-                        }
-                    }
-                }
-                _ => {
-                    // return Self::not_authorized_and_close(response, packet.referer);
-                    return Err(());
-                }
-            },
+            return Ok(());
         }
 
-        if let Ok(res) = response.build() {
-            trace!("Sending response to referer");
-            res.send(packet.referer);
+        match session_state {
+            SessionState::Opening => {
+                response.packet(OpenStream::default().into());
+            }
+            _ => {}
         }
-
-        Ok(())
+        if let Ok(res) = response
+            .packet(StreamError { kind: invalid_packet.clone() }.into())
+            .packet(CloseStream {}.into())
+            .session_state(SessionState::Closing)
+            .build()
+        {
+            res.send(Some(referer.to_owned()));
+        }
+        return Ok(());
     }
 }
 
 impl Supervised for SessionManager {}
-
 impl SystemService for SessionManager {}
 impl Actor for SessionManager {
     type Context = Context<Self>;
@@ -242,10 +72,33 @@ impl Actor for SessionManager {
     }
 }
 
-impl Handler<SessionManagementPacket> for SessionManager {
+#[derive(Debug, Message)]
+#[rtype("Result<(),()>")]
+pub(crate) struct RegistrationStatus {}
+
+#[derive(Debug, Message)]
+#[rtype("Result<(),()>")]
+pub(crate) struct RegisterSession {
+    pub(crate) referer: Recipient<RegistrationStatus>,
+}
+impl Handler<RegisterSession> for SessionManager {
     type Result = Result<(), ()>;
 
-    fn handle(&mut self, packet: SessionManagementPacket, _ctx: &mut Self::Context) -> Self::Result {
-        self.handle_packet(packet)
+    fn handle(&mut self, msg: RegisterSession, _ctx: &mut Self::Context) -> Self::Result {
+        println!("Registering session");
+
+        let _ = msg.referer.do_send(RegistrationStatus {});
+        Ok(())
+    }
+}
+
+#[derive(Debug, Message)]
+#[rtype("Result<Features,()>")]
+pub(crate) struct GetMechanisms(pub(crate) String);
+impl Handler<GetMechanisms> for SessionManager {
+    type Result = Result<Features, ()>;
+
+    fn handle(&mut self, _: GetMechanisms, _ctx: &mut Self::Context) -> Self::Result {
+        Ok(Features::Mechanisms(vec!["PLAIN".into()]))
     }
 }

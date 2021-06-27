@@ -3,8 +3,6 @@ use actix_codec::AsyncWrite;
 use tokio::sync::mpsc::Sender;
 use xmpp_proto::Packet;
 
-use crate::authentication::AuthenticationRequest;
-
 pub(crate) mod manager;
 pub(crate) mod state;
 pub(crate) mod unauthenticated;
@@ -37,10 +35,16 @@ pub(crate) struct SessionManagementPacketResult {
 }
 
 impl SessionManagementPacketResult {
-    pub(crate) fn send(self, referer: Sender<Self>) {
-        let _ = referer.try_send(self);
+    pub(crate) fn send(self, referer: Option<Sender<Self>>) {
+        match referer {
+            Some(r) => {
+                let _ = r.try_send(self);
+            }
+            None => {}
+        }
     }
 }
+
 #[derive(Message)]
 #[rtype(result = "Result<Vec<Packet>, ()>")]
 struct GetPacket {}

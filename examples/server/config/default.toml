@@ -1,16 +1,19 @@
-vhost = ["locahost"]
+authenticators = ["sql", "personal"]
+
+[vhosts.localhost]
+name = "locahost"
 
 [[listeners]]
 [listeners.Tcp]
 port = 5222
 ip = "127.0.0.1"
-starttls = "Unavailable"
+# starttls = "Unavailable"
 
-[[listeners]]
+# [[listeners]]
 
-[listeners.Tcp]
-port = 5223
-ip = "127.0.0.1"
+# [listeners.Tcp]
+# port = 5223
+# ip = "127.0.0.1"
 
 [listeners.Tcp.starttls.Required]
 cert_path = "server.crt"

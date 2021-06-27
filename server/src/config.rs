@@ -1,23 +1,38 @@
-use config::{Config, ConfigError, Environment, File};
+use config::{Config, ConfigError, File};
 use serde::Deserialize;
-use std::env;
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Settings {
     pub(crate) listeners: Vec<ListenerConfig>,
+    pub(crate) authenticators: Vec<String>,
+    pub(crate) vhosts: HashMap<String, VhostConfig>,
 }
 
+//TODO: Rethink how to access per vhost config and config inheritance
 impl Settings {
     pub(crate) fn new() -> Result<Self, ConfigError> {
         let mut s = Config::default();
 
         s.merge(File::with_name("config/default"))?;
 
+        let default_authenticators = s.get::<Vec<String>>("authenticators")?;
+
+        let vhosts = s.get_table("vhosts")?;
+
+        vhosts.iter().for_each(|(vhost, _)| {
+            let target = format!("vhosts.{}.authenticators", vhost);
+
+            let _ = s.set_default(&target, default_authenticators.clone());
+        });
+
+        println!("vhosts : {:?}", s.get::<HashMap<String, VhostConfig>>("vhosts"));
         let r = s.try_into();
 
         r
     }
 }
+
 #[derive(Debug, Deserialize)]
 pub(crate) enum ListenerConfig {
     Tcp(TcpListenerConfig),
@@ -53,4 +68,9 @@ impl std::fmt::Display for StartTLSConfig {
             StartTLSConfig::Required(_) => write!(f, "starttls required"),
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct VhostConfig {
+    pub(crate) authenticators: Vec<String>,
 }
