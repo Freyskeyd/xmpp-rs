@@ -12,13 +12,15 @@ use crate::{authentication::AuthenticationManager, sessions::manager::SessionMan
 mod authentication;
 mod config;
 mod listeners;
+mod messages;
+mod packet;
 mod parser;
 mod router;
 mod sessions;
 #[cfg(test)]
 mod tests;
 
-pub use authentication::AuthenticationRequest;
+pub use messages::AuthenticationRequest;
 
 lazy_static! {
     static ref CONFIG: Settings = Settings::new().unwrap();
@@ -42,7 +44,7 @@ impl Server {
 pub struct ServerBuilder {
     cert: Option<String>,
     keys: Option<String>,
-    authenticators: HashMap<String, Recipient<authentication::AuthenticationRequest>>,
+    authenticators: HashMap<String, Recipient<AuthenticationRequest>>,
 }
 
 impl ServerBuilder {

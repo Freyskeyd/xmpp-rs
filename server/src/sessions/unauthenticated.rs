@@ -1,28 +1,18 @@
-use std::str::FromStr;
-
+use crate::messages::system::GetMechanisms;
 use crate::{
     authentication::AuthenticationManager,
+    packet::{PacketHandler, StanzaHandler},
     sessions::SessionManagementPacketResultBuilder,
     sessions::{manager::SessionManager, state::SessionState, SessionManagementPacketResult},
     AuthenticationRequest,
 };
 use actix::{Actor, Context, SystemService};
-
 use jid::{BareJid, Jid};
 use log::{error, trace};
+use std::str::FromStr;
 use tokio::sync::mpsc::Sender;
 use uuid::Uuid;
-use xmpp_proto::{
-    ns, Auth, Bind, CloseStream, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, ProceedTls, SASLSuccess, Stanza, StartTls, StreamError, StreamErrorKind, StreamFeatures,
-};
-use xmpp_xml::Element;
-
-use super::manager::GetMechanisms;
-
-#[async_trait::async_trait]
-pub(crate) trait PacketHandler {
-    async fn handle_packet(state: &SessionState, stanza: &Packet, from: Option<Sender<SessionManagementPacketResult>>) -> Result<(), ()>;
-}
+use xmpp_proto::{Auth, Bind, CloseStream, Features, NonStanza, OpenStream, Packet, ProceedTls, SASLSuccess, Stanza, StartTls, StreamError, StreamErrorKind, StreamFeatures};
 
 #[derive(Default)]
 pub(crate) struct UnauthenticatedSession {
@@ -48,35 +38,32 @@ impl Actor for UnauthenticatedSession {
 
 #[async_trait::async_trait]
 impl PacketHandler for UnauthenticatedSession {
-    async fn handle_packet(state: &SessionState, stanza: &Packet, from: Option<Sender<SessionManagementPacketResult>>) -> Result<(), ()> {
+    type Result = Result<(), ()>;
+    type From = Option<Sender<SessionManagementPacketResult>>;
+
+    async fn handle_packet(state: &SessionState, stanza: &Packet, from: Self::From) -> Self::Result {
         match stanza {
-            Packet::NonStanza(stanza) => Self::handle(state, &**stanza).await.map(|res| res.send(from)),
-            Packet::Stanza(stanza) => Self::handle(state, &**stanza).await.map(|res| res.send(from)),
+            Packet::NonStanza(stanza) => Self::handle(state, &**stanza).await,
+            Packet::Stanza(stanza) => Self::handle(state, &**stanza).await,
             Packet::InvalidPacket(invalid_packet) => {
                 let mut response = SessionManagementPacketResultBuilder::default();
 
-                SessionManager::handle_invalid_packet(state, invalid_packet, &mut response).map(|res| res.send(from))
+                Self::handle_invalid_packet(state, invalid_packet, &mut response)
             }
         }
+        .map(|result| result.send(from))
     }
-}
-
-#[async_trait::async_trait]
-trait StanzaHandler<T> {
-    async fn handle(state: &SessionState, stanza: &T) -> Result<SessionManagementPacketResult, ()>;
 }
 
 #[async_trait::async_trait]
 impl StanzaHandler<Stanza> for UnauthenticatedSession {
-    async fn handle(state: &SessionState, stanza: &Stanza) -> Result<SessionManagementPacketResult, ()> {
-        let fut = match stanza {
-            Stanza::IQ(stanza) => Self::handle(state, stanza),
-            _ => Box::pin(async { Err(()) }),
-        };
+    async fn handle(_state: &SessionState, _stanza: &Stanza) -> Result<SessionManagementPacketResult, ()> {
+        let fut = Box::pin(async { Err(()) });
 
         fut.await
     }
 }
+
 #[async_trait::async_trait]
 impl StanzaHandler<NonStanza> for UnauthenticatedSession {
     async fn handle(state: &SessionState, stanza: &NonStanza) -> Result<SessionManagementPacketResult, ()> {
@@ -163,68 +150,17 @@ impl StanzaHandler<OpenStream> for UnauthenticatedSession {
                 response.packet(StreamFeatures { features: Features::StartTls }.into());
             }
 
-            SessionState::Negociated => match SessionManager::from_registry().send(GetMechanisms("locahost".into())).await.map_err(|_| ())? {
-                Ok(features) => {
+            SessionState::Negociated => {
+                if let Ok(features) = SessionManager::from_registry().send(GetMechanisms("locahost".into())).await.map_err(|_| ())? {
                     response.packet(StreamFeatures { features }.into()).session_state(SessionState::Authenticating);
                 }
-                Err(_) => {}
-            },
+            }
             SessionState::Authenticated => {
                 response.packet(StreamFeatures { features: Features::Bind }.into()).session_state(SessionState::Binding);
             }
             state => {
                 error!("Action({:?}) at this stage isn't possible", state);
-                return SessionManager::not_authorized_and_close(&mut response);
-            }
-        }
-        response.build().map_err(|_| ())
-    }
-}
-
-#[async_trait::async_trait]
-impl StanzaHandler<GenericIq> for UnauthenticatedSession {
-    async fn handle(state: &SessionState, stanza: &GenericIq) -> Result<SessionManagementPacketResult, ()> {
-        let mut response = SessionManagementPacketResultBuilder::default();
-
-        if stanza.get_type() == IqType::Set {
-            match state {
-                SessionState::Binding => {
-                    // We expect a binding command here
-                    match stanza.get_element() {
-                        Some(element) => {
-                            match element.find((ns::BIND, "bind")) {
-                                Some(bind_element) => {
-                                    let _bindd = Bind::from_element(bind_element);
-                                    let mut result_element = Element::new_with_namespaces((ns::STREAM, "iq"), element);
-
-                                    result_element
-                                        .set_attr("id", stanza.get_id())
-                                        .set_attr("type", "result")
-                                        .append_new_child((ns::BIND, "bind"))
-                                        .append_new_child((ns::BIND, "jid"))
-                                        .set_text(format!("SOME@localhost/{}", ""));
-
-                                    let result = GenericIq::from_element(&result_element).unwrap();
-                                    trace!("Respond with : {:?}", result);
-                                    // its bind
-                                    response.packet(result.into()).session_state(SessionState::Binded);
-                                }
-                                None => {
-                                    trace!("Something failed in Binding");
-                                    return Err(());
-                                }
-                            }
-                        }
-                        None => {
-                            trace!("IQ without element");
-                            return Err(());
-                        }
-                    }
-                }
-                _ => {
-                    trace!("Unsupported state");
-                    return Err(());
-                }
+                return Self::not_authorized_and_close(&mut response);
             }
         }
         response.build().map_err(|_| ())
@@ -266,6 +202,8 @@ impl StanzaHandler<Bind> for UnauthenticatedSession {
 #[async_trait::async_trait]
 impl StanzaHandler<StreamError> for UnauthenticatedSession {
     async fn handle(_state: &SessionState, _stanza: &StreamError) -> Result<SessionManagementPacketResult, ()> {
-        todo!()
+        let mut response = SessionManagementPacketResultBuilder::default();
+
+        response.session_state(SessionState::Closing).packet(CloseStream {}.into()).build().map_err(|_| ())
     }
 }

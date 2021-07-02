@@ -3,7 +3,6 @@ pub(crate) mod tcp;
 // WS
 pub(crate) mod ws;
 
-use actix::Message;
 use actix_codec::AsyncRead;
 use tokio::io::AsyncWrite;
 
@@ -15,7 +14,3 @@ pub struct XmppStream {
 
 impl MyTrait for tokio::net::TcpStream {}
 impl MyTrait for tokio_rustls::server::TlsStream<tokio::net::TcpStream> {}
-
-#[derive(Message)]
-#[rtype(result = "Result<(), ()>")]
-struct UnauthenticatedSessionPacket {}

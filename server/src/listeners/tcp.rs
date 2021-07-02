@@ -1,37 +1,23 @@
-use crate::router::Router;
+use crate::messages::tcp::TcpOpenStream;
 use crate::{
     listeners::XmppStream,
+    messages::SessionManagementPacketResult,
+    packet::PacketHandler,
     parser::codec::XmppCodec,
-    sessions::{
-        state::SessionState,
-        unauthenticated::{PacketHandler, UnauthenticatedSession},
-        SessionManagementPacketResult,
-    },
+    sessions::{state::SessionState, unauthenticated::UnauthenticatedSession},
 };
-use actix::{prelude::*, Message};
+use actix::prelude::*;
 use actix_codec::{Decoder, Encoder};
 use bytes::BytesMut;
 use log::{error, trace};
 use std::io;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
     sync::mpsc::{self, Receiver, Sender},
 };
 
 pub(crate) mod listener;
 pub(crate) mod session;
-
-#[derive(Message)]
-#[rtype("()")]
-pub struct NewSession(pub TcpStream, pub std::net::SocketAddr, pub Addr<Router>);
-
-#[derive(Message)]
-#[rtype("Result<XmppStream, ()>")]
-pub struct TcpOpenStream {
-    stream: TcpStream,
-    acceptor: Option<tokio_rustls::TlsAcceptor>,
-}
 
 impl Handler<TcpOpenStream> for UnauthenticatedSession {
     type Result = ResponseFuture<Result<XmppStream, ()>>;
@@ -140,7 +126,7 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                                     }
                                 }
 
-                                if state == SessionState::Binded {
+                                if state == SessionState::Authenticated {
                                     break;
                                 }
                                 if state == SessionState::Closing {

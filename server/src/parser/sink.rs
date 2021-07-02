@@ -46,7 +46,6 @@ impl PacketSink {
 
                     XmlEvent::StartElement { name, namespace, attributes } => {
                         if let Ok(e) = self.parse_start_element(name, namespace, attributes) {
-                            println!("Return {:?}", e);
                             return Some(e);
                         }
                     }

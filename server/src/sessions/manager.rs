@@ -1,12 +1,7 @@
-use crate::sessions::{state::SessionState, SessionManagementPacketResultBuilder};
-use actix::{Actor, Context, Handler, Message, Recipient, Supervised, SystemService};
-
+use crate::messages::system::{GetMechanisms, RegisterSession, RegistrationStatus};
+use actix::{Actor, Context, Handler, Supervised, SystemService};
 use log::trace;
-use tokio::sync::mpsc::Sender;
-
-use xmpp_proto::{CloseStream, Features, OpenStream, StreamError, StreamErrorKind};
-
-use super::SessionManagementPacketResult;
+use xmpp_proto::Features;
 
 /// Manage sessions on a node
 #[derive(Default)]
@@ -18,39 +13,6 @@ impl SessionManager {
     pub(crate) fn new() -> Self {
         // Self { sessions: HashMap::new() }
         Self {}
-    }
-
-    pub(crate) fn not_authorized_and_close(response: &mut SessionManagementPacketResultBuilder) -> Result<SessionManagementPacketResult, ()> {
-        response
-            .packet(StreamError { kind: StreamErrorKind::NotAuthorized }.into())
-            .packet(CloseStream {}.into())
-            .session_state(SessionState::Closing)
-            .build()
-            .map_err(|_| ())
-    }
-
-    pub(crate) fn handle_invalid_packet(
-        session_state: &SessionState,
-        invalid_packet: &StreamErrorKind,
-        response: &mut SessionManagementPacketResultBuilder,
-    ) -> Result<SessionManagementPacketResult, ()> {
-        if matches!(*invalid_packet, StreamErrorKind::UnsupportedEncoding) && SessionState::Opening.eq(session_state) {
-            return response.session_state(SessionState::UnsupportedEncoding).build().map_err(|_| ());
-        }
-
-        match session_state {
-            SessionState::Opening => {
-                response.packet(OpenStream::default().into());
-            }
-            _ => {}
-        }
-
-        response
-            .packet(StreamError { kind: invalid_packet.clone() }.into())
-            .packet(CloseStream {}.into())
-            .session_state(SessionState::Closing)
-            .build()
-            .map_err(|_| ())
     }
 }
 
@@ -64,15 +26,14 @@ impl Actor for SessionManager {
     }
 }
 
-#[derive(Debug, Message)]
-#[rtype("Result<(),()>")]
-pub(crate) struct RegistrationStatus {}
+impl Handler<GetMechanisms> for SessionManager {
+    type Result = Result<Features, ()>;
 
-#[derive(Debug, Message)]
-#[rtype("Result<(),()>")]
-pub(crate) struct RegisterSession {
-    pub(crate) referer: Recipient<RegistrationStatus>,
+    fn handle(&mut self, _: GetMechanisms, _ctx: &mut Self::Context) -> Self::Result {
+        Ok(Features::Mechanisms(vec!["PLAIN".into()]))
+    }
 }
+
 impl Handler<RegisterSession> for SessionManager {
     type Result = Result<(), ()>;
 
@@ -81,16 +42,5 @@ impl Handler<RegisterSession> for SessionManager {
 
         let _ = msg.referer.do_send(RegistrationStatus {});
         Ok(())
-    }
-}
-
-#[derive(Debug, Message)]
-#[rtype("Result<Features,()>")]
-pub(crate) struct GetMechanisms(pub(crate) String);
-impl Handler<GetMechanisms> for SessionManager {
-    type Result = Result<Features, ()>;
-
-    fn handle(&mut self, _: GetMechanisms, _ctx: &mut Self::Context) -> Self::Result {
-        Ok(Features::Mechanisms(vec!["PLAIN".into()]))
     }
 }

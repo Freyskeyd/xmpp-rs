@@ -27,9 +27,7 @@ impl Settings {
         });
 
         println!("vhosts : {:?}", s.get::<HashMap<String, VhostConfig>>("vhosts"));
-        let r = s.try_into();
-
-        r
+        s.try_into()
     }
 }
 

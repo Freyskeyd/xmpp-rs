@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
+use crate::messages::AuthenticationRequest;
+use crate::CONFIG;
 use actix::prelude::*;
 use log::trace;
-
-use xmpp_proto::Auth;
-
-use crate::CONFIG;
+use std::collections::HashMap;
 
 type Vhost = String;
 
@@ -25,7 +22,7 @@ impl AuthenticationManager {
                 "memory" => {}
                 custom => {
                     if let Some(recipient) = authenticators.get(custom) {
-                        self.authenticators.entry(vhost.clone()).or_insert(Vec::new()).push(recipient.clone());
+                        self.authenticators.entry(vhost.clone()).or_insert_with(Vec::new).push(recipient.clone());
                     }
                 }
             });
@@ -58,18 +55,5 @@ impl Handler<AuthenticationRequest> for AuthenticationManager {
             //     res.send(&msg.referer)
             // }
         }
-    }
-}
-
-#[derive(Message)]
-#[rtype("()")]
-pub struct AuthenticationRequest {
-    packet: Auth,
-    // referer: Sender<SessionManagementPacketResult>,
-}
-
-impl AuthenticationRequest {
-    pub(crate) fn new(packet: Auth) -> Self {
-        Self { packet }
     }
 }

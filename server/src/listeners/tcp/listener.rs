@@ -1,8 +1,8 @@
 use super::session::TcpSession;
-use crate::router::Router;
-use crate::{config::StartTLSConfig, listeners::tcp::TcpOpenStream};
-use crate::{config::TcpListenerConfig, listeners::tcp::NewSession};
+use crate::{config::StartTLSConfig, listeners::tcp::TcpOpenStream, sessions::state::SessionState};
+use crate::{config::TcpListenerConfig, messages::tcp::NewSession};
 use crate::{listeners::XmppStream, parser::codec::XmppCodec, sessions::unauthenticated::UnauthenticatedSession};
+use crate::{router::Router, sessions::Session};
 use actix::{prelude::*, spawn};
 use log::{error, info, trace};
 use std::{
@@ -102,8 +102,13 @@ impl Handler<NewSession> for TcpListener {
                 let session = TcpSession::create(|ctx| {
                     let (r, w) = tokio::io::split(stream.inner);
 
+                    let session = Session {
+                        state: SessionState::Opening,
+                        sink: ctx.address().recipient(),
+                    }
+                    .start();
                     TcpSession::add_stream(FramedRead::new(r, XmppCodec::new()), ctx);
-                    TcpSession::new(0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx))
+                    TcpSession::new(0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx), session)
                 });
 
                 act.sessions.push(session)
