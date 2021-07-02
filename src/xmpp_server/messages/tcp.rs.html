@@ -14,7 +14,7 @@
 <span id="14">14</span>
 <span id="15">15</span>
 </pre><pre class="rust">
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::listeners::XmppStream</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::listeners::XmppStreamHolder</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::router::Router</span>;
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">Message</span>};
 <span class="kw">use</span> <span class="ident">tokio::net::TcpStream</span>;
@@ -24,7 +24,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NewSession</span>(<span class="kw">pub</span> <span class="ident">TcpStream</span>, <span class="kw">pub</span> <span class="ident">std::net::SocketAddr</span>, <span class="kw">pub</span> <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Router</span><span class="op">&gt;</span>);
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Message</span>)]</span>
-<span class="attribute">#[<span class="ident">rtype</span>(<span class="string">&quot;Result&lt;XmppStream, ()&gt;&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">rtype</span>(<span class="string">&quot;Result&lt;XmppStreamHolder, ()&gt;&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TcpOpenStream</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">stream</span>: <span class="ident">TcpStream</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">acceptor</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">tokio_rustls::TlsAcceptor</span><span class="op">&gt;</span>,
