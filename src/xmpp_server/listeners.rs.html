@@ -14,18 +14,12 @@
 <span id="14">14</span>
 <span id="15">15</span>
 <span id="16">16</span>
-<span id="17">17</span>
-<span id="18">18</span>
-<span id="19">19</span>
-<span id="20">20</span>
-<span id="21">21</span>
 </pre><pre class="rust">
 <span class="comment">// TCP</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">tcp</span>;
 <span class="comment">// WS</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">ws</span>;
 
-<span class="kw">use</span> <span class="ident">actix::Message</span>;
 <span class="kw">use</span> <span class="ident">actix_codec::AsyncRead</span>;
 <span class="kw">use</span> <span class="ident">tokio::io::AsyncWrite</span>;
 
@@ -37,10 +31,6 @@
 
 <span class="kw">impl</span> <span class="ident">MyTrait</span> <span class="kw">for</span> <span class="ident">tokio::net::TcpStream</span> {}
 <span class="kw">impl</span> <span class="ident">MyTrait</span> <span class="kw">for</span> <span class="ident">tokio_rustls::server::TlsStream</span><span class="op">&lt;</span><span class="ident">tokio::net::TcpStream</span><span class="op">&gt;</span> {}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Message</span>)]</span>
-<span class="attribute">#[<span class="ident">rtype</span>(<span class="ident">result</span> <span class="op">=</span> <span class="string">&quot;Result&lt;(), ()&gt;&quot;</span>)]</span>
-<span class="kw">struct</span> <span class="ident">UnauthenticatedSessionPacket</span> {}
 </pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="xmpp_server" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>

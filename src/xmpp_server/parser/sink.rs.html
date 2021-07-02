@@ -82,7 +82,6 @@
 <span id="82">82</span>
 <span id="83">83</span>
 <span id="84">84</span>
-<span id="85">85</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">circular::Buffer</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">trace</span>};
@@ -132,7 +131,6 @@
 
                     <span class="ident">XmlEvent::StartElement</span> { <span class="ident">name</span>, <span class="ident">namespace</span>, <span class="ident">attributes</span> } <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">parse_start_element</span>(<span class="ident">name</span>, <span class="ident">namespace</span>, <span class="ident">attributes</span>) {
-                            <span class="macro">println!</span>(<span class="string">&quot;Return {:?}&quot;</span>, <span class="ident">e</span>);
                             <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">e</span>);
                         }
                     }

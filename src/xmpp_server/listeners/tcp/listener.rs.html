@@ -130,12 +130,17 @@
 <span id="130">130</span>
 <span id="131">131</span>
 <span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">super</span><span class="ident">::session::TcpSession</span>;
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::router::Router</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::StartTLSConfig</span>, <span class="ident">listeners::tcp::TcpOpenStream</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::TcpListenerConfig</span>, <span class="ident">listeners::tcp::NewSession</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::StartTLSConfig</span>, <span class="ident">listeners::tcp::TcpOpenStream</span>, <span class="ident">sessions::state::SessionState</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::TcpListenerConfig</span>, <span class="ident">messages::tcp::NewSession</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">listeners::XmppStream</span>, <span class="ident">parser::codec::XmppCodec</span>, <span class="ident">sessions::unauthenticated::UnauthenticatedSession</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">router::Router</span>, <span class="ident">sessions::Session</span>};
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">spawn</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -235,8 +240,13 @@
                 <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">TcpSession::create</span>(<span class="op">|</span><span class="ident">ctx</span><span class="op">|</span> {
                     <span class="kw">let</span> (<span class="ident">r</span>, <span class="ident">w</span>) <span class="op">=</span> <span class="ident">tokio::io::split</span>(<span class="ident">stream</span>.<span class="ident">inner</span>);
 
+                    <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session</span> {
+                        <span class="ident">state</span>: <span class="ident">SessionState::Opening</span>,
+                        <span class="ident">sink</span>: <span class="ident">ctx</span>.<span class="ident">address</span>().<span class="ident">recipient</span>(),
+                    }
+                    .<span class="ident">start</span>();
                     <span class="ident">TcpSession::add_stream</span>(<span class="ident">FramedRead::new</span>(<span class="ident">r</span>, <span class="ident">XmppCodec::new</span>()), <span class="ident">ctx</span>);
-                    <span class="ident">TcpSession::new</span>(<span class="number">0</span>, <span class="ident">router</span>, <span class="ident">actix::io::FramedWrite::new</span>(<span class="ident">Box::pin</span>(<span class="ident">w</span>), <span class="ident">XmppCodec::new</span>(), <span class="ident">ctx</span>))
+                    <span class="ident">TcpSession::new</span>(<span class="number">0</span>, <span class="ident">router</span>, <span class="ident">actix::io::FramedWrite::new</span>(<span class="ident">Box::pin</span>(<span class="ident">w</span>), <span class="ident">XmppCodec::new</span>(), <span class="ident">ctx</span>), <span class="ident">session</span>)
                 });
 
                 <span class="ident">act</span>.<span class="ident">sessions</span>.<span class="ident">push</span>(<span class="ident">session</span>)
