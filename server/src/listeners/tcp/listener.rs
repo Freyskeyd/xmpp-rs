@@ -1,7 +1,7 @@
 use super::session::TcpSession;
 use crate::{config::StartTLSConfig, listeners::tcp::TcpOpenStream, sessions::state::SessionState};
 use crate::{config::TcpListenerConfig, messages::tcp::NewSession};
-use crate::{listeners::XmppStream, parser::codec::XmppCodec, sessions::unauthenticated::UnauthenticatedSession};
+use crate::{listeners::XmppStreamHolder, parser::codec::XmppCodec, sessions::unauthenticated::UnauthenticatedSession};
 use crate::{router::Router, sessions::Session};
 use actix::{prelude::*, spawn};
 use log::{error, info, trace};
@@ -32,9 +32,7 @@ impl TcpListener {
         Self { acceptor, sessions: Vec::new() }
     }
 
-    // pub(crate) fn start(ip: &str, router: Addr<Router>, cert: &Path, keys: &Path) -> Result<Addr<Self>, ()> {
     pub(crate) fn start(config: &TcpListenerConfig, router: Addr<Router>) -> Result<Addr<Self>, ()> {
-        // Create server listener
         let ip = format!("{}:{}", config.ip, config.port);
         let socket_addr = SocketAddr::from_str(&ip).unwrap();
 
@@ -84,45 +82,38 @@ impl Handler<NewSession> for TcpListener {
         info!("New TCP Session asked");
 
         let router = msg.2.clone();
-
         let acceptor = self.acceptor.clone();
-
         let session = UnauthenticatedSession::default().start();
 
-        let fut = async move {
-            match session.send(TcpOpenStream { stream: msg.0, acceptor }).await.unwrap() {
-                Ok(session) => Ok(session),
-                Err(_) => Err(()),
-            }
-        }
-        .into_actor(self)
-        .map(|res: Result<XmppStream, ()>, act: &mut TcpListener, _ctx| match res {
-            Ok(stream) => {
-                trace!("Session succeed");
-                let session = TcpSession::create(|ctx| {
-                    let (r, w) = tokio::io::split(stream.inner);
+        Box::pin(
+            async move { session.send(TcpOpenStream { stream: msg.0, acceptor }).await.unwrap().map_err(|_| ()) }
+                .into_actor(self)
+                .map(|res: Result<XmppStreamHolder, ()>, act: &mut TcpListener, _ctx| match res {
+                    Ok(stream) => {
+                        trace!("Session succeed");
+                        let session = TcpSession::create(|ctx| {
+                            let (r, w) = tokio::io::split(stream.inner);
 
-                    let session = Session {
-                        state: SessionState::Opening,
-                        sink: ctx.address().recipient(),
+                            let session = Session {
+                                state: SessionState::Opening,
+                                sink: ctx.address().recipient(),
+                            }
+                            .start();
+                            TcpSession::add_stream(FramedRead::new(r, XmppCodec::new()), ctx);
+                            TcpSession::new(0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx), session)
+                        });
+
+                        act.sessions.push(session)
                     }
-                    .start();
-                    TcpSession::add_stream(FramedRead::new(r, XmppCodec::new()), ctx);
-                    TcpSession::new(0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx), session)
-                });
 
-                act.sessions.push(session)
-            }
-
-            Err(e) => {
-                error!("Session failed {:?}", e);
-            }
-        })
-        .map(|_, _, _| {
-            trace!("Session killed");
-        });
-
-        Box::pin(fut)
+                    Err(e) => {
+                        error!("Session failed {:?}", e);
+                    }
+                })
+                .map(|_, _, _| {
+                    trace!("Session killed");
+                }),
+        )
     }
 }
 

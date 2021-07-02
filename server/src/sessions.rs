@@ -1,5 +1,5 @@
 use crate::{
-    messages::{SessionManagementPacketResult, SessionManagementPacketResultBuilder, SessionPacket},
+    messages::{SessionManagementPacketError, SessionManagementPacketResult, SessionManagementPacketResultBuilder, SessionPacket},
     packet::{PacketHandler, StanzaHandler},
     sessions::state::SessionState,
 };
@@ -18,8 +18,6 @@ pub(crate) mod unauthenticated;
 /// Hold a session on a node
 pub struct Session {
     pub(crate) state: SessionState,
-    #[allow(dead_code)]
-    // sink: Box<dyn AsyncWrite>,
     pub(crate) sink: Recipient<SessionManagementPacketResult>,
 }
 
@@ -53,7 +51,7 @@ impl Handler<SessionPacket> for Session {
 
 #[async_trait::async_trait]
 impl PacketHandler for Session {
-    type Result = Result<SessionManagementPacketResult, ()>;
+    type Result = Result<SessionManagementPacketResult, SessionManagementPacketError>;
     type From = ();
 
     async fn handle_packet(state: &SessionState, stanza: &Packet, _from: Self::From) -> Self::Result {
@@ -71,10 +69,10 @@ impl PacketHandler for Session {
 
 #[async_trait::async_trait]
 impl StanzaHandler<Stanza> for Session {
-    async fn handle(state: &SessionState, stanza: &Stanza) -> Result<SessionManagementPacketResult, ()> {
+    async fn handle(state: &SessionState, stanza: &Stanza) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         let fut = match stanza {
             Stanza::IQ(stanza) => <Self as StanzaHandler<_>>::handle(state, stanza),
-            _ => Box::pin(async { Err(()) }),
+            _ => Box::pin(async { Err(SessionManagementPacketError::Unknown) }),
         };
 
         fut.await
@@ -82,14 +80,14 @@ impl StanzaHandler<Stanza> for Session {
 }
 #[async_trait::async_trait]
 impl StanzaHandler<NonStanza> for Session {
-    async fn handle(state: &SessionState, stanza: &NonStanza) -> Result<SessionManagementPacketResult, ()> {
+    async fn handle(state: &SessionState, stanza: &NonStanza) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         let fut = match stanza {
             NonStanza::OpenStream(stanza) => <Self as StanzaHandler<_>>::handle(state, stanza),
             // NonStanza::StartTls(stanza) => Self::handle(state, stanza),
             // NonStanza::Auth(stanza) => Self::handle(state, stanza),
             // NonStanza::StreamError(stanza) => Self::handle(state, stanza),
             // NonStanza::CloseStream(stanza) => Self::handle(state, stanza),
-            _ => Box::pin(async { Err(()) }),
+            _ => Box::pin(async { Err(SessionManagementPacketError::Unknown) }),
         };
 
         fut.await
@@ -98,7 +96,7 @@ impl StanzaHandler<NonStanza> for Session {
 
 #[async_trait::async_trait]
 impl StanzaHandler<OpenStream> for Session {
-    async fn handle(state: &SessionState, stanza: &OpenStream) -> Result<SessionManagementPacketResult, ()> {
+    async fn handle(state: &SessionState, stanza: &OpenStream) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         let mut response = SessionManagementPacketResultBuilder::default();
 
         response.packet(
@@ -116,7 +114,7 @@ impl StanzaHandler<OpenStream> for Session {
         );
 
         if SessionState::UnsupportedEncoding.eq(state) {
-            return response
+            return Ok(response
                 .packet(
                     StreamError {
                         kind: StreamErrorKind::UnsupportedEncoding,
@@ -125,12 +123,11 @@ impl StanzaHandler<OpenStream> for Session {
                 )
                 .packet(CloseStream {}.into())
                 .session_state(SessionState::Closing)
-                .build()
-                .map_err(|_| ());
+                .build()?);
         }
 
         if stanza.version != "1.0" {
-            return response
+            return Ok(response
                 .packet(
                     StreamError {
                         kind: StreamErrorKind::UnsupportedVersion,
@@ -139,17 +136,15 @@ impl StanzaHandler<OpenStream> for Session {
                 )
                 .packet(CloseStream {}.into())
                 .session_state(SessionState::Closing)
-                .build()
-                .map_err(|_| ());
+                .build()?);
         }
 
         if stanza.to.as_ref().map(|t| t.to_string()) != Some("localhost".into()) {
-            return response
+            return Ok(response
                 .packet(StreamError { kind: StreamErrorKind::HostUnknown }.into())
                 .packet(CloseStream {}.into())
                 .session_state(SessionState::Closing)
-                .build()
-                .map_err(|_| ());
+                .build()?);
         }
 
         match state {
@@ -161,13 +156,13 @@ impl StanzaHandler<OpenStream> for Session {
                 return Self::not_authorized_and_close(&mut response);
             }
         }
-        response.build().map_err(|_| ())
+        Ok(response.build()?)
     }
 }
 
 #[async_trait::async_trait]
 impl StanzaHandler<GenericIq> for Session {
-    async fn handle(state: &SessionState, stanza: &GenericIq) -> Result<SessionManagementPacketResult, ()> {
+    async fn handle(state: &SessionState, stanza: &GenericIq) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         let mut response = SessionManagementPacketResultBuilder::default();
 
         if stanza.get_type() == IqType::Set {
@@ -195,22 +190,23 @@ impl StanzaHandler<GenericIq> for Session {
                                 }
                                 None => {
                                     trace!("Something failed in Binding");
-                                    return Err(());
+                                    return Err(SessionManagementPacketError::Unknown);
                                 }
                             }
                         }
                         None => {
                             trace!("IQ without element");
-                            return Err(());
+                            return Err(SessionManagementPacketError::Unknown);
                         }
                     }
                 }
                 _ => {
                     trace!("Unsupported state");
-                    return Err(());
+                    return Err(SessionManagementPacketError::Unknown);
                 }
             }
         }
-        response.build().map_err(|_| ())
+
+        Ok(response.build()?)
     }
 }

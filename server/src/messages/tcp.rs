@@ -1,4 +1,4 @@
-use crate::listeners::XmppStream;
+use crate::listeners::XmppStreamHolder;
 use crate::router::Router;
 use actix::{prelude::*, Message};
 use tokio::net::TcpStream;
@@ -8,7 +8,7 @@ use tokio::net::TcpStream;
 pub struct NewSession(pub TcpStream, pub std::net::SocketAddr, pub Addr<Router>);
 
 #[derive(Message)]
-#[rtype("Result<XmppStream, ()>")]
+#[rtype("Result<XmppStreamHolder, ()>")]
 pub struct TcpOpenStream {
     pub(crate) stream: TcpStream,
     pub(crate) acceptor: Option<tokio_rustls::TlsAcceptor>,

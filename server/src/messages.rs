@@ -1,3 +1,5 @@
+use std::{error::Error, fmt};
+
 use crate::sessions::state::SessionState;
 use actix::{Message, Recipient};
 use tokio::sync::mpsc::Sender;
@@ -38,6 +40,36 @@ impl SessionManagementPacketResult {
         }
     }
 }
+
+#[derive(Debug)]
+pub(crate) enum SessionManagementPacketError {
+    Unknown,
+}
+
+impl Error for SessionManagementPacketError {
+    fn description(&self) -> &str {
+        "error"
+    }
+}
+
+impl fmt::Display for SessionManagementPacketError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", "error")
+    }
+}
+
+impl From<actix::MailboxError> for SessionManagementPacketError {
+    fn from(_: actix::MailboxError) -> Self {
+        Self::Unknown
+    }
+}
+
+impl From<SessionManagementPacketResultBuilderError> for SessionManagementPacketError {
+    fn from(_: SessionManagementPacketResultBuilderError) -> Self {
+        Self::Unknown
+    }
+}
+
 #[derive(Message)]
 #[rtype("()")]
 pub struct AuthenticationRequest {

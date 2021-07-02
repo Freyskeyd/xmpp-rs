@@ -1,7 +1,6 @@
-use crate::messages::tcp::TcpOpenStream;
 use crate::{
-    listeners::XmppStream,
-    messages::SessionManagementPacketResult,
+    listeners::{XmppStream, XmppStreamHolder},
+    messages::{tcp::TcpOpenStream, SessionManagementPacketResult},
     packet::PacketHandler,
     parser::codec::XmppCodec,
     sessions::{state::SessionState, unauthenticated::UnauthenticatedSession},
@@ -19,8 +18,11 @@ use tokio::{
 pub(crate) mod listener;
 pub(crate) mod session;
 
+impl XmppStream for tokio::net::TcpStream {}
+impl XmppStream for tokio_rustls::server::TlsStream<tokio::net::TcpStream> {}
+
 impl Handler<TcpOpenStream> for UnauthenticatedSession {
-    type Result = ResponseFuture<Result<XmppStream, ()>>;
+    type Result = ResponseFuture<Result<XmppStreamHolder, ()>>;
 
     fn handle(&mut self, msg: TcpOpenStream, _ctx: &mut Self::Context) -> Self::Result {
         trace!("Opening TCP");
@@ -43,12 +45,8 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                             let result = Self::handle_packet(&state, &packet, Some(tx.clone())).await;
 
                             if result.is_ok() {
-                                trace!("Waiting for response");
-
                                 if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
                                     state = session_state;
-
-                                    trace!("SessionState is {:?}", session_state);
 
                                     packets.into_iter().for_each(|packet| {
                                         if let Err(e) = codec.encode(packet, &mut buf) {
@@ -100,14 +98,9 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                                 while let Ok(Some(packet)) = codec.decode(&mut buf) {
                                     let result = Self::handle_packet(&state, &packet, Some(tx.clone())).await;
 
-                                    println!("{:?}", result);
                                     if result.is_ok() {
-                                        trace!("Waiting for response");
-
                                         if let Some(SessionManagementPacketResult { session_state, packets }) = rx.recv().await {
                                             state = session_state;
-
-                                            trace!("SessionState is {:?}", session_state);
 
                                             packets.into_iter().for_each(|packet| {
                                                 if let Err(e) = codec.encode(packet, &mut buf) {
@@ -140,16 +133,15 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                                 continue;
                             }
                             Err(e) => {
-                                // return Err(e.into());
                                 error!("err: {:?}", e);
                                 break;
                             }
                         };
                     }
 
-                    Ok(XmppStream { inner: Box::new(tls_stream) })
+                    Ok(XmppStreamHolder { inner: Box::new(tls_stream) })
                 }
-                None => Ok(XmppStream { inner: Box::new(stream) }),
+                None => Ok(XmppStreamHolder { inner: Box::new(stream) }),
             }
         };
         Box::pin(fut)
