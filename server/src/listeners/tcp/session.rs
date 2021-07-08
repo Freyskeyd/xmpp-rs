@@ -1,12 +1,18 @@
+use crate::messages::system::UnregisterSession;
 use crate::{
-    messages::{system::RegisterSession, system::RegistrationStatus, SessionManagementPacketResult, SessionPacket},
+    messages::{
+        system::RegistrationStatus,
+        system::{RegisterSession, SessionCommand},
+        SessionManagementPacketResult, SessionPacket,
+    },
     parser::codec::XmppCodec,
     router::Router,
     sessions::{manager::SessionManager, Session},
 };
 use actix::{io::FramedWrite, prelude::*};
+use jid::FullJid;
 use log::trace;
-use std::{io, pin::Pin};
+use std::{io, pin::Pin, str::FromStr};
 use tokio::io::AsyncWrite;
 use xmpp_proto::Packet;
 
@@ -34,16 +40,26 @@ impl Actor for TcpSession {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         trace!("Starting TcpSession");
-        let referer = ctx.address().recipient::<RegistrationStatus>();
-        let fut = async move {
-            let _ = SessionManager::from_registry().send(RegisterSession { referer }).await;
-        };
+        let referer = ctx.address().recipient::<SessionCommand>();
+        let jid: FullJid = FullJid::from_str("admin@localhost/test").unwrap();
+        let fut = async move { SessionManager::from_registry().send(RegisterSession { jid, referer }).await.unwrap() };
 
-        ctx.wait(fut.into_actor(self));
+        ctx.wait(fut.into_actor(self).map(|res, actor, ctx| {
+            println!("{:?}", res);
+
+            match res {
+                Ok(_) => println!("OK"),
+                Err(_) => {
+                    ctx.stop();
+                }
+            }
+        }));
     }
 
     fn stopping(&mut self, _ctx: &mut Self::Context) -> actix::Running {
         trace!("Stopping TcpSession");
+        let jid: FullJid = FullJid::from_str("admin@localhost/test").unwrap();
+        let _ = SessionManager::from_registry().try_send(UnregisterSession { jid });
         actix::Running::Stop
     }
 
@@ -65,11 +81,14 @@ impl StreamHandler<Result<Packet, io::Error>> for TcpSession {
     }
 }
 
-impl Handler<RegistrationStatus> for TcpSession {
+impl Handler<SessionCommand> for TcpSession {
     type Result = Result<(), ()>;
 
-    fn handle(&mut self, msg: RegistrationStatus, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: SessionCommand, ctx: &mut Self::Context) -> Self::Result {
         println!("{:?}", msg);
+        match msg.0 {
+            crate::messages::system::SessionCommandAction::Kill => ctx.stop(),
+        }
         Ok(())
     }
 }

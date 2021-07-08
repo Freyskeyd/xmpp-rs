@@ -1,3 +1,5 @@
+use crate::messages::system::SessionCommand;
+use crate::messages::system::SessionCommandAction;
 use crate::{
     messages::{SessionManagementPacketError, SessionManagementPacketResult, SessionManagementPacketResultBuilder, SessionPacket},
     packet::{PacketHandler, StanzaHandler},
@@ -7,6 +9,7 @@ use actix::prelude::*;
 use jid::{BareJid, Jid};
 use log::{error, trace};
 use std::str::FromStr;
+use std::time::Duration;
 use uuid::Uuid;
 use xmpp_proto::{ns, Bind, CloseStream, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, Stanza, StreamError, StreamErrorKind, StreamFeatures};
 use xmpp_xml::Element;
@@ -19,17 +22,75 @@ pub(crate) mod unauthenticated;
 pub struct Session {
     pub(crate) state: SessionState,
     pub(crate) sink: Recipient<SessionManagementPacketResult>,
+    timeout_handler: Option<SpawnHandle>,
 }
 
-impl Session {}
+impl Session {
+    pub(crate) fn new(sink: Recipient<SessionManagementPacketResult>) -> Self {
+        Self {
+            state: SessionState::Opening,
+            sink,
+            timeout_handler: None,
+        }
+    }
+
+    fn reset_timeout(&mut self, ctx: &mut <Self as Actor>::Context) {
+        // let referer =
+        if let Some(handler) = self.timeout_handler {
+            if ctx.cancel_future(handler) {
+                trace!("Timeout handler resetted for session");
+            } else {
+                trace!("Unable to reset timeout handler for session");
+                ctx.set_mailbox_capacity(0);
+                let fut = ctx.notify(SessionCommand(SessionCommandAction::Kill));
+                return ();
+            }
+        }
+
+        let referer = ctx.address();
+        self.timeout_handler = Some(ctx.run_later(Duration::from_secs(10), move |actor, ctx| {
+            println!("Duration ended");
+            let fut = referer.send(SessionCommand(SessionCommandAction::Kill)).into_actor(actor).map(|_, _, _| ());
+
+            ctx.spawn(fut);
+        }));
+    }
+}
+
 impl Actor for Session {
     type Context = Context<Self>;
+    fn stopping(&mut self, _ctx: &mut Self::Context) -> actix::Running {
+        trace!("Stopping Session");
+        actix::Running::Stop
+    }
+
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
+        trace!("Session Stopped");
+    }
+}
+
+impl Handler<SessionCommand> for Session {
+    type Result = Result<(), ()>;
+
+    fn handle(&mut self, msg: SessionCommand, ctx: &mut Self::Context) -> Self::Result {
+        match msg.0 {
+            SessionCommandAction::Kill => {
+                if let Ok(result) = Self::close(&mut SessionManagementPacketResultBuilder::default()) {
+                    self.state = result.session_state;
+
+                    let _ = self.sink.try_send(result);
+                }
+                Ok(())
+            }
+        }
+    }
 }
 
 impl Handler<SessionPacket> for Session {
     type Result = ResponseActFuture<Self, Result<(), ()>>;
 
-    fn handle(&mut self, msg: SessionPacket, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: SessionPacket, ctx: &mut Self::Context) -> Self::Result {
+        self.reset_timeout(ctx);
         let state = self.state;
         let fut = async move {
             println!("Handle packet in session");
@@ -86,11 +147,21 @@ impl StanzaHandler<NonStanza> for Session {
             // NonStanza::StartTls(stanza) => Self::handle(state, stanza),
             // NonStanza::Auth(stanza) => Self::handle(state, stanza),
             // NonStanza::StreamError(stanza) => Self::handle(state, stanza),
-            // NonStanza::CloseStream(stanza) => Self::handle(state, stanza),
+            NonStanza::CloseStream(stanza) => <Self as StanzaHandler<_>>::handle(state, stanza),
             _ => Box::pin(async { Err(SessionManagementPacketError::Unknown) }),
         };
 
         fut.await
+    }
+}
+
+#[async_trait::async_trait]
+impl StanzaHandler<CloseStream> for Session {
+    async fn handle(_state: &SessionState, _stanza: &CloseStream) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
+        Ok(SessionManagementPacketResultBuilder::default()
+            .session_state(SessionState::Closing)
+            .packet(CloseStream {}.into())
+            .build()?)
     }
 }
 

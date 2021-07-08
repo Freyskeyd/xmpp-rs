@@ -23,19 +23,15 @@ pub(crate) trait PacketHandler {
             response.packet(OpenStream::default().into());
         }
 
-        Ok(response
-            .packet(StreamError { kind: invalid_packet.clone() }.into())
-            .packet(CloseStream {}.into())
-            .session_state(SessionState::Closing)
-            .build()?)
+        Self::close(response.packet(StreamError { kind: invalid_packet.clone() }.into()))
     }
 
     fn not_authorized_and_close(response: &mut SessionManagementPacketResultBuilder) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
-        Ok(response
-            .packet(StreamError { kind: StreamErrorKind::NotAuthorized }.into())
-            .packet(CloseStream {}.into())
-            .session_state(SessionState::Closing)
-            .build()?)
+        Self::close(response.packet(StreamError { kind: StreamErrorKind::NotAuthorized }.into()))
+    }
+
+    fn close(response: &mut SessionManagementPacketResultBuilder) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
+        Ok(response.packet(CloseStream {}.into()).session_state(SessionState::Closing).build()?)
     }
 }
 

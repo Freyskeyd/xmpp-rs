@@ -94,11 +94,7 @@ impl Handler<NewSession> for TcpListener {
                         let session = TcpSession::create(|ctx| {
                             let (r, w) = tokio::io::split(stream.inner);
 
-                            let session = Session {
-                                state: SessionState::Opening,
-                                sink: ctx.address().recipient(),
-                            }
-                            .start();
+                            let session = Session::new(ctx.address().recipient()).start();
                             TcpSession::add_stream(FramedRead::new(r, XmppCodec::new()), ctx);
                             TcpSession::new(0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx), session)
                         });
