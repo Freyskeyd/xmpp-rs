@@ -1,12 +1,13 @@
 use crate::messages::system::SessionCommand;
 use crate::messages::system::SessionCommandAction;
 use crate::{
-    messages::{SessionManagementPacketError, SessionManagementPacketResult, SessionManagementPacketResultBuilder, SessionPacket},
+    messages::{system::RegisterSession, system::UnregisterSession, SessionManagementPacketError, SessionManagementPacketResult, SessionManagementPacketResultBuilder, SessionPacket},
     packet::{PacketHandler, StanzaHandler},
+    sessions::manager::SessionManager,
     sessions::state::SessionState,
 };
 use actix::prelude::*;
-use jid::{BareJid, Jid};
+use jid::{BareJid, FullJid, Jid};
 use log::{error, trace};
 use std::str::FromStr;
 use std::time::Duration;
@@ -59,8 +60,25 @@ impl Session {
 
 impl Actor for Session {
     type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        trace!("Starting Session");
+        let referer = ctx.address().recipient::<SessionCommand>();
+        let jid: FullJid = FullJid::from_str("admin@localhost/test").unwrap();
+        let fut = async move { SessionManager::from_registry().send(RegisterSession { jid, referer }).await.unwrap() };
+
+        ctx.wait(fut.into_actor(self).map(|res, actor, ctx| match res {
+            Ok(_) => trace!("Session registered"),
+            Err(_) => {
+                ctx.stop();
+            }
+        }));
+    }
+
     fn stopping(&mut self, _ctx: &mut Self::Context) -> actix::Running {
         trace!("Stopping Session");
+        let jid: FullJid = FullJid::from_str("admin@localhost/test").unwrap();
+        let _ = SessionManager::from_registry().try_send(UnregisterSession { jid });
         actix::Running::Stop
     }
 
@@ -79,6 +97,7 @@ impl Handler<SessionCommand> for Session {
                     self.state = result.session_state;
 
                     let _ = self.sink.try_send(result);
+                    ctx.stop();
                 }
                 Ok(())
             }
