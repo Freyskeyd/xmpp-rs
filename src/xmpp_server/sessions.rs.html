@@ -281,16 +281,36 @@
 <span id="281">281</span>
 <span id="282">282</span>
 <span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::SessionCommand</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::SessionCommandAction</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">messages</span>::{<span class="ident">SessionManagementPacketError</span>, <span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketResultBuilder</span>, <span class="ident">SessionPacket</span>},
+    <span class="ident">messages</span>::{<span class="ident">system::RegisterSession</span>, <span class="ident">system::UnregisterSession</span>, <span class="ident">SessionManagementPacketError</span>, <span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketResultBuilder</span>, <span class="ident">SessionPacket</span>},
     <span class="ident">packet</span>::{<span class="ident">PacketHandler</span>, <span class="ident">StanzaHandler</span>},
+    <span class="ident">sessions::manager::SessionManager</span>,
     <span class="ident">sessions::state::SessionState</span>,
 };
 <span class="kw">use</span> <span class="ident">actix::prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">jid</span>::{<span class="ident">BareJid</span>, <span class="ident">Jid</span>};
+<span class="kw">use</span> <span class="ident">jid</span>::{<span class="ident">BareJid</span>, <span class="ident">FullJid</span>, <span class="ident">Jid</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">trace</span>};
 <span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
 <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
@@ -343,8 +363,25 @@
 
 <span class="kw">impl</span> <span class="ident">Actor</span> <span class="kw">for</span> <span class="ident">Session</span> {
     <span class="kw">type</span> <span class="ident">Context</span> <span class="op">=</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
+
+    <span class="kw">fn</span> <span class="ident">started</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) {
+        <span class="macro">trace!</span>(<span class="string">&quot;Starting Session&quot;</span>);
+        <span class="kw">let</span> <span class="ident">referer</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">address</span>().<span class="ident">recipient</span>::<span class="op">&lt;</span><span class="ident">SessionCommand</span><span class="op">&gt;</span>();
+        <span class="kw">let</span> <span class="ident">jid</span>: <span class="ident">FullJid</span> <span class="op">=</span> <span class="ident">FullJid::from_str</span>(<span class="string">&quot;admin@localhost/test&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">SessionManager::from_registry</span>().<span class="ident">send</span>(<span class="ident">RegisterSession</span> { <span class="ident">jid</span>, <span class="ident">referer</span> }).<span class="kw">await</span>.<span class="ident">unwrap</span>() };
+
+        <span class="ident">ctx</span>.<span class="ident">wait</span>(<span class="ident">fut</span>.<span class="ident">into_actor</span>(<span class="self">self</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">res</span>, <span class="ident">actor</span>, <span class="ident">ctx</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">res</span> {
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace!</span>(<span class="string">&quot;Session registered&quot;</span>),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">ctx</span>.<span class="ident">stop</span>();
+            }
+        }));
+    }
+
     <span class="kw">fn</span> <span class="ident">stopping</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">actix::Running</span> {
         <span class="macro">trace!</span>(<span class="string">&quot;Stopping Session&quot;</span>);
+        <span class="kw">let</span> <span class="ident">jid</span>: <span class="ident">FullJid</span> <span class="op">=</span> <span class="ident">FullJid::from_str</span>(<span class="string">&quot;admin@localhost/test&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">SessionManager::from_registry</span>().<span class="ident">try_send</span>(<span class="ident">UnregisterSession</span> { <span class="ident">jid</span> });
         <span class="ident">actix::Running::Stop</span>
     }
 
@@ -363,6 +400,7 @@
                     <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">session_state</span>;
 
                     <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">sink</span>.<span class="ident">try_send</span>(<span class="ident">result</span>);
+                    <span class="ident">ctx</span>.<span class="ident">stop</span>();
                 }
                 <span class="prelude-val">Ok</span>(())
             }
