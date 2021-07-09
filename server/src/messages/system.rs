@@ -1,5 +1,5 @@
 use actix::{Message, Recipient};
-use jid::FullJid;
+use jid::{FullJid, Jid};
 use xmpp_proto::Features;
 
 #[derive(Debug, Message)]
@@ -9,7 +9,7 @@ pub(crate) struct RegistrationStatus {}
 #[derive(Debug, Message)]
 #[rtype("Result<(),()>")]
 pub(crate) struct RegisterSession {
-    pub(crate) jid: FullJid,
+    pub(crate) jid: Jid,
     pub(crate) referer: Recipient<SessionCommand>,
 }
 

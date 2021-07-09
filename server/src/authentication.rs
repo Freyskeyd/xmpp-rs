@@ -1,8 +1,26 @@
 use crate::messages::AuthenticationRequest;
+use crate::messages::SessionManagementPacketResultBuilder;
+use crate::sessions::state::{SessionRealState, SessionState};
 use crate::CONFIG;
 use actix::prelude::*;
+use base64::decode;
+use jid::FullJid;
+use jid::Jid;
 use log::trace;
+use sasl::common::Identity;
+use sasl::secret;
+use sasl::secret::Plain;
+use sasl::server::mechanisms::Plain as ServerPlain;
+use sasl::server::Response;
+use sasl::server::Validator;
+use sasl::server::ValidatorError;
 use std::collections::HashMap;
+use std::str::FromStr;
+use xmpp_proto::SASLSuccess;
+
+use sasl::common::Credentials;
+use sasl::common::Identity::Username;
+use sasl::server::Mechanism;
 
 type Vhost = String;
 
@@ -48,12 +66,50 @@ impl Handler<AuthenticationRequest> for AuthenticationManager {
 
     fn handle(&mut self, msg: AuthenticationRequest, _ctx: &mut Self::Context) -> Self::Result {
         if let Some("PLAIN") = msg.packet.mechanism() {
-            // let mut response = SessionManagementPacketResultBuilder::default();
-            // response.session_state(SessionState::Authenticated).packet(SASLSuccess::default().into());
+            println!("AUTHENT WITH PLAIN");
+            let challenge = decode(msg.packet.challenge().as_ref().unwrap()).unwrap();
 
-            // if let Ok(res) = response.build() {
-            //     res.send(&msg.referer)
-            // }
+            let mut mech = ServerPlain::new(MyValidator);
+            println!("{:?}", mech.respond(&challenge));
+            let username = match mech.respond(&challenge) {
+                Ok(Response::Success(Username(username), _)) => username,
+                _ => {
+                    return ();
+                }
+            };
+            let mut response = SessionManagementPacketResultBuilder::default();
+            response
+                .real_session_state(
+                    SessionRealState::builder()
+                        .jid(Some(Jid::from_str(&format!("{}@localhost", username)).unwrap()))
+                        .state(SessionState::Authenticated)
+                        .build()
+                        .unwrap(),
+                )
+                .session_state(SessionState::Authenticated)
+                .packet(SASLSuccess::default().into());
+
+            if let Ok(res) = response.build() {
+                match msg.from {
+                    crate::sessions::state::ResponseAddr::Unauthenticated(from) => res.send(Some(from)),
+                    _ => panic!("Shouldnt happend"),
+                }
+            }
+        }
+    }
+}
+const USERNAME: &'static str = "local";
+const PASSWORD: &'static str = "admin";
+struct MyValidator;
+impl Validator<secret::Plain> for MyValidator {
+    fn validate(&self, identity: &Identity, value: &secret::Plain) -> Result<(), ValidatorError> {
+        let &secret::Plain(ref password) = value;
+        if identity != &Identity::Username(USERNAME.to_owned()) {
+            Err(ValidatorError::AuthenticationFailed)
+        } else if password != PASSWORD {
+            Err(ValidatorError::AuthenticationFailed)
+        } else {
+            Ok(())
         }
     }
 }

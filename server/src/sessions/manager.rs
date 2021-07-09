@@ -45,19 +45,24 @@ impl Handler<RegisterSession> for SessionManager {
     fn handle(&mut self, msg: RegisterSession, ctx: &mut Self::Context) -> Self::Result {
         println!("Registering session");
 
-        let resource = msg.jid.resource.clone();
-        let sessions = self.sessions.entry(BareJid::try_from(msg.jid).unwrap().to_string()).or_default();
+        match msg.jid {
+            jid::Jid::Full(jid) => {
+                let resource = jid.resource.clone();
+                let sessions = self.sessions.entry(BareJid::try_from(jid).unwrap().to_string()).or_default();
 
-        if let Some(_) = sessions.get(&resource) {
-            println!("Session already exists");
-            return Err(());
+                if let Some(_) = sessions.get(&resource) {
+                    println!("Session already exists");
+                    return Err(());
+                }
+
+                sessions.insert(resource, msg.referer.clone());
+
+                println!("Sessions: {:?}", self.sessions);
+
+                Ok(())
+            }
+            _ => Err(()),
         }
-
-        sessions.insert(resource, msg.referer.clone());
-
-        println!("Sessions: {:?}", self.sessions);
-
-        Ok(())
     }
 }
 

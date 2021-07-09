@@ -1,6 +1,6 @@
 use std::{error::Error, fmt};
 
-use crate::sessions::state::SessionState;
+use crate::sessions::state::{ResponseAddr, SessionRealState, SessionState};
 use actix::{Message, Recipient};
 use tokio::sync::mpsc::Sender;
 use xmpp_proto::{Auth, Packet};
@@ -31,6 +31,8 @@ pub(crate) struct SessionManagementPacketResult {
     pub(crate) session_state: SessionState,
     #[builder(default = "Vec::new()", setter(each = "packet", into = "true"))]
     pub(crate) packets: Vec<Packet>,
+    #[builder(default = "None")]
+    pub(crate) real_session_state: Option<SessionRealState>,
 }
 
 impl SessionManagementPacketResult {
@@ -74,10 +76,11 @@ impl From<SessionManagementPacketResultBuilderError> for SessionManagementPacket
 #[rtype("()")]
 pub struct AuthenticationRequest {
     pub(crate) packet: Auth,
+    pub(crate) from: ResponseAddr,
 }
 
 impl AuthenticationRequest {
-    pub(crate) fn new(packet: Auth) -> Self {
-        Self { packet }
+    pub(crate) fn new(packet: Auth, from: ResponseAddr) -> Self {
+        Self { packet, from }
     }
 }

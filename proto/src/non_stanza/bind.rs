@@ -5,7 +5,7 @@ use crate::{ns, FromXmlElement, NonStanza, Packet, ToXmlElement};
 
 #[derive(Default, Debug, Clone)]
 pub struct Bind {
-    resource: Option<String>,
+    pub resource: Option<String>,
 }
 
 impl From<Bind> for Packet {

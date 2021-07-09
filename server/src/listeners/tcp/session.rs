@@ -1,4 +1,5 @@
 use crate::messages::system::UnregisterSession;
+use crate::sessions::state::SessionRealState;
 use crate::{
     messages::{
         system::RegistrationStatus,
@@ -25,7 +26,7 @@ pub(crate) struct TcpSession {
 }
 
 impl TcpSession {
-    pub(crate) fn new(id: usize, router: Addr<Router>, sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>, session: Addr<Session>) -> Self {
+    pub(crate) fn new(_state: SessionRealState, id: usize, router: Addr<Router>, sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>, session: Addr<Session>) -> Self {
         Self {
             _id: id,
             _router: router,
@@ -71,7 +72,7 @@ impl Handler<SessionManagementPacketResult> for TcpSession {
     fn handle(&mut self, msg: SessionManagementPacketResult, _ctx: &mut Self::Context) -> Self::Result {
         println!("{:?}", msg);
 
-        let SessionManagementPacketResult { session_state, packets } = msg;
+        let SessionManagementPacketResult { session_state, packets, .. } = msg;
         trace!("SessionState is {:?}", session_state);
 
         packets.into_iter().for_each(|packet| {

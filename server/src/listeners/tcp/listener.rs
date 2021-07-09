@@ -1,4 +1,5 @@
 use super::session::TcpSession;
+use crate::sessions::state::SessionRealState;
 use crate::{config::StartTLSConfig, listeners::tcp::TcpOpenStream, sessions::state::SessionState};
 use crate::{config::TcpListenerConfig, messages::tcp::NewSession};
 use crate::{listeners::XmppStreamHolder, parser::codec::XmppCodec, sessions::unauthenticated::UnauthenticatedSession};
@@ -88,15 +89,15 @@ impl Handler<NewSession> for TcpListener {
         Box::pin(
             async move { session.send(TcpOpenStream { stream: msg.0, acceptor }).await.unwrap().map_err(|_| ()) }
                 .into_actor(self)
-                .map(|res: Result<XmppStreamHolder, ()>, act: &mut TcpListener, _ctx| match res {
-                    Ok(stream) => {
+                .map(|res: Result<(XmppStreamHolder, SessionRealState), ()>, act: &mut TcpListener, _ctx| match res {
+                    Ok((stream, state)) => {
                         trace!("Session succeed");
                         let session = TcpSession::create(|ctx| {
                             let (r, w) = tokio::io::split(stream.inner);
 
-                            let session = Session::new(ctx.address().recipient()).start();
+                            let session = Session::new(state.clone(), ctx.address().recipient()).start();
                             TcpSession::add_stream(FramedRead::new(r, XmppCodec::new()), ctx);
-                            TcpSession::new(0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx), session)
+                            TcpSession::new(state, 0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx), session)
                         });
 
                         act.sessions.push(session)

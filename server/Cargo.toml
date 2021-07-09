@@ -59,6 +59,7 @@ config = "0.11"
 async-trait ="*"
 lazy_static = "1"
 tower-service = "0.3.1"
+base64 = "0.13.0"
 
 [dev-dependencies]
 demonstrate = "0.4.5"
