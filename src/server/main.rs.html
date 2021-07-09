@@ -14,7 +14,7 @@
 
 <span class="attribute">#[<span class="ident">actix::main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() {
-    <span class="ident">env::set_var</span>(<span class="string">&quot;RUST_LOG&quot;</span>, <span class="string">&quot;actix=trace,xmpp_server=trace&quot;</span>);
+    <span class="ident">env::set_var</span>(<span class="string">&quot;RUST_LOG&quot;</span>, <span class="string">&quot;actix=trace,xmpp_server=trace,xmpp_server::parser::codec=info&quot;</span>);
     <span class="ident">env_logger::init</span>();
 
     <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">Server::build</span>().<span class="ident">launch</span>().<span class="kw">await</span>;

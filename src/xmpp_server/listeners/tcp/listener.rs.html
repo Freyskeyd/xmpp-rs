@@ -122,8 +122,10 @@
 <span id="122">122</span>
 <span id="123">123</span>
 <span id="124">124</span>
+<span id="125">125</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">super</span><span class="ident">::session::TcpSession</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::SessionRealState</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::StartTLSConfig</span>, <span class="ident">listeners::tcp::TcpOpenStream</span>, <span class="ident">sessions::state::SessionState</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::TcpListenerConfig</span>, <span class="ident">messages::tcp::NewSession</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">listeners::XmppStreamHolder</span>, <span class="ident">parser::codec::XmppCodec</span>, <span class="ident">sessions::unauthenticated::UnauthenticatedSession</span>};
@@ -213,15 +215,15 @@
         <span class="ident">Box::pin</span>(
             <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">session</span>.<span class="ident">send</span>(<span class="ident">TcpOpenStream</span> { <span class="ident">stream</span>: <span class="ident">msg</span>.<span class="number">0</span>, <span class="ident">acceptor</span> }).<span class="kw">await</span>.<span class="ident">unwrap</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ()) }
                 .<span class="ident">into_actor</span>(<span class="self">self</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">res</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">XmppStreamHolder</span>, ()<span class="op">&gt;</span>, <span class="ident">act</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TcpListener</span>, <span class="ident">_ctx</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">res</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">stream</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">res</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">XmppStreamHolder</span>, <span class="ident">SessionRealState</span>), ()<span class="op">&gt;</span>, <span class="ident">act</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TcpListener</span>, <span class="ident">_ctx</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">res</span> {
+                    <span class="prelude-val">Ok</span>((<span class="ident">stream</span>, <span class="ident">state</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">trace!</span>(<span class="string">&quot;Session succeed&quot;</span>);
                         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">TcpSession::create</span>(<span class="op">|</span><span class="ident">ctx</span><span class="op">|</span> {
                             <span class="kw">let</span> (<span class="ident">r</span>, <span class="ident">w</span>) <span class="op">=</span> <span class="ident">tokio::io::split</span>(<span class="ident">stream</span>.<span class="ident">inner</span>);
 
-                            <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">ctx</span>.<span class="ident">address</span>().<span class="ident">recipient</span>()).<span class="ident">start</span>();
+                            <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">state</span>.<span class="ident">clone</span>(), <span class="ident">ctx</span>.<span class="ident">address</span>().<span class="ident">recipient</span>()).<span class="ident">start</span>();
                             <span class="ident">TcpSession::add_stream</span>(<span class="ident">FramedRead::new</span>(<span class="ident">r</span>, <span class="ident">XmppCodec::new</span>()), <span class="ident">ctx</span>);
-                            <span class="ident">TcpSession::new</span>(<span class="number">0</span>, <span class="ident">router</span>, <span class="ident">actix::io::FramedWrite::new</span>(<span class="ident">Box::pin</span>(<span class="ident">w</span>), <span class="ident">XmppCodec::new</span>(), <span class="ident">ctx</span>), <span class="ident">session</span>)
+                            <span class="ident">TcpSession::new</span>(<span class="ident">state</span>, <span class="number">0</span>, <span class="ident">router</span>, <span class="ident">actix::io::FramedWrite::new</span>(<span class="ident">Box::pin</span>(<span class="ident">w</span>), <span class="ident">XmppCodec::new</span>(), <span class="ident">ctx</span>), <span class="ident">session</span>)
                         });
 
                         <span class="ident">act</span>.<span class="ident">sessions</span>.<span class="ident">push</span>(<span class="ident">session</span>)

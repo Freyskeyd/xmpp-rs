@@ -81,10 +81,13 @@
 <span id="81">81</span>
 <span id="82">82</span>
 <span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error::Error</span>, <span class="ident">fmt</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::SessionState</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state</span>::{<span class="ident">ResponseAddr</span>, <span class="ident">SessionRealState</span>, <span class="ident">SessionState</span>};
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">Message</span>, <span class="ident">Recipient</span>};
 <span class="kw">use</span> <span class="ident">tokio::sync::mpsc::Sender</span>;
 <span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">Auth</span>, <span class="ident">Packet</span>};
@@ -115,6 +118,8 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">session_state</span>: <span class="ident">SessionState</span>,
     <span class="attribute">#[<span class="ident">builder</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;Vec::new()&quot;</span>, <span class="ident">setter</span>(<span class="ident">each</span> <span class="op">=</span> <span class="string">&quot;packet&quot;</span>, <span class="ident">into</span> <span class="op">=</span> <span class="string">&quot;true&quot;</span>))]</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">packets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">builder</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;None&quot;</span>)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">real_session_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">SessionRealState</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">SessionManagementPacketResult</span> {
@@ -158,11 +163,12 @@
 <span class="attribute">#[<span class="ident">rtype</span>(<span class="string">&quot;()&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AuthenticationRequest</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">packet</span>: <span class="ident">Auth</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">from</span>: <span class="ident">ResponseAddr</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">AuthenticationRequest</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">packet</span>: <span class="ident">Auth</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">packet</span> }
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">packet</span>: <span class="ident">Auth</span>, <span class="ident">from</span>: <span class="ident">ResponseAddr</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> { <span class="ident">packet</span>, <span class="ident">from</span> }
     }
 }
 </pre></div>

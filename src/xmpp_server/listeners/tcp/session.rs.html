@@ -79,8 +79,10 @@
 <span id="79">79</span>
 <span id="80">80</span>
 <span id="81">81</span>
+<span id="82">82</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::UnregisterSession</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::SessionRealState</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">messages</span>::{
         <span class="ident">system::RegistrationStatus</span>,
@@ -107,7 +109,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TcpSession</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">id</span>: <span class="ident">usize</span>, <span class="ident">router</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Router</span><span class="op">&gt;</span>, <span class="ident">sink</span>: <span class="ident">FramedWrite</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">XmppCodec</span><span class="op">&gt;</span>, <span class="ident">session</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Session</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">_state</span>: <span class="ident">SessionRealState</span>, <span class="ident">id</span>: <span class="ident">usize</span>, <span class="ident">router</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Router</span><span class="op">&gt;</span>, <span class="ident">sink</span>: <span class="ident">FramedWrite</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">XmppCodec</span><span class="op">&gt;</span>, <span class="ident">session</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Session</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">_id</span>: <span class="ident">id</span>,
             <span class="ident">_router</span>: <span class="ident">router</span>,
@@ -153,7 +155,7 @@
     <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">SessionManagementPacketResult</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">msg</span>);
 
-        <span class="kw">let</span> <span class="ident">SessionManagementPacketResult</span> { <span class="ident">session_state</span>, <span class="ident">packets</span> } <span class="op">=</span> <span class="ident">msg</span>;
+        <span class="kw">let</span> <span class="ident">SessionManagementPacketResult</span> { <span class="ident">session_state</span>, <span class="ident">packets</span>, .. } <span class="op">=</span> <span class="ident">msg</span>;
         <span class="macro">trace!</span>(<span class="string">&quot;SessionState is {:?}&quot;</span>, <span class="ident">session_state</span>);
 
         <span class="ident">packets</span>.<span class="ident">into_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">packet</span><span class="op">|</span> {
