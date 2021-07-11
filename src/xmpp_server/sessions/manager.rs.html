@@ -88,11 +88,13 @@
 <span id="88">88</span>
 <span id="89">89</span>
 <span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
 </pre><pre class="rust">
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">convert::TryFrom</span>, <span class="ident">thread</span>, <span class="ident">time::Duration</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">convert::TryFrom</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system</span>::{<span class="ident">GetMechanisms</span>, <span class="ident">RegisterSession</span>, <span class="ident">RegistrationStatus</span>, <span class="ident">SessionCommand</span>, <span class="ident">SessionCommandAction</span>, <span class="ident">UnregisterSession</span>};
-<span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">Actor</span>, <span class="ident">ActorFutureExt</span>, <span class="ident">AsyncContext</span>, <span class="ident">Context</span>, <span class="ident">Handler</span>, <span class="ident">Recipient</span>, <span class="ident">Supervised</span>, <span class="ident">SystemService</span>, <span class="ident">WrapFuture</span>};
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system</span>::{<span class="ident">GetMechanisms</span>, <span class="ident">RegisterSession</span>, <span class="ident">SessionCommand</span>, <span class="ident">UnregisterSession</span>};
+<span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">Actor</span>, <span class="ident">Context</span>, <span class="ident">Handler</span>, <span class="ident">Recipient</span>, <span class="ident">Supervised</span>, <span class="ident">SystemService</span>};
 <span class="kw">use</span> <span class="ident">jid::BareJid</span>;
 <span class="kw">use</span> <span class="ident">log::trace</span>;
 <span class="kw">use</span> <span class="ident">xmpp_proto::Features</span>;
@@ -133,7 +135,7 @@
 <span class="kw">impl</span> <span class="ident">Handler</span><span class="op">&lt;</span><span class="ident">RegisterSession</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SessionManager</span> {
     <span class="kw">type</span> <span class="prelude-ty">Result</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), ()<span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">RegisterSession</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
+    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">RegisterSession</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="macro">println!</span>(<span class="string">&quot;Registering session&quot;</span>);
 
         <span class="kw">match</span> <span class="ident">msg</span>.<span class="ident">jid</span> {
@@ -160,22 +162,24 @@
 <span class="kw">impl</span> <span class="ident">Handler</span><span class="op">&lt;</span><span class="ident">UnregisterSession</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SessionManager</span> {
     <span class="kw">type</span> <span class="prelude-ty">Result</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), ()<span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">UnregisterSession</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
+    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">UnregisterSession</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="macro">println!</span>(<span class="string">&quot;Unregistering session&quot;</span>);
 
-        <span class="kw">let</span> <span class="ident">resource</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">jid</span>.<span class="ident">resource</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">bare_jid</span> <span class="op">=</span> <span class="ident">BareJid::try_from</span>(<span class="ident">msg</span>.<span class="ident">jid</span>).<span class="ident">unwrap</span>().<span class="ident">to_string</span>();
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">sessions</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">sessions</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">bare_jid</span>) {
-            <span class="ident">sessions</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">resource</span>);
-            <span class="macro">println!</span>(<span class="string">&quot;Session removed: {:?}&quot;</span>, <span class="ident">resource</span>);
-            <span class="kw">if</span> <span class="ident">sessions</span>.<span class="ident">is_empty</span>() {
-                <span class="self">self</span>.<span class="ident">sessions</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">bare_jid</span>);
-                <span class="macro">println!</span>(<span class="string">&quot;No session for {:?} removed whole map&quot;</span>, <span class="ident">bare_jid</span>);
+        <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">msg</span>);
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">jid::Jid::Full</span>(<span class="ident">jid</span>) <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">jid</span> {
+            <span class="kw">let</span> <span class="ident">resource</span> <span class="op">=</span> <span class="ident">jid</span>.<span class="ident">resource</span>.<span class="ident">clone</span>();
+            <span class="kw">let</span> <span class="ident">bare_jid</span> <span class="op">=</span> <span class="ident">BareJid::try_from</span>(<span class="ident">jid</span>.<span class="ident">clone</span>()).<span class="ident">unwrap</span>().<span class="ident">to_string</span>();
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">sessions</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">sessions</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">bare_jid</span>) {
+                <span class="ident">sessions</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">resource</span>);
+                <span class="macro">println!</span>(<span class="string">&quot;Session removed: {:?}&quot;</span>, <span class="ident">resource</span>);
+                <span class="kw">if</span> <span class="ident">sessions</span>.<span class="ident">is_empty</span>() {
+                    <span class="self">self</span>.<span class="ident">sessions</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">bare_jid</span>);
+                    <span class="macro">println!</span>(<span class="string">&quot;No session for {:?} removed whole map&quot;</span>, <span class="ident">bare_jid</span>);
+                }
             }
+
+            <span class="macro">println!</span>(<span class="string">&quot;Sessions: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">sessions</span>);
         }
-
-        <span class="macro">println!</span>(<span class="string">&quot;Sessions: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">sessions</span>);
-
         <span class="prelude-val">Ok</span>(())
     }
 }

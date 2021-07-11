@@ -109,34 +109,26 @@
 <span id="109">109</span>
 <span id="110">110</span>
 <span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::AuthenticationRequest</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::SessionManagementPacketResultBuilder</span>;
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state</span>::{<span class="ident">SessionRealState</span>, <span class="ident">SessionState</span>};
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state</span>::{<span class="ident">SessionState</span>, <span class="ident">StaticSessionState</span>};
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::CONFIG</span>;
 <span class="kw">use</span> <span class="ident">actix::prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">base64::decode</span>;
-<span class="kw">use</span> <span class="ident">jid::FullJid</span>;
 <span class="kw">use</span> <span class="ident">jid::Jid</span>;
 <span class="kw">use</span> <span class="ident">log::trace</span>;
 <span class="kw">use</span> <span class="ident">sasl::common::Identity</span>;
+<span class="kw">use</span> <span class="ident">sasl::common::Identity::Username</span>;
 <span class="kw">use</span> <span class="ident">sasl::secret</span>;
-<span class="kw">use</span> <span class="ident">sasl::secret::Plain</span>;
 <span class="kw">use</span> <span class="ident">sasl::server::mechanisms::Plain</span> <span class="kw">as</span> <span class="ident">ServerPlain</span>;
+<span class="kw">use</span> <span class="ident">sasl::server::Mechanism</span>;
 <span class="kw">use</span> <span class="ident">sasl::server::Response</span>;
 <span class="kw">use</span> <span class="ident">sasl::server::Validator</span>;
 <span class="kw">use</span> <span class="ident">sasl::server::ValidatorError</span>;
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
 <span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
 <span class="kw">use</span> <span class="ident">xmpp_proto::SASLSuccess</span>;
-
-<span class="kw">use</span> <span class="ident">sasl::common::Credentials</span>;
-<span class="kw">use</span> <span class="ident">sasl::common::Identity::Username</span>;
-<span class="kw">use</span> <span class="ident">sasl::server::Mechanism</span>;
 
 <span class="kw">type</span> <span class="ident">Vhost</span> <span class="op">=</span> <span class="ident">String</span>;
 
@@ -196,7 +188,7 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">SessionManagementPacketResultBuilder::default</span>();
             <span class="ident">response</span>
                 .<span class="ident">real_session_state</span>(
-                    <span class="ident">SessionRealState::builder</span>()
+                    <span class="ident">StaticSessionState::builder</span>()
                         .<span class="ident">jid</span>(<span class="prelude-val">Some</span>(<span class="ident">Jid::from_str</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}@localhost&quot;</span>, <span class="ident">username</span>)).<span class="ident">unwrap</span>()))
                         .<span class="ident">state</span>(<span class="ident">SessionState::Authenticated</span>)
                         .<span class="ident">build</span>()

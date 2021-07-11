@@ -318,10 +318,27 @@
 <span id="318">318</span>
 <span id="319">319</span>
 <span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::SessionCommand</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::SessionCommandAction</span>;
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::SessionRealState</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::StaticSessionState</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">messages</span>::{<span class="ident">system::RegisterSession</span>, <span class="ident">system::UnregisterSession</span>, <span class="ident">SessionManagementPacketError</span>, <span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketResultBuilder</span>, <span class="ident">SessionPacket</span>},
     <span class="ident">packet</span>::{<span class="ident">PacketHandler</span>, <span class="ident">StanzaHandler</span>},
@@ -331,6 +348,7 @@
 <span class="kw">use</span> <span class="ident">actix::prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">jid</span>::{<span class="ident">BareJid</span>, <span class="ident">FullJid</span>, <span class="ident">Jid</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">trace</span>};
+<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 <span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
 <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 <span class="kw">use</span> <span class="ident">uuid::Uuid</span>;
@@ -346,16 +364,25 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">state</span>: <span class="ident">SessionState</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">sink</span>: <span class="ident">Recipient</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span><span class="op">&gt;</span>,
     <span class="ident">timeout_handler</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">SpawnHandle</span><span class="op">&gt;</span>,
-    <span class="ident">jid</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Jid</span><span class="op">&gt;</span>,
+    <span class="ident">jid</span>: <span class="ident">Jid</span>,
+    <span class="ident">self_addr</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Session</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">state</span>: <span class="ident">SessionRealState</span>, <span class="ident">sink</span>: <span class="ident">Recipient</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">self_addr</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">sink</span>: <span class="ident">Recipient</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">state</span>: <span class="ident">SessionState::Opening</span>,
             <span class="ident">sink</span>,
             <span class="ident">timeout_handler</span>: <span class="prelude-val">None</span>,
-            <span class="ident">jid</span>: <span class="ident">state</span>.<span class="ident">jid</span>,
+            <span class="ident">jid</span>: <span class="ident">state</span>.<span class="ident">jid</span>.<span class="ident">unwrap</span>(),
+            <span class="ident">self_addr</span>,
+        }
+    }
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">sync_state</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">StaticSessionState</span> { <span class="ident">state</span>, <span class="ident">jid</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">StaticSessionState</span>) {
+        <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">clone</span>();
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">jid</span>) <span class="op">=</span> <span class="ident">jid</span> {
+            <span class="self">self</span>.<span class="ident">jid</span> <span class="op">=</span> <span class="ident">jid</span>.<span class="ident">clone</span>();
         }
     }
 
@@ -381,17 +408,25 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">TryInto</span><span class="op">&lt;</span><span class="ident">StaticSessionState</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Session</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> ();
+
+    <span class="kw">fn</span> <span class="ident">try_into</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">StaticSessionState</span>, <span class="self">Self</span><span class="ident">::Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">self_addr</span>.<span class="ident">clone</span>().<span class="ident">recipient</span>::<span class="op">&lt;</span><span class="ident">SessionCommand</span><span class="op">&gt;</span>();
+        <span class="ident">StaticSessionState::builder</span>().<span class="ident">state</span>(<span class="self">self</span>.<span class="ident">state</span>).<span class="ident">jid</span>(<span class="self">self</span>.<span class="ident">jid</span>.<span class="ident">clone</span>()).<span class="ident">addr_session_command</span>(<span class="ident">addr</span>).<span class="ident">build</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">Actor</span> <span class="kw">for</span> <span class="ident">Session</span> {
     <span class="kw">type</span> <span class="ident">Context</span> <span class="op">=</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">started</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) {
+    <span class="kw">fn</span> <span class="ident">started</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) {
         <span class="macro">trace!</span>(<span class="string">&quot;Starting Session&quot;</span>);
     }
 
     <span class="kw">fn</span> <span class="ident">stopping</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">actix::Running</span> {
         <span class="macro">trace!</span>(<span class="string">&quot;Stopping Session&quot;</span>);
-        <span class="kw">let</span> <span class="ident">jid</span>: <span class="ident">FullJid</span> <span class="op">=</span> <span class="ident">FullJid::from_str</span>(<span class="string">&quot;admin@localhost/test&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">SessionManager::from_registry</span>().<span class="ident">try_send</span>(<span class="ident">UnregisterSession</span> { <span class="ident">jid</span> });
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">SessionManager::from_registry</span>().<span class="ident">try_send</span>(<span class="ident">UnregisterSession</span> { <span class="ident">jid</span>: <span class="self">self</span>.<span class="ident">jid</span>.<span class="ident">clone</span>() });
         <span class="ident">actix::Running::Stop</span>
     }
 
@@ -407,7 +442,9 @@
         <span class="kw">match</span> <span class="ident">msg</span>.<span class="number">0</span> {
             <span class="ident">SessionCommandAction::Kill</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">result</span>) <span class="op">=</span> <span class="self">Self</span><span class="ident">::close</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SessionManagementPacketResultBuilder::default</span>()) {
-                    <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">session_state</span>;
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">state</span>) <span class="op">=</span> <span class="ident">result</span>.<span class="ident">real_session_state</span> {
+                        <span class="self">self</span>.<span class="ident">sync_state</span>(<span class="ident">state</span>);
+                    }
 
                     <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">sink</span>.<span class="ident">try_send</span>(<span class="ident">result</span>);
                     <span class="ident">ctx</span>.<span class="ident">stop</span>();
@@ -423,23 +460,17 @@
 
     <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">SessionPacket</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="self">self</span>.<span class="ident">reset_timeout</span>(<span class="ident">ctx</span>);
-        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">address</span>().<span class="ident">recipient</span>::<span class="op">&lt;</span><span class="ident">SessionCommand</span><span class="op">&gt;</span>();
-        <span class="comment">// TODO State isn&#39;t synchronize if multiple stanza comes at the same time.</span>
-        <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">SessionRealState::builder</span>()
-            .<span class="ident">state</span>(<span class="self">self</span>.<span class="ident">state</span>)
-            .<span class="ident">addr_session_command</span>(<span class="ident">addr</span>)
-            <span class="comment">// .addr_response(ctx.address().recipient::&lt;SessionManagementPacketResult&gt;())</span>
-            .<span class="ident">jid</span>(<span class="self">self</span>.<span class="ident">jid</span>.<span class="ident">clone</span>())
-            .<span class="ident">build</span>()
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
             <span class="macro">println!</span>(<span class="string">&quot;Handle packet in session&quot;</span>);
-            <span class="self">Self</span><span class="ident">::handle_packet</span>(<span class="kw-2">&amp;</span><span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="ident">msg</span>.<span class="ident">packet</span>, ()).<span class="kw">await</span>
+            <span class="self">Self</span><span class="ident">::handle_packet</span>(<span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="ident">msg</span>.<span class="ident">packet</span>, ()).<span class="kw">await</span>
         };
 
         <span class="ident">Box::pin</span>(<span class="ident">fut</span>.<span class="ident">into_actor</span>(<span class="self">self</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">res</span>, <span class="ident">act</span>, <span class="ident">_ctx</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">res</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">result</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">act</span>.<span class="ident">state</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">session_state</span>;
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">r_state</span>) <span class="op">=</span> <span class="ident">result</span>.<span class="ident">real_session_state</span> {
+                    <span class="ident">act</span>.<span class="ident">sync_state</span>(<span class="ident">r_state</span>);
+                }
 
                 <span class="comment">// TODO: Handle better</span>
                 <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">act</span>.<span class="ident">sink</span>.<span class="ident">try_send</span>(<span class="ident">result</span>);
@@ -455,7 +486,7 @@
     <span class="kw">type</span> <span class="prelude-ty">Result</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">From</span> <span class="op">=</span> ();
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_packet</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Packet</span>, <span class="ident">_from</span>: <span class="self">Self</span><span class="ident">::From</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_packet</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Packet</span>, <span class="ident">_from</span>: <span class="self">Self</span><span class="ident">::From</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="kw">match</span> <span class="ident">stanza</span> {
             <span class="ident">Packet::NonStanza</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>).<span class="kw">await</span>,
             <span class="ident">Packet::Stanza</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>).<span class="kw">await</span>,
@@ -470,7 +501,7 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">Stanza</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Session</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Stanza</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Stanza</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">stanza</span> {
             <span class="ident">Stanza::IQ</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="ident">stanza</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box::pin</span>(<span class="kw">async</span> { <span class="prelude-val">Err</span>(<span class="ident">SessionManagementPacketError::Unknown</span>) }),
@@ -481,7 +512,7 @@
 }
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">NonStanza</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Session</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">NonStanza</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">NonStanza</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">stanza</span> {
             <span class="ident">NonStanza::OpenStream</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="ident">stanza</span>),
             <span class="comment">// NonStanza::StartTls(stanza) =&gt; Self::handle(state, stanza),</span>
@@ -497,7 +528,7 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">CloseStream</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Session</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">CloseStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">CloseStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">SessionManagementPacketResultBuilder::default</span>()
             .<span class="ident">session_state</span>(<span class="ident">SessionState::Closing</span>)
             .<span class="ident">packet</span>(<span class="ident">CloseStream</span> {}.<span class="ident">into</span>())
@@ -507,7 +538,7 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">OpenStream</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Session</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">OpenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">OpenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">SessionManagementPacketResultBuilder::default</span>();
 
         <span class="ident">response</span>.<span class="ident">packet</span>(
@@ -573,7 +604,7 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">GenericIq</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Session</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">GenericIq</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">GenericIq</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">SessionManagementPacketResultBuilder::default</span>();
 
         <span class="kw">if</span> <span class="ident">stanza</span>.<span class="ident">get_type</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">IqType::Set</span> {
@@ -609,7 +640,10 @@
                                             <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">GenericIq::from_element</span>(<span class="kw-2">&amp;</span><span class="ident">result_element</span>).<span class="ident">unwrap</span>();
                                             <span class="macro">trace!</span>(<span class="string">&quot;Respond with : {:?}&quot;</span>, <span class="ident">result</span>);
                                             <span class="comment">// its bind</span>
-                                            <span class="ident">response</span>.<span class="ident">packet</span>(<span class="ident">result</span>.<span class="ident">into</span>()).<span class="ident">session_state</span>(<span class="ident">SessionState::Binded</span>);
+                                            <span class="ident">response</span>
+                                                .<span class="ident">real_session_state</span>(<span class="ident">state</span>.<span class="ident">clone</span>().<span class="ident">set_jid</span>(<span class="ident">Jid::Full</span>(<span class="ident">jid</span>.<span class="ident">clone</span>())))
+                                                .<span class="ident">packet</span>(<span class="ident">result</span>.<span class="ident">into</span>())
+                                                .<span class="ident">session_state</span>(<span class="ident">SessionState::Binded</span>);
                                         }
                                         <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                                             <span class="macro">trace!</span>(<span class="string">&quot;Error binding session&quot;</span>);

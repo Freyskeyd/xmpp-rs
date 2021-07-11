@@ -74,29 +74,17 @@
 <span id="74">74</span>
 <span id="75">75</span>
 <span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
 </pre><pre class="rust">
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::UnregisterSession</span>;
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::SessionRealState</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::StaticSessionState</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">messages</span>::{
-        <span class="ident">system::RegistrationStatus</span>,
-        <span class="ident">system</span>::{<span class="ident">RegisterSession</span>, <span class="ident">SessionCommand</span>},
-        <span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionPacket</span>,
-    },
+    <span class="ident">messages</span>::{<span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionPacket</span>},
     <span class="ident">parser::codec::XmppCodec</span>,
     <span class="ident">router::Router</span>,
-    <span class="ident">sessions</span>::{<span class="ident">manager::SessionManager</span>, <span class="ident">Session</span>},
+    <span class="ident">sessions::Session</span>,
 };
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">io::FramedWrite</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>};
-<span class="kw">use</span> <span class="ident">jid::FullJid</span>;
 <span class="kw">use</span> <span class="ident">log::trace</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>, <span class="ident">pin::Pin</span>, <span class="ident">str::FromStr</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>, <span class="ident">pin::Pin</span>};
 <span class="kw">use</span> <span class="ident">tokio::io::AsyncWrite</span>;
 <span class="kw">use</span> <span class="ident">xmpp_proto::Packet</span>;
 
@@ -109,7 +97,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TcpSession</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">_state</span>: <span class="ident">SessionRealState</span>, <span class="ident">id</span>: <span class="ident">usize</span>, <span class="ident">router</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Router</span><span class="op">&gt;</span>, <span class="ident">sink</span>: <span class="ident">FramedWrite</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">XmppCodec</span><span class="op">&gt;</span>, <span class="ident">session</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Session</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">_state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">id</span>: <span class="ident">usize</span>, <span class="ident">router</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Router</span><span class="op">&gt;</span>, <span class="ident">sink</span>: <span class="ident">FramedWrite</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">XmppCodec</span><span class="op">&gt;</span>, <span class="ident">session</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Session</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">_id</span>: <span class="ident">id</span>,
             <span class="ident">_router</span>: <span class="ident">router</span>,

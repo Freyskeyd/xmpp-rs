@@ -87,7 +87,7 @@
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error::Error</span>, <span class="ident">fmt</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state</span>::{<span class="ident">ResponseAddr</span>, <span class="ident">SessionRealState</span>, <span class="ident">SessionState</span>};
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state</span>::{<span class="ident">ResponseAddr</span>, <span class="ident">SessionState</span>, <span class="ident">StaticSessionState</span>};
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">Message</span>, <span class="ident">Recipient</span>};
 <span class="kw">use</span> <span class="ident">tokio::sync::mpsc::Sender</span>;
 <span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">Auth</span>, <span class="ident">Packet</span>};
@@ -119,7 +119,7 @@
     <span class="attribute">#[<span class="ident">builder</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;Vec::new()&quot;</span>, <span class="ident">setter</span>(<span class="ident">each</span> <span class="op">=</span> <span class="string">&quot;packet&quot;</span>, <span class="ident">into</span> <span class="op">=</span> <span class="string">&quot;true&quot;</span>))]</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">packets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">builder</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;None&quot;</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">real_session_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">SessionRealState</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">real_session_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">StaticSessionState</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">SessionManagementPacketResult</span> {

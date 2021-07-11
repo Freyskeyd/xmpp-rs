@@ -33,7 +33,7 @@
 <span id="33">33</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">Message</span>, <span class="ident">Recipient</span>};
-<span class="kw">use</span> <span class="ident">jid</span>::{<span class="ident">FullJid</span>, <span class="ident">Jid</span>};
+<span class="kw">use</span> <span class="ident">jid::Jid</span>;
 <span class="kw">use</span> <span class="ident">xmpp_proto::Features</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Message</span>)]</span>
@@ -50,7 +50,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Message</span>)]</span>
 <span class="attribute">#[<span class="ident">rtype</span>(<span class="string">&quot;Result&lt;(),()&gt;&quot;</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">UnregisterSession</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">jid</span>: <span class="ident">FullJid</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">jid</span>: <span class="ident">Jid</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Message</span>)]</span>

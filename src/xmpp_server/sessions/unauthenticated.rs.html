@@ -210,6 +210,8 @@
 <span id="210">210</span>
 <span id="211">211</span>
 <span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::SessionCommand</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages</span>::{<span class="ident">system::GetMechanisms</span>, <span class="ident">SessionManagementPacketError</span>};
@@ -226,13 +228,15 @@
 <span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
 <span class="kw">use</span> <span class="ident">tokio::sync::mpsc::Sender</span>;
 <span class="kw">use</span> <span class="ident">uuid::Uuid</span>;
-<span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">Auth</span>, <span class="ident">Bind</span>, <span class="ident">CloseStream</span>, <span class="ident">Features</span>, <span class="ident">NonStanza</span>, <span class="ident">OpenStream</span>, <span class="ident">Packet</span>, <span class="ident">ProceedTls</span>, <span class="ident">SASLSuccess</span>, <span class="ident">Stanza</span>, <span class="ident">StartTls</span>, <span class="ident">StreamError</span>, <span class="ident">StreamErrorKind</span>, <span class="ident">StreamFeatures</span>};
+<span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">Auth</span>, <span class="ident">Bind</span>, <span class="ident">CloseStream</span>, <span class="ident">Features</span>, <span class="ident">NonStanza</span>, <span class="ident">OpenStream</span>, <span class="ident">Packet</span>, <span class="ident">ProceedTls</span>, <span class="ident">Stanza</span>, <span class="ident">StartTls</span>, <span class="ident">StreamError</span>, <span class="ident">StreamErrorKind</span>, <span class="ident">StreamFeatures</span>};
 
-<span class="kw">use</span> <span class="kw">super</span><span class="ident">::state::SessionRealState</span>;
+<span class="kw">use</span> <span class="kw">super</span><span class="ident">::state::StaticSessionState</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">UnauthenticatedSession</span> {
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">state</span>: <span class="ident">SessionState</span>,
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">jid</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FullJid</span><span class="op">&gt;</span>,
 }
 
@@ -266,7 +270,7 @@
     <span class="kw">type</span> <span class="prelude-ty">Result</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">From</span> <span class="op">=</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_packet</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Packet</span>, <span class="ident">from</span>: <span class="self">Self</span><span class="ident">::From</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_packet</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Packet</span>, <span class="ident">from</span>: <span class="self">Self</span><span class="ident">::From</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="kw">match</span> <span class="ident">stanza</span> {
             <span class="ident">Packet::NonStanza</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>).<span class="kw">await</span>,
             <span class="ident">Packet::Stanza</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>).<span class="kw">await</span>,
@@ -282,14 +286,14 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">Stanza</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Stanza</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Stanza</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="ident">Box::pin</span>(<span class="kw">async</span> { <span class="prelude-val">Err</span>(<span class="ident">SessionManagementPacketError::Unknown</span>) }).<span class="kw">await</span>
     }
 }
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">NonStanza</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">NonStanza</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">NonStanza</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="ident">stanza</span> {
             <span class="ident">NonStanza::OpenStream</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="ident">stanza</span>),
             <span class="ident">NonStanza::StartTls</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="ident">stanza</span>),
@@ -304,7 +308,7 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">CloseStream</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">CloseStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">CloseStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">SessionManagementPacketResultBuilder::default</span>()
             .<span class="ident">session_state</span>(<span class="ident">SessionState::Closing</span>)
             .<span class="ident">packet</span>(<span class="ident">CloseStream</span> {}.<span class="ident">into</span>())
@@ -314,7 +318,7 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">OpenStream</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">OpenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">OpenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">SessionManagementPacketResultBuilder::default</span>();
 
         <span class="ident">response</span>.<span class="ident">packet</span>(
@@ -390,7 +394,7 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">StartTls</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">StartTls</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">StartTls</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">SessionManagementPacketResultBuilder::default</span>()
             .<span class="ident">session_state</span>(<span class="ident">SessionState::Negociating</span>)
             .<span class="ident">packet</span>(<span class="ident">ProceedTls::default</span>().<span class="ident">into</span>())
@@ -400,7 +404,7 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">Auth</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Auth</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Auth</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">AuthenticationManager::from_registry</span>().<span class="ident">send</span>(<span class="ident">AuthenticationRequest::new</span>(<span class="ident">stanza</span>.<span class="ident">clone</span>(), <span class="ident">state</span>.<span class="ident">get_responder</span>())).<span class="kw">await</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">SessionManagementPacketResultBuilder::default</span>().<span class="ident">session_state</span>(<span class="ident">SessionState::Authenticating</span>).<span class="ident">build</span>()<span class="question-mark">?</span>)
@@ -409,14 +413,14 @@
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">Bind</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Bind</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Bind</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">SessionManagementPacketResultBuilder::default</span>().<span class="ident">build</span>()<span class="question-mark">?</span>)
     }
 }
 
 <span class="attribute">#[<span class="ident">async_trait::async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">StreamError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnauthenticatedSession</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="kw-2">&amp;</span><span class="ident">SessionRealState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">StreamError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">_state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">_stanza</span>: <span class="kw-2">&amp;</span><span class="ident">StreamError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">SessionManagementPacketResultBuilder::default</span>()
             .<span class="ident">session_state</span>(<span class="ident">SessionState::Closing</span>)
             .<span class="ident">packet</span>(<span class="ident">CloseStream</span> {}.<span class="ident">into</span>())
