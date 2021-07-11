@@ -1,26 +1,22 @@
 use crate::messages::AuthenticationRequest;
 use crate::messages::SessionManagementPacketResultBuilder;
-use crate::sessions::state::{SessionRealState, SessionState};
+use crate::sessions::state::{SessionState, StaticSessionState};
 use crate::CONFIG;
 use actix::prelude::*;
 use base64::decode;
-use jid::FullJid;
 use jid::Jid;
 use log::trace;
 use sasl::common::Identity;
+use sasl::common::Identity::Username;
 use sasl::secret;
-use sasl::secret::Plain;
 use sasl::server::mechanisms::Plain as ServerPlain;
+use sasl::server::Mechanism;
 use sasl::server::Response;
 use sasl::server::Validator;
 use sasl::server::ValidatorError;
 use std::collections::HashMap;
 use std::str::FromStr;
 use xmpp_proto::SASLSuccess;
-
-use sasl::common::Credentials;
-use sasl::common::Identity::Username;
-use sasl::server::Mechanism;
 
 type Vhost = String;
 
@@ -80,7 +76,7 @@ impl Handler<AuthenticationRequest> for AuthenticationManager {
             let mut response = SessionManagementPacketResultBuilder::default();
             response
                 .real_session_state(
-                    SessionRealState::builder()
+                    StaticSessionState::builder()
                         .jid(Some(Jid::from_str(&format!("{}@localhost", username)).unwrap()))
                         .state(SessionState::Authenticated)
                         .build()

@@ -2,16 +2,17 @@ use xmpp_proto::{CloseStream, OpenStream, Packet, StreamError, StreamErrorKind};
 
 use crate::messages::SessionManagementPacketResultBuilder;
 use crate::messages::{SessionManagementPacketError, SessionManagementPacketResult};
-use crate::sessions::state::{SessionRealState, SessionState};
+use crate::sessions::state::{SessionState, StaticSessionState};
+
 #[async_trait::async_trait]
 pub(crate) trait PacketHandler {
     type Result;
     type From;
 
-    async fn handle_packet(state: &SessionRealState, stanza: &Packet, from: Self::From) -> Self::Result;
+    async fn handle_packet(state: StaticSessionState, stanza: &Packet, from: Self::From) -> Self::Result;
 
     fn handle_invalid_packet(
-        session_state: &SessionRealState,
+        session_state: StaticSessionState,
         invalid_packet: &StreamErrorKind,
         response: &mut SessionManagementPacketResultBuilder,
     ) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
@@ -37,5 +38,5 @@ pub(crate) trait PacketHandler {
 
 #[async_trait::async_trait]
 pub(crate) trait StanzaHandler<T> {
-    async fn handle(state: &SessionRealState, stanza: &T) -> Result<SessionManagementPacketResult, SessionManagementPacketError>;
+    async fn handle(state: StaticSessionState, stanza: &T) -> Result<SessionManagementPacketResult, SessionManagementPacketError>;
 }

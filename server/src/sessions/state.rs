@@ -1,6 +1,5 @@
 use actix::Recipient;
-use actix_web::guard::Options;
-use jid::{FullJid, Jid};
+use jid::Jid;
 use tokio::sync::mpsc::Sender;
 
 use crate::messages::{system::SessionCommand, SessionManagementPacketResult};
@@ -27,7 +26,7 @@ impl Default for SessionState {
 
 #[derive(derive_builder::Builder, Debug, Clone)]
 #[builder(setter(into))]
-pub(crate) struct SessionRealState {
+pub(crate) struct StaticSessionState {
     #[builder(default = "SessionState::Opening")]
     pub(crate) state: SessionState,
     #[builder(default = "None")]
@@ -38,9 +37,9 @@ pub(crate) struct SessionRealState {
     pub(crate) addr_response: ResponseAddr,
 }
 
-impl SessionRealState {
-    pub(crate) fn builder() -> SessionRealStateBuilder {
-        SessionRealStateBuilder::default()
+impl StaticSessionState {
+    pub(crate) fn builder() -> StaticSessionStateBuilder {
+        StaticSessionStateBuilder::default()
     }
 
     pub(crate) fn get_addr(&self) -> Option<Recipient<SessionCommand>> {
@@ -50,11 +49,19 @@ impl SessionRealState {
     pub(crate) fn get_responder(&self) -> ResponseAddr {
         self.addr_response.clone()
     }
+
+    pub(crate) fn set_jid(mut self, jid: Jid) -> Self {
+        self.jid = Some(jid);
+
+        self
+    }
 }
 
 #[derive(Debug, Clone)]
 pub(crate) enum ResponseAddr {
+    #[allow(dead_code)]
     Authenticated(Recipient<SessionManagementPacketResult>),
+    #[allow(dead_code)]
     Unauthenticated(Sender<SessionManagementPacketResult>),
     Nothing,
 }

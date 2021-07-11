@@ -1,14 +1,14 @@
-use crate::sessions::{
-    state::SessionState,
-    unauthenticated::{PacketHandler, UnauthenticatedSession},
-    SessionManagementPacketResult,
-};
+use crate::messages::SessionManagementPacketResult;
+use crate::packet::PacketHandler;
+use crate::sessions::state::StaticSessionState;
+use crate::sessions::{state::SessionState, unauthenticated::UnauthenticatedSession};
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use xmpp_proto::Packet;
 
 pub(crate) async fn executor(packet: impl Into<Packet>, expected_session_state: SessionState, starting_state: SessionState, resolver: impl Fn(Vec<Packet>) -> ()) -> Result<(), ()> {
     let (referer, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
-    let _ = UnauthenticatedSession::handle_packet(&starting_state, &packet.into(), Some(referer)).await;
+    let s = StaticSessionState::builder().state(starting_state).build().unwrap();
+    let _ = UnauthenticatedSession::handle_packet(s, &packet.into(), Some(referer)).await;
     if let Some(result) = rx.recv().await {
         assert_eq!(
             result.session_state, expected_session_state,

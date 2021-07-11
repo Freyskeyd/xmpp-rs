@@ -1,7 +1,7 @@
-use std::{collections::HashMap, convert::TryFrom, thread, time::Duration};
+use std::{collections::HashMap, convert::TryFrom};
 
-use crate::messages::system::{GetMechanisms, RegisterSession, RegistrationStatus, SessionCommand, SessionCommandAction, UnregisterSession};
-use actix::{Actor, ActorFutureExt, AsyncContext, Context, Handler, Recipient, Supervised, SystemService, WrapFuture};
+use crate::messages::system::{GetMechanisms, RegisterSession, SessionCommand, UnregisterSession};
+use actix::{Actor, Context, Handler, Recipient, Supervised, SystemService};
 use jid::BareJid;
 use log::trace;
 use xmpp_proto::Features;
@@ -42,7 +42,7 @@ impl Handler<GetMechanisms> for SessionManager {
 impl Handler<RegisterSession> for SessionManager {
     type Result = Result<(), ()>;
 
-    fn handle(&mut self, msg: RegisterSession, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: RegisterSession, _ctx: &mut Self::Context) -> Self::Result {
         println!("Registering session");
 
         match msg.jid {
@@ -69,22 +69,24 @@ impl Handler<RegisterSession> for SessionManager {
 impl Handler<UnregisterSession> for SessionManager {
     type Result = Result<(), ()>;
 
-    fn handle(&mut self, msg: UnregisterSession, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: UnregisterSession, _ctx: &mut Self::Context) -> Self::Result {
         println!("Unregistering session");
 
-        let resource = msg.jid.resource.clone();
-        let bare_jid = BareJid::try_from(msg.jid).unwrap().to_string();
-        if let Some(sessions) = self.sessions.get_mut(&bare_jid) {
-            sessions.remove(&resource);
-            println!("Session removed: {:?}", resource);
-            if sessions.is_empty() {
-                self.sessions.remove(&bare_jid);
-                println!("No session for {:?} removed whole map", bare_jid);
+        println!("{:?}", msg);
+        if let jid::Jid::Full(jid) = msg.jid {
+            let resource = jid.resource.clone();
+            let bare_jid = BareJid::try_from(jid.clone()).unwrap().to_string();
+            if let Some(sessions) = self.sessions.get_mut(&bare_jid) {
+                sessions.remove(&resource);
+                println!("Session removed: {:?}", resource);
+                if sessions.is_empty() {
+                    self.sessions.remove(&bare_jid);
+                    println!("No session for {:?} removed whole map", bare_jid);
+                }
             }
+
+            println!("Sessions: {:?}", self.sessions);
         }
-
-        println!("Sessions: {:?}", self.sessions);
-
         Ok(())
     }
 }

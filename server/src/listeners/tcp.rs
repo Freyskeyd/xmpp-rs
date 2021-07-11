@@ -4,7 +4,7 @@ use crate::{
     packet::PacketHandler,
     parser::codec::XmppCodec,
     sessions::{
-        state::{ResponseAddr, SessionRealState, SessionState},
+        state::{ResponseAddr, SessionState, StaticSessionState},
         unauthenticated::UnauthenticatedSession,
     },
 };
@@ -25,7 +25,7 @@ impl XmppStream for tokio::net::TcpStream {}
 impl XmppStream for tokio_rustls::server::TlsStream<tokio::net::TcpStream> {}
 
 impl Handler<TcpOpenStream> for UnauthenticatedSession {
-    type Result = ResponseFuture<Result<(XmppStreamHolder, SessionRealState), ()>>;
+    type Result = ResponseFuture<Result<(XmppStreamHolder, StaticSessionState), ()>>;
 
     fn handle(&mut self, msg: TcpOpenStream, ctx: &mut Self::Context) -> Self::Result {
         trace!("Opening TCP");
@@ -36,7 +36,7 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
 
         let (tx, mut rx): (Sender<SessionManagementPacketResult>, Receiver<SessionManagementPacketResult>) = mpsc::channel(32);
         let addr = ctx.address().recipient::<SessionCommand>();
-        let mut state = SessionRealState::builder()
+        let mut state = StaticSessionState::builder()
             .addr_session_command(addr)
             .addr_response(ResponseAddr::Unauthenticated(tx.clone()))
             .build()
@@ -49,7 +49,7 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                     Ok(0) => {}
                     Ok(_) => {
                         while let Ok(Some(packet)) = codec.decode(&mut buf) {
-                            let result = Self::handle_packet(&state, &packet, Some(tx.clone())).await;
+                            let result = Self::handle_packet(state.clone(), &packet, Some(tx.clone())).await;
 
                             if result.is_ok() {
                                 if let Some(SessionManagementPacketResult { session_state, packets, .. }) = rx.recv().await {
@@ -103,7 +103,7 @@ impl Handler<TcpOpenStream> for UnauthenticatedSession {
                             Ok(0) => {}
                             Ok(_) => {
                                 while let Ok(Some(packet)) = codec.decode(&mut buf) {
-                                    let result = Self::handle_packet(&state, &packet, Some(tx.clone())).await;
+                                    let result = Self::handle_packet(state.clone(), &packet, Some(tx.clone())).await;
 
                                     if result.is_ok() {
                                         if let Some(SessionManagementPacketResult {

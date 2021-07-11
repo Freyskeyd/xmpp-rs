@@ -1,19 +1,13 @@
-use crate::messages::system::UnregisterSession;
-use crate::sessions::state::SessionRealState;
+use crate::sessions::state::StaticSessionState;
 use crate::{
-    messages::{
-        system::RegistrationStatus,
-        system::{RegisterSession, SessionCommand},
-        SessionManagementPacketResult, SessionPacket,
-    },
+    messages::{SessionManagementPacketResult, SessionPacket},
     parser::codec::XmppCodec,
     router::Router,
-    sessions::{manager::SessionManager, Session},
+    sessions::Session,
 };
 use actix::{io::FramedWrite, prelude::*};
-use jid::FullJid;
 use log::trace;
-use std::{io, pin::Pin, str::FromStr};
+use std::{io, pin::Pin};
 use tokio::io::AsyncWrite;
 use xmpp_proto::Packet;
 
@@ -26,7 +20,7 @@ pub(crate) struct TcpSession {
 }
 
 impl TcpSession {
-    pub(crate) fn new(_state: SessionRealState, id: usize, router: Addr<Router>, sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>, session: Addr<Session>) -> Self {
+    pub(crate) fn new(_state: StaticSessionState, id: usize, router: Addr<Router>, sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>, session: Addr<Session>) -> Self {
         Self {
             _id: id,
             _router: router,
