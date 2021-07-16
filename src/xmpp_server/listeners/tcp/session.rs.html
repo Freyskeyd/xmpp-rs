@@ -64,24 +64,10 @@
 <span id="64">64</span>
 <span id="65">65</span>
 <span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
 </pre><pre class="rust">
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system</span>::{<span class="ident">PacketIn</span>, <span class="ident">PacketsOut</span>};
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::StaticSessionState</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">messages</span>::{<span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionPacket</span>},
-    <span class="ident">parser::codec::XmppCodec</span>,
-    <span class="ident">router::Router</span>,
-    <span class="ident">sessions::Session</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">parser::codec::XmppCodec</span>, <span class="ident">router::Router</span>, <span class="ident">sessions::Session</span>};
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">io::FramedWrite</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>};
 <span class="kw">use</span> <span class="ident">log::trace</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>, <span class="ident">pin::Pin</span>};
@@ -127,28 +113,22 @@
 <span class="kw">impl</span> <span class="ident">actix::io::WriteHandler</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TcpSession</span> {}
 
 <span class="kw">impl</span> <span class="ident">StreamHandler</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">io::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TcpSession</span> {
-    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">io::Error</span><span class="op">&gt;</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) {
+    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">io::Error</span><span class="op">&gt;</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">packet</span>) <span class="op">=</span> <span class="ident">packet</span> {
-            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">session</span>.<span class="ident">try_send</span>(<span class="ident">SessionPacket</span> {
-                <span class="ident">packet</span>,
-                <span class="ident">referer</span>: <span class="ident">ctx</span>.<span class="ident">address</span>().<span class="ident">recipient</span>(),
-            });
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">session</span>.<span class="ident">try_send</span>(<span class="ident">PacketIn</span>(<span class="ident">packet</span>));
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Handler</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TcpSession</span> {
-    <span class="kw">type</span> <span class="prelude-ty">Result</span> <span class="op">=</span> ();
+<span class="kw">impl</span> <span class="ident">Handler</span><span class="op">&lt;</span><span class="ident">PacketsOut</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TcpSession</span> {
+    <span class="kw">type</span> <span class="prelude-ty">Result</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), ()<span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">SessionManagementPacketResult</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
-        <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">msg</span>);
-
-        <span class="kw">let</span> <span class="ident">SessionManagementPacketResult</span> { <span class="ident">session_state</span>, <span class="ident">packets</span>, .. } <span class="op">=</span> <span class="ident">msg</span>;
-        <span class="macro">trace!</span>(<span class="string">&quot;SessionState is {:?}&quot;</span>, <span class="ident">session_state</span>);
-
-        <span class="ident">packets</span>.<span class="ident">into_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">packet</span><span class="op">|</span> {
+    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">PacketsOut</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
+        <span class="ident">msg</span>.<span class="number">0</span>.<span class="ident">into_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">packet</span><span class="op">|</span> {
             <span class="self">self</span>.<span class="ident">sink</span>.<span class="ident">write</span>(<span class="ident">packet</span>);
         });
+
+        <span class="prelude-val">Ok</span>(())
     }
 }
 </pre></div>

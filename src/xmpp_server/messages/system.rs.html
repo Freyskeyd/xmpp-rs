@@ -31,10 +31,18 @@
 <span id="31">31</span>
 <span id="32">32</span>
 <span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">Message</span>, <span class="ident">Recipient</span>};
 <span class="kw">use</span> <span class="ident">jid::Jid</span>;
-<span class="kw">use</span> <span class="ident">xmpp_proto::Features</span>;
+<span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">Features</span>, <span class="ident">Packet</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Message</span>)]</span>
 <span class="attribute">#[<span class="ident">rtype</span>(<span class="string">&quot;Result&lt;(),()&gt;&quot;</span>)]</span>
@@ -65,6 +73,14 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">SessionCommandAction</span> {
     <span class="ident">Kill</span>,
 }
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Message</span>)]</span>
+<span class="attribute">#[<span class="ident">rtype</span>(<span class="string">&quot;Result&lt;(),()&gt;&quot;</span>)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">PacketsOut</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span>);
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Message</span>)]</span>
+<span class="attribute">#[<span class="ident">rtype</span>(<span class="string">&quot;()&quot;</span>)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">PacketIn</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">Packet</span>);
 </pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="xmpp_server" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
     <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script>

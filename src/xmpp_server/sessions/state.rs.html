@@ -65,12 +65,15 @@
 <span id="65">65</span>
 <span id="66">66</span>
 <span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
 </pre><pre class="rust">
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::SessionCommand</span>;
 <span class="kw">use</span> <span class="ident">actix::Recipient</span>;
 <span class="kw">use</span> <span class="ident">jid::Jid</span>;
-<span class="kw">use</span> <span class="ident">tokio::sync::mpsc::Sender</span>;
-
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages</span>::{<span class="ident">system::SessionCommand</span>, <span class="ident">SessionManagementPacketResult</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">SessionState</span> {
@@ -101,10 +104,13 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">jid</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Jid</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">builder</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;None&quot;</span>)]</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">addr_session_command</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Recipient</span><span class="op">&lt;</span><span class="ident">SessionCommand</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">builder</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;ResponseAddr::Nothing&quot;</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">addr_response</span>: <span class="ident">ResponseAddr</span>,
 }
 
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">StaticSessionState</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">StaticSessionStateBuilder::default</span>().<span class="ident">build</span>().<span class="ident">unwrap</span>()
+    }
+}
 <span class="kw">impl</span> <span class="ident">StaticSessionState</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">builder</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StaticSessionStateBuilder</span> {
         <span class="ident">StaticSessionStateBuilder::default</span>()
@@ -114,24 +120,28 @@
         <span class="self">self</span>.<span class="ident">addr_session_command</span>.<span class="ident">clone</span>()
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_responder</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ResponseAddr</span> {
-        <span class="self">self</span>.<span class="ident">addr_response</span>.<span class="ident">clone</span>()
-    }
-
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">set_jid</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">jid</span>: <span class="ident">Jid</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">jid</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">jid</span>);
 
         <span class="self">self</span>
     }
+
+    <span class="doccomment">/// Set the static session state&#39;s state.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">set_state</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">state</span>: <span class="ident">SessionState</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="ident">state</span>;
+
+        <span class="self">self</span>
+    }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">ResponseAddr</span> {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="ident">Authenticated</span>(<span class="ident">Recipient</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span><span class="op">&gt;</span>),
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="ident">Unauthenticated</span>(<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span><span class="op">&gt;</span>),
-    <span class="ident">Nothing</span>,
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">SessionState</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StaticSessionState</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">state</span>: <span class="ident">SessionState</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">state</span>,
+            <span class="ident">jid</span>: <span class="prelude-val">None</span>,
+            <span class="ident">addr_session_command</span>: <span class="prelude-val">None</span>,
+        }
+    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="xmpp_server" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
