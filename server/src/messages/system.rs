@@ -1,6 +1,6 @@
 use actix::{Message, Recipient};
 use jid::Jid;
-use xmpp_proto::Features;
+use xmpp_proto::{Features, Packet};
 
 #[derive(Debug, Message)]
 #[rtype("Result<(),()>")]
@@ -31,3 +31,11 @@ pub(crate) struct SessionCommand(pub(crate) SessionCommandAction);
 pub(crate) enum SessionCommandAction {
     Kill,
 }
+
+#[derive(Debug, Message)]
+#[rtype("Result<(),()>")]
+pub(crate) struct PacketsOut(pub(crate) Vec<Packet>);
+
+#[derive(Debug, Message)]
+#[rtype("()")]
+pub(crate) struct PacketIn(pub(crate) Packet);

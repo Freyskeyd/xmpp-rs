@@ -1,10 +1,6 @@
+use crate::messages::system::{PacketIn, PacketsOut};
 use crate::sessions::state::StaticSessionState;
-use crate::{
-    messages::{SessionManagementPacketResult, SessionPacket},
-    parser::codec::XmppCodec,
-    router::Router,
-    sessions::Session,
-};
+use crate::{parser::codec::XmppCodec, router::Router, sessions::Session};
 use actix::{io::FramedWrite, prelude::*};
 use log::trace;
 use std::{io, pin::Pin};
@@ -50,27 +46,21 @@ impl Actor for TcpSession {
 impl actix::io::WriteHandler<io::Error> for TcpSession {}
 
 impl StreamHandler<Result<Packet, io::Error>> for TcpSession {
-    fn handle(&mut self, packet: Result<Packet, io::Error>, ctx: &mut Context<Self>) {
+    fn handle(&mut self, packet: Result<Packet, io::Error>, _ctx: &mut Context<Self>) {
         if let Ok(packet) = packet {
-            let _ = self.session.try_send(SessionPacket {
-                packet,
-                referer: ctx.address().recipient(),
-            });
+            let _ = self.session.try_send(PacketIn(packet));
         }
     }
 }
 
-impl Handler<SessionManagementPacketResult> for TcpSession {
-    type Result = ();
+impl Handler<PacketsOut> for TcpSession {
+    type Result = Result<(), ()>;
 
-    fn handle(&mut self, msg: SessionManagementPacketResult, _ctx: &mut Self::Context) -> Self::Result {
-        println!("{:?}", msg);
-
-        let SessionManagementPacketResult { session_state, packets, .. } = msg;
-        trace!("SessionState is {:?}", session_state);
-
-        packets.into_iter().for_each(|packet| {
+    fn handle(&mut self, msg: PacketsOut, _ctx: &mut Self::Context) -> Self::Result {
+        msg.0.into_iter().for_each(|packet| {
             self.sink.write(packet);
         });
+
+        Ok(())
     }
 }

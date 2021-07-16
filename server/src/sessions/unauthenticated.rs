@@ -1,4 +1,3 @@
-use crate::messages::system::SessionCommand;
 use crate::messages::{system::GetMechanisms, SessionManagementPacketError};
 use crate::{
     authentication::AuthenticationManager,
@@ -7,13 +6,12 @@ use crate::{
     sessions::{manager::SessionManager, state::SessionState, SessionManagementPacketResult},
     AuthenticationRequest,
 };
-use actix::{Actor, Context, Handler, SystemService};
+use actix::{Actor, Context, SystemService};
 use jid::{BareJid, FullJid, Jid};
 use log::{error, trace};
 use std::str::FromStr;
-use tokio::sync::mpsc::Sender;
 use uuid::Uuid;
-use xmpp_proto::{Auth, Bind, CloseStream, Features, NonStanza, OpenStream, Packet, ProceedTls, Stanza, StartTls, StreamError, StreamErrorKind, StreamFeatures};
+use xmpp_proto::{Auth, Bind, CloseStream, Features, NonStanza, OpenStream, Packet, ProceedTls, SASLSuccess, Stanza, StartTls, StreamError, StreamErrorKind, StreamFeatures};
 
 use super::state::StaticSessionState;
 
@@ -42,20 +40,11 @@ impl Actor for UnauthenticatedSession {
     }
 }
 
-impl Handler<SessionCommand> for UnauthenticatedSession {
-    type Result = Result<(), ()>;
-
-    fn handle(&mut self, _msg: SessionCommand, _ctx: &mut Self::Context) -> Self::Result {
-        todo!()
-    }
-}
-
 #[async_trait::async_trait]
 impl PacketHandler for UnauthenticatedSession {
-    type Result = Result<(), SessionManagementPacketError>;
-    type From = Option<Sender<SessionManagementPacketResult>>;
+    type Result = Result<SessionManagementPacketResult, SessionManagementPacketError>;
 
-    async fn handle_packet(state: StaticSessionState, stanza: &Packet, from: Self::From) -> Self::Result {
+    async fn handle_packet(state: StaticSessionState, stanza: &Packet) -> Self::Result {
         match stanza {
             Packet::NonStanza(stanza) => <Self as StanzaHandler<_>>::handle(state, &**stanza).await,
             Packet::Stanza(stanza) => <Self as StanzaHandler<_>>::handle(state, &**stanza).await,
@@ -65,7 +54,6 @@ impl PacketHandler for UnauthenticatedSession {
                 Self::handle_invalid_packet(state, invalid_packet, &mut response)
             }
         }
-        .map(|result| result.send(from))
     }
 }
 
@@ -106,19 +94,21 @@ impl StanzaHandler<OpenStream> for UnauthenticatedSession {
     async fn handle(state: StaticSessionState, stanza: &OpenStream) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         let mut response = SessionManagementPacketResultBuilder::default();
 
-        response.packet(
-            OpenStream {
-                id: Some(Uuid::new_v4().to_string()),
-                to: stanza.from.as_ref().map(|jid| BareJid::from(jid.clone()).into()),
-                // TODO: Replace JID crate with another?
-                // TODO: Validate FQDN
-                from: Jid::from_str("localhost").ok(),
-                // TODO: Validate lang input
-                lang: "en".into(),
-                version: "1.0".to_string(),
-            }
-            .into(),
-        );
+        response
+            .packet(
+                OpenStream {
+                    id: Some(Uuid::new_v4().to_string()),
+                    to: stanza.from.as_ref().map(|jid| BareJid::from(jid.clone()).into()),
+                    // TODO: Replace JID crate with another?
+                    // TODO: Validate FQDN
+                    from: Jid::from_str("localhost").ok(),
+                    // TODO: Validate lang input
+                    lang: "en".into(),
+                    version: "1.0".to_string(),
+                }
+                .into(),
+            )
+            .session_state(state.state);
 
         if SessionState::UnsupportedEncoding.eq(&state.state) {
             return Ok(response
@@ -189,10 +179,14 @@ impl StanzaHandler<StartTls> for UnauthenticatedSession {
 
 #[async_trait::async_trait]
 impl StanzaHandler<Auth> for UnauthenticatedSession {
-    async fn handle(state: StaticSessionState, stanza: &Auth) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
-        let _ = AuthenticationManager::from_registry().send(AuthenticationRequest::new(stanza.clone(), state.get_responder())).await;
-
-        Ok(SessionManagementPacketResultBuilder::default().session_state(SessionState::Authenticating).build()?)
+    async fn handle(_state: StaticSessionState, stanza: &Auth) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
+        match AuthenticationManager::from_registry().send(AuthenticationRequest::new(stanza.clone())).await.unwrap() {
+            Ok(jid) => Ok(SessionManagementPacketResultBuilder::default()
+                .session_state(StaticSessionState::builder().jid(Some(jid)).state(SessionState::Authenticated).build().unwrap())
+                .packet(SASLSuccess::default().into())
+                .build()?),
+            Err(_) => Err(SessionManagementPacketError::Unknown),
+        }
     }
 }
 

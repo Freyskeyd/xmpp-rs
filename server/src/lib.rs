@@ -1,13 +1,12 @@
 #[macro_use]
 extern crate lazy_static;
 
+use crate::config::Settings;
+use crate::{authentication::AuthenticationManager, sessions::manager::SessionManager};
 use actix::{Actor, Recipient};
 use log::info;
 use router::Router;
 use std::collections::HashMap;
-
-use crate::config::Settings;
-use crate::{authentication::AuthenticationManager, sessions::manager::SessionManager};
 
 mod authentication;
 mod config;

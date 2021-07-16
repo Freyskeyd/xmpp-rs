@@ -1,6 +1,4 @@
 use crate::messages::AuthenticationRequest;
-use crate::messages::SessionManagementPacketResultBuilder;
-use crate::sessions::state::{SessionState, StaticSessionState};
 use crate::CONFIG;
 use actix::prelude::*;
 use base64::decode;
@@ -16,7 +14,6 @@ use sasl::server::Validator;
 use sasl::server::ValidatorError;
 use std::collections::HashMap;
 use std::str::FromStr;
-use xmpp_proto::SASLSuccess;
 
 type Vhost = String;
 
@@ -58,51 +55,36 @@ impl Actor for AuthenticationManager {
 }
 
 impl Handler<AuthenticationRequest> for AuthenticationManager {
-    type Result = ();
+    type Result = Result<Jid, ()>;
 
     fn handle(&mut self, msg: AuthenticationRequest, _ctx: &mut Self::Context) -> Self::Result {
         if let Some("PLAIN") = msg.packet.mechanism() {
-            println!("AUTHENT WITH PLAIN");
+            trace!("AUTHENT WITH PLAIN");
             let challenge = decode(msg.packet.challenge().as_ref().unwrap()).unwrap();
 
             let mut mech = ServerPlain::new(MyValidator);
-            println!("{:?}", mech.respond(&challenge));
             let username = match mech.respond(&challenge) {
                 Ok(Response::Success(Username(username), _)) => username,
                 _ => {
-                    return ();
+                    return Err(());
                 }
             };
-            let mut response = SessionManagementPacketResultBuilder::default();
-            response
-                .real_session_state(
-                    StaticSessionState::builder()
-                        .jid(Some(Jid::from_str(&format!("{}@localhost", username)).unwrap()))
-                        .state(SessionState::Authenticated)
-                        .build()
-                        .unwrap(),
-                )
-                .session_state(SessionState::Authenticated)
-                .packet(SASLSuccess::default().into());
 
-            if let Ok(res) = response.build() {
-                match msg.from {
-                    crate::sessions::state::ResponseAddr::Unauthenticated(from) => res.send(Some(from)),
-                    _ => panic!("Shouldnt happend"),
-                }
-            }
+            Ok(Jid::from_str(&format!("{}@localhost", username)).unwrap())
+        } else {
+            Err(())
         }
     }
 }
-const USERNAME: &'static str = "local";
-const PASSWORD: &'static str = "admin";
+
+const USERNAME: &str = "local";
+const PASSWORD: &str = "admin";
+
 struct MyValidator;
 impl Validator<secret::Plain> for MyValidator {
     fn validate(&self, identity: &Identity, value: &secret::Plain) -> Result<(), ValidatorError> {
         let &secret::Plain(ref password) = value;
-        if identity != &Identity::Username(USERNAME.to_owned()) {
-            Err(ValidatorError::AuthenticationFailed)
-        } else if password != PASSWORD {
+        if identity != &Identity::Username(USERNAME.to_owned()) || password != PASSWORD {
             Err(ValidatorError::AuthenticationFailed)
         } else {
             Ok(())

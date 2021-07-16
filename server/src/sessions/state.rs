@@ -1,8 +1,6 @@
+use crate::messages::system::SessionCommand;
 use actix::Recipient;
 use jid::Jid;
-use tokio::sync::mpsc::Sender;
-
-use crate::messages::{system::SessionCommand, SessionManagementPacketResult};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum SessionState {
@@ -33,10 +31,13 @@ pub(crate) struct StaticSessionState {
     pub(crate) jid: Option<Jid>,
     #[builder(default = "None")]
     pub(crate) addr_session_command: Option<Recipient<SessionCommand>>,
-    #[builder(default = "ResponseAddr::Nothing")]
-    pub(crate) addr_response: ResponseAddr,
 }
 
+impl Default for StaticSessionState {
+    fn default() -> Self {
+        StaticSessionStateBuilder::default().build().unwrap()
+    }
+}
 impl StaticSessionState {
     pub(crate) fn builder() -> StaticSessionStateBuilder {
         StaticSessionStateBuilder::default()
@@ -46,22 +47,26 @@ impl StaticSessionState {
         self.addr_session_command.clone()
     }
 
-    pub(crate) fn get_responder(&self) -> ResponseAddr {
-        self.addr_response.clone()
-    }
-
     pub(crate) fn set_jid(mut self, jid: Jid) -> Self {
         self.jid = Some(jid);
 
         self
     }
+
+    /// Set the static session state's state.
+    pub(crate) fn set_state(mut self, state: SessionState) -> Self {
+        self.state = state;
+
+        self
+    }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) enum ResponseAddr {
-    #[allow(dead_code)]
-    Authenticated(Recipient<SessionManagementPacketResult>),
-    #[allow(dead_code)]
-    Unauthenticated(Sender<SessionManagementPacketResult>),
-    Nothing,
+impl From<SessionState> for StaticSessionState {
+    fn from(state: SessionState) -> Self {
+        Self {
+            state,
+            jid: None,
+            addr_session_command: None,
+        }
+    }
 }

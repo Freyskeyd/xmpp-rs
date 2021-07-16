@@ -1,8 +1,11 @@
+use crate::messages::system::PacketIn;
+use crate::messages::system::PacketsOut;
 use crate::messages::system::SessionCommand;
 use crate::messages::system::SessionCommandAction;
 use crate::sessions::state::StaticSessionState;
+use crate::sessions::state::StaticSessionStateBuilder;
 use crate::{
-    messages::{system::RegisterSession, system::UnregisterSession, SessionManagementPacketError, SessionManagementPacketResult, SessionManagementPacketResultBuilder, SessionPacket},
+    messages::{system::RegisterSession, system::UnregisterSession, SessionManagementPacketError, SessionManagementPacketResult, SessionManagementPacketResultBuilder},
     packet::{PacketHandler, StanzaHandler},
     sessions::manager::SessionManager,
     sessions::state::SessionState,
@@ -24,14 +27,14 @@ pub(crate) mod unauthenticated;
 /// Hold a session on a node
 pub struct Session {
     pub(crate) state: SessionState,
-    pub(crate) sink: Recipient<SessionManagementPacketResult>,
+    pub(crate) sink: Recipient<PacketsOut>,
     timeout_handler: Option<SpawnHandle>,
     jid: Jid,
     self_addr: Addr<Self>,
 }
 
 impl Session {
-    pub(crate) fn new(state: StaticSessionState, self_addr: Addr<Self>, sink: Recipient<SessionManagementPacketResult>) -> Self {
+    pub(crate) fn new(state: StaticSessionState, self_addr: Addr<Self>, sink: Recipient<PacketsOut>) -> Self {
         Self {
             state: SessionState::Opening,
             sink,
@@ -42,7 +45,7 @@ impl Session {
     }
 
     pub(crate) fn sync_state(&mut self, StaticSessionState { state, jid, .. }: &StaticSessionState) {
-        self.state = state.clone();
+        self.state = *state;
         if let Some(jid) = jid {
             self.jid = jid.clone();
         }
@@ -56,13 +59,12 @@ impl Session {
                 trace!("Unable to reset timeout handler for session");
                 ctx.set_mailbox_capacity(0);
                 ctx.notify(SessionCommand(SessionCommandAction::Kill));
-                return ();
             }
         }
 
         let referer = ctx.address();
         self.timeout_handler = Some(ctx.run_later(Duration::from_secs(10), move |actor, ctx| {
-            println!("Duration ended");
+            trace!("Duration ended");
             let fut = referer.send(SessionCommand(SessionCommandAction::Kill)).into_actor(actor).map(|_, _, _| ());
 
             ctx.spawn(fut);
@@ -104,11 +106,9 @@ impl Handler<SessionCommand> for Session {
         match msg.0 {
             SessionCommandAction::Kill => {
                 if let Ok(result) = Self::close(&mut SessionManagementPacketResultBuilder::default()) {
-                    if let Some(ref state) = result.real_session_state {
-                        self.sync_state(state);
-                    }
+                    self.sync_state(&result.session_state);
 
-                    let _ = self.sink.try_send(result);
+                    let _ = self.sink.try_send(PacketsOut(result.packets));
                     ctx.stop();
                 }
                 Ok(())
@@ -117,28 +117,30 @@ impl Handler<SessionCommand> for Session {
     }
 }
 
-impl Handler<SessionPacket> for Session {
-    type Result = ResponseActFuture<Self, Result<(), ()>>;
+impl Handler<PacketIn> for Session {
+    type Result = ResponseActFuture<Self, ()>;
 
-    fn handle(&mut self, msg: SessionPacket, ctx: &mut Self::Context) -> Self::Result {
+    /// Different packets can be handled
+    /// IQ(type=set, session_based_action) -> handle by the session itself
+    /// IQ(...) -> Route to router
+    /// Presence(self) -> handle by the session itself
+    /// Presence(...) -> Route to router
+    /// _ -> Route to router
+    fn handle(&mut self, msg: PacketIn, ctx: &mut Self::Context) -> Self::Result {
         self.reset_timeout(ctx);
         let state = self.try_into().unwrap();
         let fut = async move {
-            println!("Handle packet in session");
-            Self::handle_packet(state, &msg.packet, ()).await
+            trace!("Handle packet in session");
+            Self::handle_packet(state, &msg.0).await
         };
 
-        Box::pin(fut.into_actor(self).map(|res, act, _ctx| match res {
-            Ok(result) => {
-                if let Some(ref r_state) = result.real_session_state {
-                    act.sync_state(r_state);
-                }
+        Box::pin(fut.into_actor(self).map(|res, act, _ctx| {
+            if let Ok(result) = res {
+                act.sync_state(&result.session_state);
 
                 // TODO: Handle better
-                let _ = act.sink.try_send(result);
-                Ok(())
+                let _ = act.sink.try_send(PacketsOut(result.packets));
             }
-            Err(_) => Err(()),
         }))
     }
 }
@@ -146,9 +148,8 @@ impl Handler<SessionPacket> for Session {
 #[async_trait::async_trait]
 impl PacketHandler for Session {
     type Result = Result<SessionManagementPacketResult, SessionManagementPacketError>;
-    type From = ();
 
-    async fn handle_packet(state: StaticSessionState, stanza: &Packet, _from: Self::From) -> Self::Result {
+    async fn handle_packet(state: StaticSessionState, stanza: &Packet) -> Self::Result {
         match stanza {
             Packet::NonStanza(stanza) => <Self as StanzaHandler<_>>::handle(state, &**stanza).await,
             Packet::Stanza(stanza) => <Self as StanzaHandler<_>>::handle(state, &**stanza).await,
@@ -203,19 +204,21 @@ impl StanzaHandler<OpenStream> for Session {
     async fn handle(state: StaticSessionState, stanza: &OpenStream) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         let mut response = SessionManagementPacketResultBuilder::default();
 
-        response.packet(
-            OpenStream {
-                id: Some(Uuid::new_v4().to_string()),
-                to: stanza.from.as_ref().map(|jid| BareJid::from(jid.clone()).into()),
-                // TODO: Replace JID crate with another?
-                // TODO: Validate FQDN
-                from: Jid::from_str("localhost").ok(),
-                // TODO: Validate lang input
-                lang: "en".into(),
-                version: "1.0".to_string(),
-            }
-            .into(),
-        );
+        response
+            .packet(
+                OpenStream {
+                    id: Some(Uuid::new_v4().to_string()),
+                    to: stanza.from.as_ref().map(|jid| BareJid::from(jid.clone()).into()),
+                    // TODO: Replace JID crate with another?
+                    // TODO: Validate FQDN
+                    from: Jid::from_str("localhost").ok(),
+                    // TODO: Validate lang input
+                    lang: "en".into(),
+                    version: "1.0".to_string(),
+                }
+                .into(),
+            )
+            .session_state(state.state);
 
         if SessionState::UnsupportedEncoding.eq(&state.state) {
             return Ok(response
@@ -253,7 +256,9 @@ impl StanzaHandler<OpenStream> for Session {
 
         match state.state {
             SessionState::Opening => {
-                response.packet(StreamFeatures { features: Features::Bind }.into()).session_state(SessionState::Binding);
+                response
+                    .packet(StreamFeatures { features: Features::Bind }.into())
+                    .session_state(StaticSessionStateBuilder::default().state(SessionState::Binding).build().unwrap());
             }
             state => {
                 error!("Action({:?}) at this stage isn't possible", state);
@@ -269,6 +274,7 @@ impl StanzaHandler<GenericIq> for Session {
     async fn handle(state: StaticSessionState, stanza: &GenericIq) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         let mut response = SessionManagementPacketResultBuilder::default();
 
+        response.session_state(state.state);
         if stanza.get_type() == IqType::Set {
             match state.state {
                 SessionState::Binding => {
@@ -300,12 +306,10 @@ impl StanzaHandler<GenericIq> for Session {
                                                 .set_text(jid.to_string());
 
                                             let result = GenericIq::from_element(&result_element).unwrap();
-                                            trace!("Respond with : {:?}", result);
                                             // its bind
                                             response
-                                                .real_session_state(state.clone().set_jid(Jid::Full(jid.clone())))
-                                                .packet(result.into())
-                                                .session_state(SessionState::Binded);
+                                                .session_state(state.clone().set_state(SessionState::Binded).set_jid(Jid::Full(jid.clone())))
+                                                .packet(result.into());
                                         }
                                         Err(_) => {
                                             trace!("Error binding session");
@@ -325,8 +329,8 @@ impl StanzaHandler<GenericIq> for Session {
                         }
                     }
                 }
-                _ => {
-                    trace!("Unsupported state");
+                e => {
+                    trace!("Unsupported state {:?}", e);
                     return Err(SessionManagementPacketError::Unknown);
                 }
             }

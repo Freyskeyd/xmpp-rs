@@ -7,9 +7,8 @@ use crate::sessions::state::{SessionState, StaticSessionState};
 #[async_trait::async_trait]
 pub(crate) trait PacketHandler {
     type Result;
-    type From;
 
-    async fn handle_packet(state: StaticSessionState, stanza: &Packet, from: Self::From) -> Self::Result;
+    async fn handle_packet(state: StaticSessionState, stanza: &Packet) -> Self::Result;
 
     fn handle_invalid_packet(
         session_state: StaticSessionState,
