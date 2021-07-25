@@ -49,7 +49,13 @@ demonstrate! {
         async it "should fail on unsupported encoding" -> Result<(), ()> {
             let fail_packet = Packet::InvalidPacket(Box::new(StreamErrorKind::UnsupportedEncoding));
 
-            assert!(execute!(fail_packet, SessionState::UnsupportedEncoding, []).is_ok());
+            execute!(
+                fail_packet,
+                starting_state SessionState::Opening,
+                expected_state SessionState::UnsupportedEncoding,
+                []
+            );
+
             execute!(
                 packet,
                 starting_state SessionState::UnsupportedEncoding,

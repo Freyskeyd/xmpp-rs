@@ -1,8 +1,6 @@
-use crate::messages::SessionManagementPacketResult;
 use crate::packet::PacketHandler;
 use crate::sessions::state::StaticSessionState;
 use crate::sessions::{state::SessionState, unauthenticated::UnauthenticatedSession};
-use tokio::sync::mpsc::{self, Receiver, Sender};
 use xmpp_proto::Packet;
 
 pub(crate) async fn executor(packet: impl Into<Packet>, expected_session_state: SessionState, starting_state: SessionState, resolver: impl Fn(Vec<Packet>) -> ()) -> Result<(), ()> {

@@ -2,6 +2,8 @@ use crate::messages::system::PacketIn;
 use crate::messages::system::PacketsOut;
 use crate::messages::system::SessionCommand;
 use crate::messages::system::SessionCommandAction;
+use crate::messages::StanzaEnvelope;
+use crate::router::Router;
 use crate::sessions::state::StaticSessionState;
 use crate::sessions::state::StaticSessionStateBuilder;
 use crate::{
@@ -15,7 +17,6 @@ use jid::{BareJid, FullJid, Jid};
 use log::{error, trace};
 use std::convert::TryInto;
 use std::str::FromStr;
-use std::time::Duration;
 use uuid::Uuid;
 use xmpp_proto::{ns, Bind, CloseStream, Features, FromXmlElement, GenericIq, IqType, NonStanza, OpenStream, Packet, Stanza, StreamError, StreamErrorKind, StreamFeatures};
 use xmpp_xml::Element;
@@ -24,11 +25,12 @@ pub(crate) mod manager;
 pub(crate) mod state;
 pub(crate) mod unauthenticated;
 
+const ACTIVE_SESSION_STATES: &'static [SessionState] = &[SessionState::Binding, SessionState::Binded];
+
 /// Hold a session on a node
 pub struct Session {
     pub(crate) state: SessionState,
     pub(crate) sink: Recipient<PacketsOut>,
-    timeout_handler: Option<SpawnHandle>,
     jid: Jid,
     self_addr: Addr<Self>,
 }
@@ -38,7 +40,6 @@ impl Session {
         Self {
             state: SessionState::Opening,
             sink,
-            timeout_handler: None,
             jid: state.jid.unwrap(),
             self_addr,
         }
@@ -49,26 +50,6 @@ impl Session {
         if let Some(jid) = jid {
             self.jid = jid.clone();
         }
-    }
-
-    fn reset_timeout(&mut self, ctx: &mut <Self as Actor>::Context) {
-        if let Some(handler) = self.timeout_handler {
-            if ctx.cancel_future(handler) {
-                trace!("Timeout handler resetted for session");
-            } else {
-                trace!("Unable to reset timeout handler for session");
-                ctx.set_mailbox_capacity(0);
-                ctx.notify(SessionCommand(SessionCommandAction::Kill));
-            }
-        }
-
-        let referer = ctx.address();
-        self.timeout_handler = Some(ctx.run_later(Duration::from_secs(10), move |actor, ctx| {
-            trace!("Duration ended");
-            let fut = referer.send(SessionCommand(SessionCommandAction::Kill)).into_actor(actor).map(|_, _, _| ());
-
-            ctx.spawn(fut);
-        }));
     }
 }
 
@@ -104,6 +85,10 @@ impl Handler<SessionCommand> for Session {
 
     fn handle(&mut self, msg: SessionCommand, ctx: &mut Self::Context) -> Self::Result {
         match msg.0 {
+            SessionCommandAction::SendPacket(packet) => {
+                let _ = self.sink.try_send(PacketsOut(vec![packet]));
+                Ok(())
+            }
             SessionCommandAction::Kill => {
                 if let Ok(result) = Self::close(&mut SessionManagementPacketResultBuilder::default()) {
                     self.sync_state(&result.session_state);
@@ -126,8 +111,7 @@ impl Handler<PacketIn> for Session {
     /// Presence(self) -> handle by the session itself
     /// Presence(...) -> Route to router
     /// _ -> Route to router
-    fn handle(&mut self, msg: PacketIn, ctx: &mut Self::Context) -> Self::Result {
-        self.reset_timeout(ctx);
+    fn handle(&mut self, msg: PacketIn, _ctx: &mut Self::Context) -> Self::Result {
         let state = self.try_into().unwrap();
         let fut = async move {
             trace!("Handle packet in session");
@@ -152,12 +136,13 @@ impl PacketHandler for Session {
     async fn handle_packet(state: StaticSessionState, stanza: &Packet) -> Self::Result {
         match stanza {
             Packet::NonStanza(stanza) => <Self as StanzaHandler<_>>::handle(state, &**stanza).await,
-            Packet::Stanza(stanza) => <Self as StanzaHandler<_>>::handle(state, &**stanza).await,
+            Packet::Stanza(stanza) if ACTIVE_SESSION_STATES.contains(&state.state) => <Self as StanzaHandler<_>>::handle(state, &**stanza).await,
             Packet::InvalidPacket(invalid_packet) => {
                 let mut response = SessionManagementPacketResultBuilder::default();
 
                 Self::handle_invalid_packet(state, invalid_packet, &mut response)
             }
+            _ => Err(SessionManagementPacketError::Unknown),
         }
     }
 }
@@ -166,7 +151,12 @@ impl PacketHandler for Session {
 impl StanzaHandler<Stanza> for Session {
     async fn handle(state: StaticSessionState, stanza: &Stanza) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         let fut = match stanza {
-            Stanza::IQ(stanza) => <Self as StanzaHandler<_>>::handle(state, stanza),
+            Stanza::IQ(stanza) if state.state == SessionState::Binding => <Self as StanzaHandler<_>>::handle(state, stanza),
+            stanza if state.state == SessionState::Binded => {
+                Router::from_registry().send(StanzaEnvelope { stanza: stanza.clone(), from: state }).await;
+
+                Box::pin(async { Err(SessionManagementPacketError::Unknown) })
+            }
             _ => Box::pin(async { Err(SessionManagementPacketError::Unknown) }),
         };
 
@@ -219,19 +209,6 @@ impl StanzaHandler<OpenStream> for Session {
                 .into(),
             )
             .session_state(state.state);
-
-        if SessionState::UnsupportedEncoding.eq(&state.state) {
-            return Ok(response
-                .packet(
-                    StreamError {
-                        kind: StreamErrorKind::UnsupportedEncoding,
-                    }
-                    .into(),
-                )
-                .packet(CloseStream {}.into())
-                .session_state(SessionState::Closing)
-                .build()?);
-        }
 
         if stanza.version != "1.0" {
             return Ok(response
@@ -329,9 +306,9 @@ impl StanzaHandler<GenericIq> for Session {
                         }
                     }
                 }
-                e => {
-                    trace!("Unsupported state {:?}", e);
-                    return Err(SessionManagementPacketError::Unknown);
+                _ => {
+                    // trace!("Unsupported state {:?}", e);
+                    // return Err(SessionManagementPacketError::Unknown);
                 }
             }
         }

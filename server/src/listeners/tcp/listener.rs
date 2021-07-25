@@ -97,7 +97,7 @@ impl Handler<NewSession> for TcpListener {
 
                             let session = Session::create(|session_ctx| Session::new(state.clone(), session_ctx.address(), ctx.address().recipient()));
                             TcpSession::add_stream(FramedRead::new(r, XmppCodec::new()), ctx);
-                            TcpSession::new(state, 0, router, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx), session)
+                            TcpSession::new(state, 0, actix::io::FramedWrite::new(Box::pin(w), XmppCodec::new(), ctx), session)
                         });
 
                         act.sessions.push(session)

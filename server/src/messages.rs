@@ -2,7 +2,7 @@ use crate::sessions::state::StaticSessionState;
 use actix::Message;
 use jid::Jid;
 use std::{error::Error, fmt};
-use xmpp_proto::{Auth, Packet};
+use xmpp_proto::{Auth, Packet, Stanza};
 
 pub(crate) mod system;
 pub(crate) mod tcp;
@@ -61,4 +61,11 @@ impl AuthenticationRequest {
     pub(crate) fn new(packet: Auth) -> Self {
         Self { packet }
     }
+}
+
+#[derive(Message)]
+#[rtype("()")]
+pub(crate) struct StanzaEnvelope {
+    pub(crate) stanza: Stanza,
+    pub(crate) from: StaticSessionState,
 }

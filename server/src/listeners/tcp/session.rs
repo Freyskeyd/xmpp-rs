@@ -1,28 +1,53 @@
-use crate::messages::system::{PacketIn, PacketsOut};
-use crate::sessions::state::StaticSessionState;
-use crate::{parser::codec::XmppCodec, router::Router, sessions::Session};
+use crate::messages::system::{PacketIn, PacketsOut, SessionCommand, SessionCommandAction};
+use crate::sessions::state::{SessionState, StaticSessionState};
+use crate::{parser::codec::XmppCodec, sessions::Session};
 use actix::{io::FramedWrite, prelude::*};
 use log::trace;
+use std::time::Duration;
 use std::{io, pin::Pin};
 use tokio::io::AsyncWrite;
 use xmpp_proto::Packet;
 
 pub(crate) struct TcpSession {
     _id: usize,
-    _router: Addr<Router>,
     session: Addr<Session>,
+    state: SessionState,
     #[allow(dead_code)]
     sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>,
+    timeout_handler: Option<SpawnHandle>,
 }
 
 impl TcpSession {
-    pub(crate) fn new(_state: StaticSessionState, id: usize, router: Addr<Router>, sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>, session: Addr<Session>) -> Self {
+    pub(crate) fn new(_state: StaticSessionState, id: usize, sink: FramedWrite<Packet, Pin<Box<dyn AsyncWrite + 'static>>, XmppCodec>, session: Addr<Session>) -> Self {
         Self {
             _id: id,
-            _router: router,
+            state: SessionState::Opening,
             sink,
             session,
+            timeout_handler: None,
         }
+    }
+
+    fn reset_timeout(&mut self, ctx: &mut <Self as Actor>::Context) {
+        if let Some(handler) = self.timeout_handler {
+            if ctx.cancel_future(handler) {
+                trace!("Timeout handler resetted for session");
+            } else {
+                trace!("Unable to reset timeout handler for session");
+                ctx.set_mailbox_capacity(0);
+                self.state = SessionState::Closing;
+                ctx.stop()
+            }
+        }
+
+        self.timeout_handler = Some(ctx.run_later(Duration::from_secs(120), move |actor, ctx| {
+            trace!("Duration ended");
+            ctx.set_mailbox_capacity(0);
+            actor.state = SessionState::Closing;
+            let fut = actor.session.send(SessionCommand(SessionCommandAction::Kill)).into_actor(actor).map(|_, _, _| ());
+            ctx.wait(fut);
+            // ctx.stop();
+        }));
     }
 }
 
@@ -35,6 +60,9 @@ impl Actor for TcpSession {
 
     fn stopping(&mut self, _ctx: &mut Self::Context) -> actix::Running {
         trace!("Stopping TcpSession");
+        if self.state != SessionState::Closing {
+            self.session.do_send(SessionCommand(SessionCommandAction::Kill));
+        }
         actix::Running::Stop
     }
 
@@ -46,7 +74,9 @@ impl Actor for TcpSession {
 impl actix::io::WriteHandler<io::Error> for TcpSession {}
 
 impl StreamHandler<Result<Packet, io::Error>> for TcpSession {
-    fn handle(&mut self, packet: Result<Packet, io::Error>, _ctx: &mut Context<Self>) {
+    fn handle(&mut self, packet: Result<Packet, io::Error>, ctx: &mut Context<Self>) {
+        self.reset_timeout(ctx);
+
         if let Ok(packet) = packet {
             let _ = self.session.try_send(PacketIn(packet));
         }

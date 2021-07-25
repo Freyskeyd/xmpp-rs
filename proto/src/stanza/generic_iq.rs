@@ -138,7 +138,7 @@ impl FromXmlElement for GenericIq {
 
             // An error stanza MUST contain an <error/> child element
             IqType::Error => {
-                if e.find("error").is_none() {
+                if e.find("{jabber:client}error").is_none() {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
                         "An IQ stanza of type \"error\" SHOULD include the child element contained in the associated \"get\" or \"set\" and MUST include an <error/> child",

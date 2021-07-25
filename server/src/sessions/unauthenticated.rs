@@ -15,6 +15,8 @@ use xmpp_proto::{Auth, Bind, CloseStream, Features, NonStanza, OpenStream, Packe
 
 use super::state::StaticSessionState;
 
+const OPEN_STREAM_STATES: &'static [SessionState] = &[SessionState::Opening, SessionState::Negociated, SessionState::Authenticated];
+
 #[derive(Default)]
 pub(crate) struct UnauthenticatedSession {
     #[allow(dead_code)]
@@ -45,14 +47,20 @@ impl PacketHandler for UnauthenticatedSession {
     type Result = Result<SessionManagementPacketResult, SessionManagementPacketError>;
 
     async fn handle_packet(state: StaticSessionState, stanza: &Packet) -> Self::Result {
+        if state.state == SessionState::UnsupportedEncoding {
+            let mut response = SessionManagementPacketResultBuilder::default();
+
+            return Self::handle_invalid_packet(state, &StreamErrorKind::UnsupportedEncoding, &mut response);
+        }
+
         match stanza {
             Packet::NonStanza(stanza) => <Self as StanzaHandler<_>>::handle(state, &**stanza).await,
-            Packet::Stanza(stanza) => <Self as StanzaHandler<_>>::handle(state, &**stanza).await,
             Packet::InvalidPacket(invalid_packet) => {
                 let mut response = SessionManagementPacketResultBuilder::default();
 
                 Self::handle_invalid_packet(state, invalid_packet, &mut response)
             }
+            _ => Err(SessionManagementPacketError::Unknown),
         }
     }
 }
@@ -68,9 +76,9 @@ impl StanzaHandler<Stanza> for UnauthenticatedSession {
 impl StanzaHandler<NonStanza> for UnauthenticatedSession {
     async fn handle(state: StaticSessionState, stanza: &NonStanza) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         match stanza {
-            NonStanza::OpenStream(stanza) => <Self as StanzaHandler<_>>::handle(state, stanza),
-            NonStanza::StartTls(stanza) => <Self as StanzaHandler<_>>::handle(state, stanza),
-            NonStanza::Auth(stanza) => <Self as StanzaHandler<_>>::handle(state, stanza),
+            NonStanza::OpenStream(stanza) if OPEN_STREAM_STATES.contains(&state.state) => <Self as StanzaHandler<_>>::handle(state, stanza),
+            NonStanza::StartTls(stanza) if state.state.eq(&SessionState::Opening) => <Self as StanzaHandler<_>>::handle(state, stanza),
+            NonStanza::Auth(stanza) if state.state.eq(&SessionState::Authenticating) => <Self as StanzaHandler<_>>::handle(state, stanza),
             NonStanza::StreamError(stanza) => <Self as StanzaHandler<_>>::handle(state, stanza),
             NonStanza::CloseStream(stanza) => <Self as StanzaHandler<_>>::handle(state, stanza),
             _ => Box::pin(async { Err(SessionManagementPacketError::Unknown) }),
@@ -109,19 +117,6 @@ impl StanzaHandler<OpenStream> for UnauthenticatedSession {
                 .into(),
             )
             .session_state(state.state);
-
-        if SessionState::UnsupportedEncoding.eq(&state.state) {
-            return Ok(response
-                .packet(
-                    StreamError {
-                        kind: StreamErrorKind::UnsupportedEncoding,
-                    }
-                    .into(),
-                )
-                .packet(CloseStream {}.into())
-                .session_state(SessionState::Closing)
-                .build()?);
-        }
 
         if stanza.version != "1.0" {
             return Ok(response

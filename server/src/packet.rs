@@ -19,7 +19,7 @@ pub(crate) trait PacketHandler {
             return Ok(response.session_state(SessionState::UnsupportedEncoding).build()?);
         }
 
-        if let SessionState::Opening = session_state.state {
+        if SessionState::Opening == session_state.state || SessionState::UnsupportedEncoding == session_state.state {
             response.packet(OpenStream::default().into());
         }
 
