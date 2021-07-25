@@ -64,32 +64,87 @@
 <span id="64">64</span>
 <span id="65">65</span>
 <span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
 </pre><pre class="rust">
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system</span>::{<span class="ident">PacketIn</span>, <span class="ident">PacketsOut</span>};
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::StaticSessionState</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">parser::codec::XmppCodec</span>, <span class="ident">router::Router</span>, <span class="ident">sessions::Session</span>};
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system</span>::{<span class="ident">PacketIn</span>, <span class="ident">PacketsOut</span>, <span class="ident">SessionCommand</span>, <span class="ident">SessionCommandAction</span>};
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state</span>::{<span class="ident">SessionState</span>, <span class="ident">StaticSessionState</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">parser::codec::XmppCodec</span>, <span class="ident">sessions::Session</span>};
 <span class="kw">use</span> <span class="ident">actix</span>::{<span class="ident">io::FramedWrite</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>};
 <span class="kw">use</span> <span class="ident">log::trace</span>;
+<span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>, <span class="ident">pin::Pin</span>};
 <span class="kw">use</span> <span class="ident">tokio::io::AsyncWrite</span>;
 <span class="kw">use</span> <span class="ident">xmpp_proto::Packet</span>;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">TcpSession</span> {
     <span class="ident">_id</span>: <span class="ident">usize</span>,
-    <span class="ident">_router</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Router</span><span class="op">&gt;</span>,
     <span class="ident">session</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Session</span><span class="op">&gt;</span>,
+    <span class="ident">state</span>: <span class="ident">SessionState</span>,
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="ident">sink</span>: <span class="ident">FramedWrite</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">XmppCodec</span><span class="op">&gt;</span>,
+    <span class="ident">timeout_handler</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">SpawnHandle</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">TcpSession</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">_state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">id</span>: <span class="ident">usize</span>, <span class="ident">router</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Router</span><span class="op">&gt;</span>, <span class="ident">sink</span>: <span class="ident">FramedWrite</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">XmppCodec</span><span class="op">&gt;</span>, <span class="ident">session</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Session</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">_state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">id</span>: <span class="ident">usize</span>, <span class="ident">sink</span>: <span class="ident">FramedWrite</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">XmppCodec</span><span class="op">&gt;</span>, <span class="ident">session</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="ident">Session</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">_id</span>: <span class="ident">id</span>,
-            <span class="ident">_router</span>: <span class="ident">router</span>,
+            <span class="ident">state</span>: <span class="ident">SessionState::Opening</span>,
             <span class="ident">sink</span>,
             <span class="ident">session</span>,
+            <span class="ident">timeout_handler</span>: <span class="prelude-val">None</span>,
         }
+    }
+
+    <span class="kw">fn</span> <span class="ident">reset_timeout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Actor</span><span class="op">&gt;</span><span class="ident">::Context</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">handler</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">timeout_handler</span> {
+            <span class="kw">if</span> <span class="ident">ctx</span>.<span class="ident">cancel_future</span>(<span class="ident">handler</span>) {
+                <span class="macro">trace!</span>(<span class="string">&quot;Timeout handler resetted for session&quot;</span>);
+            } <span class="kw">else</span> {
+                <span class="macro">trace!</span>(<span class="string">&quot;Unable to reset timeout handler for session&quot;</span>);
+                <span class="ident">ctx</span>.<span class="ident">set_mailbox_capacity</span>(<span class="number">0</span>);
+                <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="ident">SessionState::Closing</span>;
+                <span class="ident">ctx</span>.<span class="ident">stop</span>()
+            }
+        }
+
+        <span class="self">self</span>.<span class="ident">timeout_handler</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">run_later</span>(<span class="ident">Duration::from_secs</span>(<span class="number">120</span>), <span class="kw">move</span> <span class="op">|</span><span class="ident">actor</span>, <span class="ident">ctx</span><span class="op">|</span> {
+            <span class="macro">trace!</span>(<span class="string">&quot;Duration ended&quot;</span>);
+            <span class="ident">ctx</span>.<span class="ident">set_mailbox_capacity</span>(<span class="number">0</span>);
+            <span class="ident">actor</span>.<span class="ident">state</span> <span class="op">=</span> <span class="ident">SessionState::Closing</span>;
+            <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="ident">actor</span>.<span class="ident">session</span>.<span class="ident">send</span>(<span class="ident">SessionCommand</span>(<span class="ident">SessionCommandAction::Kill</span>)).<span class="ident">into_actor</span>(<span class="ident">actor</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> ());
+            <span class="ident">ctx</span>.<span class="ident">wait</span>(<span class="ident">fut</span>);
+            <span class="comment">// ctx.stop();</span>
+        }));
     }
 }
 
@@ -102,6 +157,9 @@
 
     <span class="kw">fn</span> <span class="ident">stopping</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">actix::Running</span> {
         <span class="macro">trace!</span>(<span class="string">&quot;Stopping TcpSession&quot;</span>);
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">state</span> <span class="op">!</span><span class="op">=</span> <span class="ident">SessionState::Closing</span> {
+            <span class="self">self</span>.<span class="ident">session</span>.<span class="ident">do_send</span>(<span class="ident">SessionCommand</span>(<span class="ident">SessionCommandAction::Kill</span>));
+        }
         <span class="ident">actix::Running::Stop</span>
     }
 
@@ -113,7 +171,9 @@
 <span class="kw">impl</span> <span class="ident">actix::io::WriteHandler</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TcpSession</span> {}
 
 <span class="kw">impl</span> <span class="ident">StreamHandler</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">io::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TcpSession</span> {
-    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">io::Error</span><span class="op">&gt;</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) {
+    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Packet</span>, <span class="ident">io::Error</span><span class="op">&gt;</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) {
+        <span class="self">self</span>.<span class="ident">reset_timeout</span>(<span class="ident">ctx</span>);
+
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">packet</span>) <span class="op">=</span> <span class="ident">packet</span> {
             <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">session</span>.<span class="ident">try_send</span>(<span class="ident">PacketIn</span>(<span class="ident">packet</span>));
         }

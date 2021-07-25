@@ -382,7 +382,7 @@
 
             <span class="comment">// An error stanza MUST contain an &lt;error/&gt; child element</span>
             <span class="ident">IqType::Error</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">if</span> <span class="ident">e</span>.<span class="ident">find</span>(<span class="string">&quot;error&quot;</span>).<span class="ident">is_none</span>() {
+                <span class="kw">if</span> <span class="ident">e</span>.<span class="ident">find</span>(<span class="string">&quot;{jabber:client}error&quot;</span>).<span class="ident">is_none</span>() {
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">io::Error::new</span>(
                         <span class="ident">io::ErrorKind::InvalidInput</span>,
                         <span class="string">&quot;An IQ stanza of type \&quot;error\&quot; SHOULD include the child element contained in the associated \&quot;get\&quot; or \&quot;set\&quot; and MUST include an &lt;error/&gt; child&quot;</span>,

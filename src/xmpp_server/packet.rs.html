@@ -61,7 +61,7 @@
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>.<span class="ident">session_state</span>(<span class="ident">SessionState::UnsupportedEncoding</span>).<span class="ident">build</span>()<span class="question-mark">?</span>);
         }
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SessionState::Opening</span> <span class="op">=</span> <span class="ident">session_state</span>.<span class="ident">state</span> {
+        <span class="kw">if</span> <span class="ident">SessionState::Opening</span> <span class="op">=</span><span class="op">=</span> <span class="ident">session_state</span>.<span class="ident">state</span> <span class="op">|</span><span class="op">|</span> <span class="ident">SessionState::UnsupportedEncoding</span> <span class="op">=</span><span class="op">=</span> <span class="ident">session_state</span>.<span class="ident">state</span> {
             <span class="ident">response</span>.<span class="ident">packet</span>(<span class="ident">OpenStream::default</span>().<span class="ident">into</span>());
         }
 

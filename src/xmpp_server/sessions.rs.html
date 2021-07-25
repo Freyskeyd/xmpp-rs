@@ -316,34 +316,13 @@
 <span id="316">316</span>
 <span id="317">317</span>
 <span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::PacketIn</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::PacketsOut</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::SessionCommand</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::system::SessionCommandAction</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::messages::StanzaEnvelope</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::router::Router</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::StaticSessionState</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::sessions::state::StaticSessionStateBuilder</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -357,7 +336,6 @@
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">trace</span>};
 <span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 <span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
-<span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 <span class="kw">use</span> <span class="ident">uuid::Uuid</span>;
 <span class="kw">use</span> <span class="ident">xmpp_proto</span>::{<span class="ident">ns</span>, <span class="ident">Bind</span>, <span class="ident">CloseStream</span>, <span class="ident">Features</span>, <span class="ident">FromXmlElement</span>, <span class="ident">GenericIq</span>, <span class="ident">IqType</span>, <span class="ident">NonStanza</span>, <span class="ident">OpenStream</span>, <span class="ident">Packet</span>, <span class="ident">Stanza</span>, <span class="ident">StreamError</span>, <span class="ident">StreamErrorKind</span>, <span class="ident">StreamFeatures</span>};
 <span class="kw">use</span> <span class="ident">xmpp_xml::Element</span>;
@@ -366,11 +344,12 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">state</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">unauthenticated</span>;
 
+<span class="kw">const</span> <span class="ident">ACTIVE_SESSION_STATES</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">SessionState</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">SessionState::Binding</span>, <span class="ident">SessionState::Binded</span>];
+
 <span class="doccomment">/// Hold a session on a node</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Session</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">state</span>: <span class="ident">SessionState</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">sink</span>: <span class="ident">Recipient</span><span class="op">&lt;</span><span class="ident">PacketsOut</span><span class="op">&gt;</span>,
-    <span class="ident">timeout_handler</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">SpawnHandle</span><span class="op">&gt;</span>,
     <span class="ident">jid</span>: <span class="ident">Jid</span>,
     <span class="ident">self_addr</span>: <span class="ident">Addr</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
 }
@@ -380,7 +359,6 @@
         <span class="self">Self</span> {
             <span class="ident">state</span>: <span class="ident">SessionState::Opening</span>,
             <span class="ident">sink</span>,
-            <span class="ident">timeout_handler</span>: <span class="prelude-val">None</span>,
             <span class="ident">jid</span>: <span class="ident">state</span>.<span class="ident">jid</span>.<span class="ident">unwrap</span>(),
             <span class="ident">self_addr</span>,
         }
@@ -391,26 +369,6 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">jid</span>) <span class="op">=</span> <span class="ident">jid</span> {
             <span class="self">self</span>.<span class="ident">jid</span> <span class="op">=</span> <span class="ident">jid</span>.<span class="ident">clone</span>();
         }
-    }
-
-    <span class="kw">fn</span> <span class="ident">reset_timeout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Actor</span><span class="op">&gt;</span><span class="ident">::Context</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">handler</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">timeout_handler</span> {
-            <span class="kw">if</span> <span class="ident">ctx</span>.<span class="ident">cancel_future</span>(<span class="ident">handler</span>) {
-                <span class="macro">trace!</span>(<span class="string">&quot;Timeout handler resetted for session&quot;</span>);
-            } <span class="kw">else</span> {
-                <span class="macro">trace!</span>(<span class="string">&quot;Unable to reset timeout handler for session&quot;</span>);
-                <span class="ident">ctx</span>.<span class="ident">set_mailbox_capacity</span>(<span class="number">0</span>);
-                <span class="ident">ctx</span>.<span class="ident">notify</span>(<span class="ident">SessionCommand</span>(<span class="ident">SessionCommandAction::Kill</span>));
-            }
-        }
-
-        <span class="kw">let</span> <span class="ident">referer</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">address</span>();
-        <span class="self">self</span>.<span class="ident">timeout_handler</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">run_later</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="kw">move</span> <span class="op">|</span><span class="ident">actor</span>, <span class="ident">ctx</span><span class="op">|</span> {
-            <span class="macro">trace!</span>(<span class="string">&quot;Duration ended&quot;</span>);
-            <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="ident">referer</span>.<span class="ident">send</span>(<span class="ident">SessionCommand</span>(<span class="ident">SessionCommandAction::Kill</span>)).<span class="ident">into_actor</span>(<span class="ident">actor</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> ());
-
-            <span class="ident">ctx</span>.<span class="ident">spawn</span>(<span class="ident">fut</span>);
-        }));
     }
 }
 
@@ -446,6 +404,10 @@
 
     <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">SessionCommand</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="kw">match</span> <span class="ident">msg</span>.<span class="number">0</span> {
+            <span class="ident">SessionCommandAction::SendPacket</span>(<span class="ident">packet</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">sink</span>.<span class="ident">try_send</span>(<span class="ident">PacketsOut</span>(<span class="macro">vec!</span>[<span class="ident">packet</span>]));
+                <span class="prelude-val">Ok</span>(())
+            }
             <span class="ident">SessionCommandAction::Kill</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">result</span>) <span class="op">=</span> <span class="self">Self</span><span class="ident">::close</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SessionManagementPacketResultBuilder::default</span>()) {
                     <span class="self">self</span>.<span class="ident">sync_state</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>.<span class="ident">session_state</span>);
@@ -468,8 +430,7 @@
     <span class="doccomment">/// Presence(self) -&gt; handle by the session itself</span>
     <span class="doccomment">/// Presence(...) -&gt; Route to router</span>
     <span class="doccomment">/// _ -&gt; Route to router</span>
-    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">PacketIn</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
-        <span class="self">self</span>.<span class="ident">reset_timeout</span>(<span class="ident">ctx</span>);
+    <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">PacketIn</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="ident">::Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
             <span class="macro">trace!</span>(<span class="string">&quot;Handle packet in session&quot;</span>);
@@ -494,12 +455,13 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_packet</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Packet</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Result</span> {
         <span class="kw">match</span> <span class="ident">stanza</span> {
             <span class="ident">Packet::NonStanza</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>).<span class="kw">await</span>,
-            <span class="ident">Packet::Stanza</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>).<span class="kw">await</span>,
+            <span class="ident">Packet::Stanza</span>(<span class="ident">stanza</span>) <span class="kw">if</span> <span class="ident">ACTIVE_SESSION_STATES</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">state</span>.<span class="ident">state</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">stanza</span>).<span class="kw">await</span>,
             <span class="ident">Packet::InvalidPacket</span>(<span class="ident">invalid_packet</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">SessionManagementPacketResultBuilder::default</span>();
 
                 <span class="self">Self</span><span class="ident">::handle_invalid_packet</span>(<span class="ident">state</span>, <span class="ident">invalid_packet</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">response</span>)
             }
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">SessionManagementPacketError::Unknown</span>),
         }
     }
 }
@@ -508,7 +470,12 @@
 <span class="kw">impl</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="ident">Stanza</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Session</span> {
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="ident">state</span>: <span class="ident">StaticSessionState</span>, <span class="ident">stanza</span>: <span class="kw-2">&amp;</span><span class="ident">Stanza</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SessionManagementPacketResult</span>, <span class="ident">SessionManagementPacketError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">stanza</span> {
-            <span class="ident">Stanza::IQ</span>(<span class="ident">stanza</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="ident">stanza</span>),
+            <span class="ident">Stanza::IQ</span>(<span class="ident">stanza</span>) <span class="kw">if</span> <span class="ident">state</span>.<span class="ident">state</span> <span class="op">=</span><span class="op">=</span> <span class="ident">SessionState::Binding</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">StanzaHandler</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::handle</span>(<span class="ident">state</span>, <span class="ident">stanza</span>),
+            <span class="ident">stanza</span> <span class="kw">if</span> <span class="ident">state</span>.<span class="ident">state</span> <span class="op">=</span><span class="op">=</span> <span class="ident">SessionState::Binded</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">Router::from_registry</span>().<span class="ident">send</span>(<span class="ident">StanzaEnvelope</span> { <span class="ident">stanza</span>: <span class="ident">stanza</span>.<span class="ident">clone</span>(), <span class="ident">from</span>: <span class="ident">state</span> }).<span class="kw">await</span>;
+
+                <span class="ident">Box::pin</span>(<span class="kw">async</span> { <span class="prelude-val">Err</span>(<span class="ident">SessionManagementPacketError::Unknown</span>) })
+            }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box::pin</span>(<span class="kw">async</span> { <span class="prelude-val">Err</span>(<span class="ident">SessionManagementPacketError::Unknown</span>) }),
         };
 
@@ -561,19 +528,6 @@
                 .<span class="ident">into</span>(),
             )
             .<span class="ident">session_state</span>(<span class="ident">state</span>.<span class="ident">state</span>);
-
-        <span class="kw">if</span> <span class="ident">SessionState::UnsupportedEncoding</span>.<span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="ident">state</span>.<span class="ident">state</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>
-                .<span class="ident">packet</span>(
-                    <span class="ident">StreamError</span> {
-                        <span class="ident">kind</span>: <span class="ident">StreamErrorKind::UnsupportedEncoding</span>,
-                    }
-                    .<span class="ident">into</span>(),
-                )
-                .<span class="ident">packet</span>(<span class="ident">CloseStream</span> {}.<span class="ident">into</span>())
-                .<span class="ident">session_state</span>(<span class="ident">SessionState::Closing</span>)
-                .<span class="ident">build</span>()<span class="question-mark">?</span>);
-        }
 
         <span class="kw">if</span> <span class="ident">stanza</span>.<span class="ident">version</span> <span class="op">!</span><span class="op">=</span> <span class="string">&quot;1.0&quot;</span> {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>
@@ -671,9 +625,9 @@
                         }
                     }
                 }
-                <span class="ident">e</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace!</span>(<span class="string">&quot;Unsupported state {:?}&quot;</span>, <span class="ident">e</span>);
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">SessionManagementPacketError::Unknown</span>);
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="comment">// trace!(&quot;Unsupported state {:?}&quot;, e);</span>
+                    <span class="comment">// return Err(SessionManagementPacketError::Unknown);</span>
                 }
             }
         }
