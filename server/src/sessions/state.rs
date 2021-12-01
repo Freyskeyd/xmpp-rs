@@ -10,7 +10,7 @@ pub(crate) enum SessionState {
     Authenticating,
     Authenticated,
     Binding,
-    Binded,
+    Bound,
     Closing,
 
     UnsupportedEncoding,

@@ -10,6 +10,7 @@ use std::collections::HashMap;
 
 mod authentication;
 mod config;
+mod iq_handler;
 mod listeners;
 mod messages;
 mod packet;

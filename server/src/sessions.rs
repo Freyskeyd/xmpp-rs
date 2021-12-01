@@ -25,7 +25,7 @@ pub(crate) mod manager;
 pub(crate) mod state;
 pub(crate) mod unauthenticated;
 
-const ACTIVE_SESSION_STATES: &'static [SessionState] = &[SessionState::Binding, SessionState::Binded];
+const ACTIVE_SESSION_STATES: &'static [SessionState] = &[SessionState::Binding, SessionState::Bound];
 
 /// Hold a session on a node
 pub struct Session {
@@ -152,7 +152,7 @@ impl StanzaHandler<Stanza> for Session {
     async fn handle(state: StaticSessionState, stanza: &Stanza) -> Result<SessionManagementPacketResult, SessionManagementPacketError> {
         let fut = match stanza {
             Stanza::IQ(stanza) if state.state == SessionState::Binding => <Self as StanzaHandler<_>>::handle(state, stanza),
-            stanza if state.state == SessionState::Binded => {
+            stanza if state.state == SessionState::Bound => {
                 Router::from_registry().send(StanzaEnvelope { stanza: stanza.clone(), from: state }).await;
 
                 Box::pin(async { Err(SessionManagementPacketError::Unknown) })
@@ -285,7 +285,7 @@ impl StanzaHandler<GenericIq> for Session {
                                             let result = GenericIq::from_element(&result_element).unwrap();
                                             // its bind
                                             response
-                                                .session_state(state.clone().set_state(SessionState::Binded).set_jid(Jid::Full(jid.clone())))
+                                                .session_state(state.clone().set_state(SessionState::Bound).set_jid(Jid::Full(jid.clone())))
                                                 .packet(result.into());
                                         }
                                         Err(_) => {

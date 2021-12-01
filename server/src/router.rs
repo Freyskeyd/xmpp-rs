@@ -1,20 +1,33 @@
-use actix::{Actor, Context, Handler, Supervised, SystemService};
+use actix::{Actor, Addr, Context, Handler, Supervised, SystemService};
 use log::trace;
 use xmpp_proto::{FromXmlElement, GenericIq, Packet, Stanza};
 use xmpp_xml::Element;
 
-use crate::messages::{
-    system::{SessionCommand, SessionCommandAction},
-    StanzaEnvelope,
+use crate::{
+    iq_handler::manager::IqHandlerManager,
+    messages::{
+        system::{SessionCommand, SessionCommandAction},
+        StanzaEnvelope,
+    },
 };
 
 /// Manage to route packet on a node
-#[derive(Default, Debug)]
-pub struct Router {}
+#[derive(Debug)]
+pub struct Router {
+    pub(crate) iq_handler: Addr<IqHandlerManager>,
+}
+
+impl Default for Router {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Router {
     pub(crate) fn new() -> Self {
-        Self {}
+        Self {
+            iq_handler: IqHandlerManager::from_registry(),
+        }
     }
 }
 
@@ -32,7 +45,7 @@ impl Actor for Router {
 impl Handler<StanzaEnvelope> for Router {
     type Result = ();
 
-    fn handle(&mut self, msg: StanzaEnvelope, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: StanzaEnvelope, _ctx: &mut Self::Context) -> Self::Result {
         match msg.stanza {
             Stanza::IQ(iq) => {
                 let e = if iq.get_id() == "roster" {
